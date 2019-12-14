@@ -7,6 +7,7 @@
         "IMixinFenceGateBlock",
         "IMixinContainerScreen",
         "IMixinRedstoneWireBlock",
+        "IMixinSignBlockEntity",
         "IMixinStairsBlock",
         "IMixinVineBlock",
         "MixinBlock",
@@ -21,6 +22,7 @@
         "MixinMinecraftClient",
         "MixinModelItemOverride",
         "MixinRailBlocks",
+        "MixinSignEditScreen",
         "MixinWorld",
         "MixinWorldChunk",
         "MixinWorldRenderer"
