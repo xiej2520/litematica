@@ -186,8 +186,17 @@ public class LitematicaSchematic extends BaseSchematic
                 continue;
             }
 
-            if (readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette(), dataVersion) == false)
+            boolean needsVersionConversion = mainDataVersion != CURRENT_MINECRAFT_DATA_VERSION;
+
+            if (needsVersionConversion)
             {
+                paletteTag = this.convertBlockStatePaletteToCurrentGameVersion(paletteTag);
+                this.convertBlockEntityMapToCurrentGameVersion(blockEntityMap);
+                this.convertBlockTickMapToCurrentGameVersion(blockTickMap);
+                this.convertEntityListToCurrentGameVersion(entityList);
+            }
+
+            if (readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette(), dataVersion) == false) {
                 MessageDispatcher.error("litematica.error.schematic_read.litematica.palette_read_failed", regionName);
                 continue;
             }
