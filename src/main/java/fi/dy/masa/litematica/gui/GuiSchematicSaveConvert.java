@@ -5,7 +5,9 @@ import java.util.List;
 import com.google.common.collect.ImmutableList;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.schematic.ISchematic;
+import fi.dy.masa.litematica.schematic.SchematicBase;
 import fi.dy.masa.litematica.schematic.SchematicType;
+import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.malilib.gui.interfaces.IGuiIcon;
 import fi.dy.masa.malilib.gui.interfaces.IIconProvider;
@@ -20,6 +22,7 @@ public class GuiSchematicSaveConvert extends GuiSchematicSaveBase
 {
     private final ISchematic schematic;
     private final WidgetDropDownList<SchematicType<?>> widgetOutputType;
+    private final WidgetDropDownList<MinecraftVersion> widgetOutputDataVersion;
     private WidgetRadioButton<UpdatePlacementsOption> widgetUpdatePlacements;
 
     public GuiSchematicSaveConvert(ISchematic schematic, String inputName)
@@ -33,9 +36,15 @@ public class GuiSchematicSaveConvert extends GuiSchematicSaveBase
         this.title = StringUtils.translate("litematica.gui.title.save_schematic_convert", inputName);
         this.useTitleHierarchy = false;
 
-        this.widgetOutputType = new WidgetDropDownList<>(9, 56, -1, 20, 200, 10, SchematicType.KNOWN_TYPES, (entry) -> entry.getDisplayName());
+        int x = 9;
+        this.widgetOutputType = new WidgetDropDownList<>(x, 56, -1, 20, 200, 10, SchematicType.KNOWN_TYPES, (entry) -> entry.getDisplayName());
         this.widgetOutputType.setIconProvider(new SchematicIconProvider());
         this.widgetOutputType.setSelectedEntry(SchematicType.LITEMATICA);
+        this.widgetOutputType.setSelectionListener((type) -> this.reCreateCustomWidgets());
+
+        x += this.widgetOutputType.getWidth() + 4;
+        this.widgetOutputDataVersion = new WidgetDropDownList<>(x, 56, -1, 20, 200, 10, MinecraftVersion.KNOWN_VERSIONS, (entry) -> "MC " + entry.getMcVersionDisplayName());
+        this.widgetOutputDataVersion.setSelectedEntry(SchematicBase.CURRENT_GAME_SCHEMATIC_DATA_VERSION);
     }
 
     @Override
@@ -59,9 +68,18 @@ public class GuiSchematicSaveConvert extends GuiSchematicSaveBase
     @Override
     protected void createCustomElements()
     {
+        this.addWidget(this.textField);
         this.addWidget(this.widgetOutputType);
+
         int x = this.widgetOutputType.getX() + this.widgetOutputType.getWidth() + 4;
         int y = this.widgetOutputType.getY();
+
+        if (this.widgetOutputType.getSelectedEntry() != SchematicType.SCHEMATICA)
+        {
+            x = this.widgetOutputDataVersion.getX() + this.widgetOutputDataVersion.getWidth() + 4;
+            this.addWidget(this.widgetOutputDataVersion);
+        }
+
         x = this.createButton(x, y, ButtonType.SAVE);
 
         if (this.updatePlacementsOption)
@@ -71,6 +89,12 @@ public class GuiSchematicSaveConvert extends GuiSchematicSaveBase
             this.widgetUpdatePlacements.setSelection(UpdatePlacementsOption.NONE, false);
             this.addWidget(this.widgetUpdatePlacements);
         }
+    }
+
+    protected void reCreateCustomWidgets()
+    {
+        this.clearElements();
+        this.createCustomElements();
     }
 
     @Override
@@ -125,6 +149,8 @@ public class GuiSchematicSaveConvert extends GuiSchematicSaveBase
             {
                 convertedSchematic = this.schematic;
             }
+
+            convertedSchematic.setOutputMinecraftVersion(this.widgetOutputDataVersion.getSelectedEntry());
 
             if (convertedSchematic.writeToFile(dir, fileName, override))
             {

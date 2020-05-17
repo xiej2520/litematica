@@ -4,19 +4,22 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3i;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
+import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataVersion;
 import fi.dy.masa.litematica.util.NbtUtils;
 import fi.dy.masa.malilib.util.Constants;
 import fi.dy.masa.malilib.util.InfoUtils;
@@ -30,12 +33,39 @@ public class SchematicaSchematic extends SingleRegionSchematic
     SchematicaSchematic(@Nullable File fileName)
     {
         super(fileName);
+
+        this.currentDataSchematicDataVersion = SchematicDataVersion.getVersionFor(MinecraftVersion.MC_1_12.getMaxDataVersion());
+        this.requestedOutputMinecraftVersion = MinecraftVersion.MC_1_12;
     }
 
     @Override
     public SchematicType<?> getType()
     {
         return SchematicType.SCHEMATICA;
+    }
+
+    @Override
+    public void setOutputMinecraftVersion(MinecraftVersion version)
+    {
+        // NO-OP - No other formats are supported than the legacy format
+    }
+
+    @Override
+    protected void setCurrentDataVersionWithFallback(int dataVersion)
+    {
+        this.currentDataSchematicDataVersion = SchematicDataVersion.getVersionFor(MinecraftVersion.MC_1_12.getMaxDataVersion());
+    }
+
+    @Override
+    protected void setToCurrentGameVersion()
+    {
+        // NO-OP
+    }
+
+    @Override
+    protected boolean initFromTag(NBTTagCompound tag)
+    {
+        return true;
     }
 
     public static boolean isValidSchematic(NBTTagCompound tag)
@@ -70,15 +100,29 @@ public class SchematicaSchematic extends SingleRegionSchematic
     }
 
     @Override
-    protected Map<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag)
+    protected ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion)
     {
-        return this.readBlockEntitiesFromListTag(tag.getTagList("TileEntities", Constants.NBT.TAG_COMPOUND));
+        NBTTagList listBlockEntities = tag.getTagList("TileEntities", Constants.NBT.TAG_COMPOUND);
+
+        if (needsVersionConversion)
+        {
+            // TODO
+        }
+
+        return this.readBlockEntitiesFromListTag(listBlockEntities);
     }
 
     @Override
-    protected List<EntityInfo> readEntitiesFromTag(NBTTagCompound tag)
+    protected ImmutableList<EntityInfo> readEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion)
     {
-        return this.readEntitiesFromListTag(tag.getTagList("Entities", Constants.NBT.TAG_COMPOUND));
+        NBTTagList listEntities = tag.getTagList("Entities", Constants.NBT.TAG_COMPOUND);
+
+        if (needsVersionConversion)
+        {
+            // TODO
+        }
+
+        return this.readEntitiesFromListTag(listEntities);
     }
 
     @Override
@@ -211,8 +255,9 @@ public class SchematicaSchematic extends SingleRegionSchematic
         }
     }
 
+    @Override
     @SuppressWarnings("deprecation")
-    protected boolean readBlocksFromTag(NBTTagCompound tag)
+    protected boolean readBlocksFromTag(NBTTagCompound tag, boolean needsVersionConversion)
     {
         // This method was implemented based on
         // https://minecraft.gamepedia.com/Schematic_file_format

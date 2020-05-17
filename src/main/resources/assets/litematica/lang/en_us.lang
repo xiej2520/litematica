@@ -24,9 +24,12 @@ litematica.error.area_editor.switch_mode.no_selection=Can't switch to Selection 
 
 litematica.error.execute_operation_no_tool=As a safety measure the executeOperation hotkey requires you to hold the tool item, and the main rendering toggle option and the tool item both need to be enabled (Visuals -> 'enableRendering' ['%s'] and Generic -> 'toolItemEnabled' ['%s']). This requirement can be disabled in Generic -> 'executeRequireHoldingTool'.
 
+litematica.error.schematic_conversion.block_state_mapping.failed_to_read_mapping_from_json_data=Failed to read a block state mapping entry from the mapping JSON data
 litematica.error.schematic_conversion.schematic_to_litematica.failed_to_create_schematic=Failed to create the Litematica schematic
 litematica.error.schematic_conversion.schematic_to_litematica.failed_to_read_schematic=Failed to load the Schematic
 litematica.error.schematic_conversion.structure_to_litematica_failed=Failed to convert the Structure to a Litematica Schematic
+litematica.error.schematic_conversion.unknown_data_version.future=Unknown Minecraft data version '%s' found in the schematic file. This file appears to be from an unknown future Minecraft version (after MC %s). Falling back to Minecraft version %s (DataVersion: %s). The schematic may be read wrong, or some blocks may be missing due to this. Also any future blocks will be missing.
+litematica.error.schematic_conversion.unknown_data_version.old=Unknown Minecraft data version '%s' found in the schematic file. This file appears to be an old file (from before MC 1.12). Falling back to Minecraft version %s (DataVersion: %s). The schematic may be read wrong, or some blocks may be missing due to this.
 
 litematica.error.schematic_convert.failed_to_convert=Failed to convert the schematic:
 litematica.error.schematic_convert.failed_to_save=Failed to save the converted schematic as '%s'
@@ -356,6 +359,7 @@ litematica.gui.label.schematic_placement.hover.name=§7Name: §2%s
 litematica.gui.label.schematic_placement.hover.origin=§7Origin - x: §9%s§7, y: §9%s§7, z: §9%s
 litematica.gui.label.schematic_placement.hover.rotation_mirror=§7Rotation: §b%s§7, Mirror: §b%s
 litematica.gui.label.schematic_placement.hover.placement_file=§7Placement file: §3%s
+litematica.gui.label.schematic_placement.hover.schematic_data_version=§7Data version: MC §9%s§7, DV: §a%s
 litematica.gui.label.schematic_placement.hover.schematic_file=§7Schematic file: §3%s
 litematica.gui.label.schematic_placement.hover.schematic_name=§7Schematic name: §2%s
 litematica.gui.label.schematic_placement.hover.schematic_type=§7Type: §b%s
@@ -531,6 +535,7 @@ litematica.message.error.schematic_read.sponge.palette.unknown_block=Unknown blo
 litematica.message.error.schematic_read.sponge.failed_to_read_blocks=Failed to read the blocks for a Sponge format schematic
 litematica.message.error.schematic_save_failed=Failed to save schematic to file '%s'
 litematica.message.error.schematic_save_interrupted=Schematic saving interrupted or stopped
+litematica.message.error.schematic_save_invalid_region_name=Invalid sub-region name '%s' (not found)
 litematica.message.error.schematic_save.missing_container=One of the data containers not found for sub-region '%s'
 litematica.message.error.schematic_save.missing_entity_list=Entity list not found for sub-region '%s'
 litematica.message.error.schematic_save_no_area_selected=§cSchematic saving failed - no area selected§r
@@ -590,6 +595,8 @@ litematica.message.warn.area_selection.browser_open_in_simple_mode=Note: You are
 litematica.message.warn.layer_mode_currently_at=Note: You are currently in the '%s' render layer mode
 litematica.message.warn.main_rendering_disabled=Warning: The main rendering is currently disabled\nSee Visuals -> %s, or Hotkeys -> %s ['%s']
 litematica.message.warn.schematic_blocks_rendering_disabled=Warning: Schematic blocks rendering is currently disabled\nSee Visuals -> %s, or Hotkeys -> %s ['%s']
+litematica.message.warn.schematic_conversion.non_native_data_version=Warning: The schematic is from a different Minecraft version (DataVersion: %s, interpreted as Minecraft %s). It will be automatically converted, but it's possible that the conversion is not perfect and some things may be wrong with it. Also any future blocks WILL turn into air.
+litematica.message.warn.schematic_load.palette_conversion_failures=Failed to convert some block states in the palette from a different Minecraft version to the current version. Tried to convert version from '%s' to '%s', and successfully converted %s states and failed to convert %s states.
 litematica.message.warn.schematic_load_non_litematica=Warning: When you directly load non-Litematica schematics, the created placements won't be persistent.\nAlso if you have to load the schematic many times, then the schematic type conversion lag spike (for large schematics) will happen each time you load it.\n\nIt is therefore recommended to either import the schematic and save it in the Litematica format via the Schematic Manager menu, or better yet, paste the original schematic into a temporary world using MCEdit or the Paste mode in Litematica, and then make a new Litematica schematic from that, preferably using multiple sub-regions to tightly capture the build, where applicable.
 litematica.message.warn.schematic_rebuild.subregion_not_selected=The targeted placement has a different sub-region selected. The Replace All action only works on the currently selected sub-region(s), if one is selected. To replace blocks in the entire schematic (all sub-regions), don't select any sub-regions. The blocks are also only replaced within the area limited by the current Render Layers setting.\n\n(You can select or unselect sub-regions in the Placement configuration GUI, by clicking on the sub-regions in the list. A hilighted entry is the currently selected sub-region.)
 litematica.message.warn.schematic_rendering_disabled=Warning: Schematic rendering is currently disabled\nSee Visuals -> %s, or Hotkeys -> %s ['%s']

@@ -63,7 +63,6 @@ public abstract class GuiSchematicSaveBase extends GuiSchematicBrowserBase imple
         super.initGui();
 
         this.textField.setWidth(this.width - 196);
-        this.addWidget(this.textField);
 
         DirectoryEntry entry = this.getListWidget().getLastSelectedEntry();
 
@@ -102,6 +101,7 @@ public abstract class GuiSchematicSaveBase extends GuiSchematicBrowserBase imple
         int x = this.textField.getX() + this.textField.getWidth() + 12;
         int y = 32;
 
+        this.addWidget(this.textField);
         this.createButton(x, y, ButtonType.SAVE);
     }
 

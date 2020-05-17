@@ -12,7 +12,9 @@ import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.gui.GuiPlacementConfiguration;
 import fi.dy.masa.litematica.gui.GuiSchematicPlacementsList;
 import fi.dy.masa.litematica.gui.LitematicaGuiIcons;
+import fi.dy.masa.litematica.schematic.ISchematic;
 import fi.dy.masa.litematica.schematic.SchematicMetadata;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataVersion;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacementUnloaded;
@@ -212,7 +214,8 @@ public class WidgetSchematicPlacementEntry extends WidgetListEntryBase<Schematic
         else if (GuiBase.isMouseOver(mouseX, mouseY, x, y, this.buttonsStartX - 18, height))
         {
             File schematicFile = this.placement.getSchematicFile();
-            SchematicMetadata metadata = this.loadedPlacement != null ? this.loadedPlacement.getSchematic().getMetadata() : null;
+            ISchematic schematic = this.loadedPlacement != null ? this.loadedPlacement.getSchematic() : null;
+            SchematicMetadata metadata = schematic != null ? schematic.getMetadata() : null;
             String fileName = schematicFile != null ? schematicFile.getName() : StringUtils.translate("litematica.gui.label.schematic_placement.hover.in_memory");
             List<String> text = new ArrayList<>();
             boolean saved = this.placement.isSavedToFile();
@@ -223,6 +226,14 @@ public class WidgetSchematicPlacementEntry extends WidgetListEntryBase<Schematic
             }
 
             text.add(StringUtils.translate("litematica.gui.label.schematic_placement.hover.schematic_file", fileName));
+
+            if (schematic != null)
+            {
+                SchematicDataVersion version = schematic.getCurrentSchematicDataVersion();
+                String strDV = String.valueOf(version.getDataVersion());
+                text.add(StringUtils.translate("litematica.gui.label.schematic_placement.hover.schematic_data_version", version.getMcVersionDisplayName(), strDV));
+            }
+
             text.add(StringUtils.translate("litematica.gui.label.schematic_placement.hover.is_loaded", Messages.getYesNoColored(this.placement.isLoaded(), false)));
 
             // Get a cached value, to not query and read the file every rendered frame...

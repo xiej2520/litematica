@@ -25,6 +25,7 @@ import fi.dy.masa.litematica.materials.MaterialListBase;
 import fi.dy.masa.litematica.materials.MaterialListHudRenderer;
 import fi.dy.masa.litematica.render.infohud.InfoHud;
 import fi.dy.masa.litematica.scheduler.TaskScheduler;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataConversionManager;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
 import fi.dy.masa.litematica.schematic.projects.SchematicProjectsManager;
 import fi.dy.masa.litematica.schematic.verifier.SchematicVerifier;
@@ -181,6 +182,7 @@ public class DataManager implements IDirectoryCache
         TaskScheduler.getInstanceClient().clearTasks();
         SchematicVerifier.clearActiveVerifiers();
         InfoHud.getInstance().reset(); // remove the line providers and clear the data
+        SchematicDataConversionManager.INSTANCE.reset();
 
         getInstance().clearData(true);
     }

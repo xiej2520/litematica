@@ -2,6 +2,8 @@ package fi.dy.masa.litematica.schematic;
 
 import java.util.List;
 import java.util.Map;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3i;
@@ -31,19 +33,37 @@ public interface ISchematicRegion
     ILitematicaBlockStateContainer getBlockStateContainer();
 
     /**
-     * Returns the BlockEntity map used for this region
-     * @return
-     */
-    Map<BlockPos, NBTTagCompound> getBlockEntityMap();
-
-    /**
      * Returns the entity list for this region
      * @return
      */
-    List<EntityInfo> getEntityList();
+    ImmutableList<EntityInfo> getEntityList();
+
+    /**
+     * Returns the BlockEntity map used for this region
+     * @return
+     */
+    ImmutableMap<BlockPos, NBTTagCompound> getBlockEntityMap();
 
     /*
      * Returns the map for the scheduled Block ticks in this region
      */
-    Map<BlockPos, NextTickListEntry> getBlockTickMap();
+    ImmutableMap<BlockPos, NextTickListEntry> getBlockTickMap();
+
+    /**
+     * Sets the entity list, replacing the old list
+     * @param list
+     */
+    void setEntityList(List<EntityInfo> list);
+
+    /**
+     * Sets the block entity map, replacing the old map
+     * @param map
+     */
+    void setBlockEntityMap(Map<BlockPos, NBTTagCompound> map);
+
+    /**
+     * Sets the block tick map, replacing the old map
+     * @param map
+     */
+    void setBlockTickMap(Map<BlockPos, NextTickListEntry> map);
 }

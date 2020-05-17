@@ -1,8 +1,6 @@
 package fi.dy.masa.litematica.schematic;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -24,9 +22,9 @@ import fi.dy.masa.malilib.util.NBTUtils;
 
 public abstract class SingleRegionSchematic extends SchematicBase implements ISchematicRegion
 {
-    protected final Map<BlockPos, NBTTagCompound> blockEntities = new HashMap<>();
-    protected final Map<BlockPos, NextTickListEntry> pendingBlockTicks = new HashMap<>();
-    protected final List<EntityInfo> entities = new ArrayList<>();
+    protected ImmutableMap<BlockPos, NBTTagCompound> blockEntities = ImmutableMap.of();
+    protected ImmutableMap<BlockPos, NextTickListEntry> pendingBlockTicks = ImmutableMap.of();
+    protected ImmutableList<EntityInfo> entities = ImmutableList.of();
     protected ILitematicaBlockStateContainer blockContainer;
     protected BlockPos regionPos = BlockPos.ORIGIN;
     private Vec3i regionSize = Vec3i.NULL_VECTOR;
@@ -41,16 +39,12 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
     @Override
     public void clear()
     {
-        this.blockEntities.clear();
-        this.entities.clear();
-        this.pendingBlockTicks.clear();
-        this.metadata.clearModifiedSinceSaved();
-    }
+        super.clear();
 
-    @Override
-    public int getSubRegionCount()
-    {
-        return 1;
+        this.entities = ImmutableList.of();
+        this.blockEntities = ImmutableMap.of();
+        this.pendingBlockTicks = ImmutableMap.of();
+        this.metadata.clearModifiedSinceSaved();
     }
 
     @Override
@@ -60,13 +54,13 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
     }
 
     @Override
-    public ImmutableMap<String, ISchematicRegion> getRegions()
+    protected ImmutableMap<String, ISchematicRegion> getRegionsImpl()
     {
         return ImmutableMap.of(this.getMetadata().getName(), this);
     }
 
     @Override
-    public ISchematicRegion getSchematicRegion(String regionName)
+    protected ISchematicRegion getSchematicRegionImpl(String regionName)
     {
         return this;
     }
@@ -117,21 +111,42 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
     }
 
     @Override
-    public Map<BlockPos, NBTTagCompound> getBlockEntityMap()
-    {
-        return this.blockEntities;
-    }
-
-    @Override
-    public List<EntityInfo> getEntityList()
+    public ImmutableList<EntityInfo> getEntityList()
     {
         return this.entities;
     }
 
     @Override
-    public Map<BlockPos, NextTickListEntry> getBlockTickMap()
+    public ImmutableMap<BlockPos, NBTTagCompound> getBlockEntityMap()
+    {
+        return this.blockEntities;
+    }
+
+    @Override
+    public ImmutableMap<BlockPos, NextTickListEntry> getBlockTickMap()
     {
         return this.pendingBlockTicks;
+    }
+
+    @Override
+    public void setEntityList(List<EntityInfo> list)
+    {
+        this.entities = ImmutableList.copyOf(list);
+        this.dirtyData.add(SchematicDataPiece.ENTITIES);
+    }
+
+    @Override
+    public void setBlockEntityMap(Map<BlockPos, NBTTagCompound> map)
+    {
+        this.blockEntities = ImmutableMap.copyOf(map);
+        this.dirtyData.add(SchematicDataPiece.BLOCK_ENTITIES);
+    }
+
+    @Override
+    public void setBlockTickMap(Map<BlockPos, NextTickListEntry> map)
+    {
+        this.pendingBlockTicks = ImmutableMap.copyOf(map);
+        this.dirtyData.add(SchematicDataPiece.BLOCK_TICKS);
     }
 
     @Override
@@ -232,12 +247,16 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
 
         for (ISchematicRegion region : regions.values())
         {
+            ImmutableMap.Builder<BlockPos, NBTTagCompound> builderBlockEntities = ImmutableMap.builder();
+            ImmutableMap.Builder<BlockPos, NextTickListEntry> builderBlockTicks = ImmutableMap.builder();
+            ImmutableList.Builder<EntityInfo> builderEntities = ImmutableList.builder();
+
             // No offset for this sub-region, use the positions in the maps without modifications
             if (region.getPosition().equals(BlockPos.ORIGIN))
             {
-                region.getBlockEntityMap().entrySet().forEach((entry) -> this.blockEntities.put(entry.getKey(), entry.getValue().copy()));
-                region.getBlockTickMap().entrySet().forEach((entry) -> this.pendingBlockTicks.put(entry.getKey(), entry.getValue()));
-                region.getEntityList().forEach((info) -> this.entities.add(info.copy()));
+                region.getBlockEntityMap().entrySet().forEach((entry) -> builderBlockEntities.put(entry.getKey(), entry.getValue().copy()));
+                region.getBlockTickMap().entrySet().forEach((entry) -> builderBlockTicks.put(entry.getKey(), entry.getValue()));
+                region.getEntityList().forEach((info) -> builderEntities.add(info.copy()));
             }
             else
             {
@@ -246,12 +265,12 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
 
                 region.getBlockEntityMap().entrySet().forEach((entry) -> {
                     BlockPos pos = entry.getKey().add(regionOffsetBlocks);
-                    this.blockEntities.put(pos, entry.getValue().copy());
+                    builderBlockEntities.put(pos, entry.getValue().copy());
                 });
 
                 region.getBlockTickMap().entrySet().forEach((entry) -> {
                     BlockPos pos = entry.getKey().add(regionOffsetBlocks);
-                    this.pendingBlockTicks.put(pos, entry.getValue());
+                    builderBlockTicks.put(pos, entry.getValue());
                 });
 
                 // The entity positions are not relative to the sub-region's minimum corner,
@@ -262,9 +281,13 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
                     Vec3d pos = info.pos.add(regionOffsetEntities.getX(), regionOffsetEntities.getY(), regionOffsetEntities.getZ());
                     NBTTagCompound nbt = info.nbt.copy();
                     NBTUtils.writeVec3dToListTag(pos, nbt);
-                    this.entities.add(new EntityInfo(pos, nbt));
+                    builderEntities.add(new EntityInfo(pos, nbt));
                 });
             }
+
+            this.setBlockEntityMap(builderBlockEntities.build());
+            this.setBlockTickMap(builderBlockTicks.build());
+            this.setEntityList(builderEntities.build());
         }
     }
 
@@ -282,11 +305,8 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
     }
 
     @Override
-    public final boolean fromTag(NBTTagCompound tag)
+    protected final boolean fromCachedTag(NBTTagCompound tag)
     {
-        this.clear();
-
-        this.initFromTag(tag);
         this.setSize(this.readSizeFromTag(tag), true);
 
         if (isSizeValid(this.regionSize) == false)
@@ -295,10 +315,11 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
             return false;
         }
 
-        if (this.readBlocksFromTag(tag))
+        final boolean needsVersionConversion = this.isFromDifferentMinecraftVersion();
+
+        if (this.readBlocksFromTag(tag, needsVersionConversion))
         {
-            this.blockEntities.putAll(this.readBlockEntitiesFromTag(tag));
-            this.entities.addAll(this.readEntitiesFromTag(tag));
+            this.readAllEntityData(tag, needsVersionConversion);
             this.readMetadataFromTag(tag);
 
             return true;
@@ -310,13 +331,10 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
         }
     }
 
-    /**
-     * This method is called first, when reading data from NBT.
-     * It allows the schematic to initialize any required custom things before the common methods are called.
-     * @param tag
-     */
-    protected void initFromTag(NBTTagCompound tag)
+    protected void readAllEntityData(NBTTagCompound tag, boolean needsVersionConversion)
     {
+        this.blockEntities = this.readBlockEntitiesFromTag(tag, needsVersionConversion);
+        this.entities = this.readEntitiesFromTag(tag, needsVersionConversion);
     }
 
     @Override
@@ -325,7 +343,7 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
         super.readMetadataFromTag(tag);
 
         // Not stored in metadata yet
-        if (this.getMetadata().getTotalBlocks() < 0)
+        if (this.blockContainer != null && this.getMetadata().getTotalBlocks() < 0)
         {
             long totalBlocks = this.blockContainer.getTotalBlockCount();
             this.getMetadata().setTotalBlocks(totalBlocks);
@@ -334,9 +352,9 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
 
     @Nullable protected abstract Vec3i readSizeFromTag(NBTTagCompound tag);
 
-    protected abstract boolean readBlocksFromTag(NBTTagCompound tag);
+    protected abstract boolean readBlocksFromTag(NBTTagCompound tag, boolean needsVersionConversion);
 
-    protected abstract Map<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag);
+    protected abstract ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion);
 
-    protected abstract List<EntityInfo> readEntitiesFromTag(NBTTagCompound tag);
+    protected abstract ImmutableList<EntityInfo> readEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion);
 }

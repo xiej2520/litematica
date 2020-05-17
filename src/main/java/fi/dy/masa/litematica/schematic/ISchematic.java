@@ -10,6 +10,8 @@ import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.Vec3i;
 import fi.dy.masa.litematica.Litematica;
+import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataVersion;
 import fi.dy.masa.malilib.gui.util.Message.MessageType;
 import fi.dy.masa.malilib.util.InfoUtils;
 import fi.dy.masa.malilib.util.NBTUtils;
@@ -72,6 +74,20 @@ public interface ISchematic
      * @return
      */
     @Nullable ISchematicRegion getSchematicRegion(String regionName);
+
+    /**
+     * Returns the current schematic data version of this schematic.
+     * This is the version the schematic was read from file as, or created as
+     * (in which case it would be the current game version).
+     * @return
+     */
+    SchematicDataVersion getCurrentSchematicDataVersion();
+
+    /**
+     * Sets the Minecraft version that this schematic should be written to file as.
+     * @param version
+     */
+    void setOutputMinecraftVersion(MinecraftVersion version);
 
     /**
      * Reads the data from the provided other schematic

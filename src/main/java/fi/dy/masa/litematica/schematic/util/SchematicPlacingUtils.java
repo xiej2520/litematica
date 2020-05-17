@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.Pair;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import net.minecraft.block.material.Material;
@@ -152,9 +153,9 @@ public class SchematicPlacingUtils
                     BlockPos regionPos = placement.getPos();
                     Vec3i regionSize = region.getSize();
                     ILitematicaBlockStateContainer container = region.getBlockStateContainer();
-                    Map<BlockPos, NBTTagCompound> blockEntityMap = region.getBlockEntityMap();
-                    List<EntityInfo> entityList = region.getEntityList();
-                    Map<BlockPos, NextTickListEntry> scheduledBlockTicks = region.getBlockTickMap();
+                    ImmutableList<EntityInfo> entityList = region.getEntityList();
+                    ImmutableMap<BlockPos, NBTTagCompound> blockEntityMap = region.getBlockEntityMap();
+                    ImmutableMap<BlockPos, NextTickListEntry> scheduledBlockTicks = region.getBlockTickMap();
 
                     if (regionPos != null && regionSize != null && container != null && blockEntityMap != null)
                     {
@@ -188,7 +189,7 @@ public class SchematicPlacingUtils
     public static boolean placeBlocksToWorld(World world, BlockPos origin, BlockPos regionPos, Vec3i regionSize,
             SchematicPlacement schematicPlacement, SubRegionPlacement placement,
             ILitematicaBlockStateContainer container, Map<BlockPos, NBTTagCompound> tileMap,
-            @Nullable Map<BlockPos, NextTickListEntry> scheduledTicks, LayerRange range, boolean notifyNeighbors)
+            @Nullable Map<BlockPos, NextTickListEntry> scheduledBlockTicks, LayerRange range, boolean notifyNeighbors)
     {
         // These are the untransformed relative positions
         BlockPos posEndRelSub = new BlockPos(PositionUtils.getRelativeEndPositionFromAreaSize(regionSize));
@@ -287,7 +288,9 @@ public class SchematicPlacingUtils
                         world.setBlockState(pos, barrier, 0x14);
                     }
 
-                    if (world.setBlockState(pos, state, 0x12) && teNBT != null)
+                    boolean setBlock = world.setBlockState(pos, state, 0x12);
+
+                    if (setBlock && teNBT != null)
                     {
                         TileEntity te = world.getTileEntity(pos);
 
@@ -312,6 +315,17 @@ public class SchematicPlacingUtils
                             }
                         }
                     }
+
+                    if (setBlock && scheduledBlockTicks != null)
+                    {
+                        posMutable.setPos(x, y, z);
+                        NextTickListEntry entry = scheduledBlockTicks.get(posMutable);
+
+                        if (entry != null)
+                        {
+                            world.scheduleBlockUpdate(pos, state.getBlock(), (int) entry.scheduledTime, entry.priority);
+                        }
+                    }
                 }
             }
         }
@@ -331,16 +345,6 @@ public class SchematicPlacingUtils
                         world.notifyNeighborsRespectDebug(pos, world.getBlockState(pos).getBlock(), false);
                     }
                 }
-            }
-        }
-
-        if (scheduledTicks != null && scheduledTicks.isEmpty() == false)
-        {
-            for (Map.Entry<BlockPos, NextTickListEntry> entry : scheduledTicks.entrySet())
-            {
-                BlockPos pos = entry.getKey().add(regionPosAbs);
-                NextTickListEntry tick = entry.getValue();
-                world.scheduleBlockUpdate(pos, world.getBlockState(pos).getBlock(), (int) tick.scheduledTime, tick.priority);
             }
         }
 
@@ -442,7 +446,8 @@ public class SchematicPlacingUtils
     {
         IntBoundingBox bounds = schematicPlacement.getBoxWithinChunkForRegion(regionName, chunkPos.x, chunkPos.z);
         ILitematicaBlockStateContainer container = region.getBlockStateContainer();
-        Map<BlockPos, NBTTagCompound> blockEntityMap = region.getBlockEntityMap();
+        ImmutableMap<BlockPos, NBTTagCompound> blockEntityMap = region.getBlockEntityMap();
+        ImmutableMap<BlockPos, NextTickListEntry> scheduledBlockTicks = region.getBlockTickMap();
 
         if (bounds == null || container == null || blockEntityMap == null)
         {
@@ -554,7 +559,9 @@ public class SchematicPlacingUtils
                         world.setBlockState(pos, barrier, 0x14);
                     }
 
-                    if (world.setBlockState(pos, state, 0x12) && teNBT != null)
+                    boolean setBlock = world.setBlockState(pos, state, 0x12);
+
+                    if (setBlock && teNBT != null)
                     {
                         te = world.getTileEntity(pos);
 
@@ -577,6 +584,17 @@ public class SchematicPlacingUtils
                             {
                                 Litematica.logger.warn("Failed to load TileEntity data for {} @ {}", state, pos);
                             }
+                        }
+                    }
+
+                    if (setBlock && scheduledBlockTicks != null)
+                    {
+                        posMutable.setPos(x, y, z);
+                        NextTickListEntry entry = scheduledBlockTicks.get(posMutable);
+
+                        if (entry != null)
+                        {
+                            world.scheduleBlockUpdate(pos, state.getBlock(), (int) entry.scheduledTime, entry.priority);
                         }
                     }
                 }
@@ -608,7 +626,7 @@ public class SchematicPlacingUtils
             BlockPos origin, SchematicPlacement schematicPlacement, SubRegionPlacement placement)
     {
         BlockPos regionPos = placement.getPos();
-        List<EntityInfo> entityList = region.getEntityList();
+        ImmutableList<EntityInfo> entityList = region.getEntityList();
 
         if (entityList == null)
         {

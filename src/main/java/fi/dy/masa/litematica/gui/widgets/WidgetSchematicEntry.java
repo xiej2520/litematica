@@ -14,6 +14,7 @@ import fi.dy.masa.litematica.data.SchematicHolder;
 import fi.dy.masa.litematica.gui.GuiSchematicSaveConvert;
 import fi.dy.masa.litematica.gui.LitematicaGuiIcons;
 import fi.dy.masa.litematica.schematic.ISchematic;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataVersion;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
 import fi.dy.masa.malilib.gui.GuiBase;
@@ -191,6 +192,10 @@ public class WidgetSchematicEntry extends WidgetListEntryBase<ISchematic>
             lines.add(StringUtils.translate("litematica.gui.label.schematic_placement.hover.schematic_name", this.schematic.getMetadata().getName()));
             lines.add(StringUtils.translate("litematica.gui.label.schematic_placement.hover.schematic_file", fileName));
             lines.add(StringUtils.translate("litematica.gui.label.schematic_placement.hover.schematic_type", this.schematic.getType().getDisplayName()));
+
+            SchematicDataVersion version = this.schematic.getCurrentSchematicDataVersion();
+            String strDV = String.valueOf(version.getDataVersion());
+            lines.add(StringUtils.translate("litematica.gui.label.schematic_placement.hover.schematic_data_version", version.getMcVersionDisplayName(), strDV));
 
             RenderUtils.drawHoverText(mouseX, mouseY, z, lines);
         }

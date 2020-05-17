@@ -139,32 +139,35 @@ public class SchematicCreationUtils
         {
             String regionName = box.getName();
             ISchematicRegion region = schematic.getSchematicRegion(regionName);
-            List<EntityInfo> schematicEntityList = region != null ? region.getEntityList() : null;
 
-            if (schematicEntityList == null)
+            if (region == null)
             {
-                InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, "litematica.message.error.schematic_save.missing_entity_list", box.getName());
+                InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, "litematica.message.error.schematic_save_invalid_region_name", regionName);
                 continue;
             }
 
             AxisAlignedBB bb = PositionUtils.createEnclosingAABB(box.getPos1(), box.getPos2());
             BlockPos regionPosAbs = box.getPos1();
-            List<EntityInfo> list = new ArrayList<>();
+            ArrayList<EntityInfo> list = new ArrayList<>();
             List<Entity> entities = world.getEntitiesInAABBexcluding(null, bb, null);
 
             for (Entity entity : entities)
             {
                 NBTTagCompound tag = new NBTTagCompound();
 
-                if (entity.writeToNBTOptional(tag))
+                try
                 {
-                    Vec3d posVec = new Vec3d(entity.posX - regionPosAbs.getX(), entity.posY - regionPosAbs.getY(), entity.posZ - regionPosAbs.getZ());
-                    NBTUtils.writeVec3dToListTag(posVec, tag);
-                    list.add(new EntityInfo(posVec, tag));
+                    if (entity.writeToNBTOptional(tag))
+                    {
+                        Vec3d posVec = new Vec3d(entity.posX - regionPosAbs.getX(), entity.posY - regionPosAbs.getY(), entity.posZ - regionPosAbs.getZ());
+                        NBTUtils.writeVec3dToListTag(posVec, tag);
+                        list.add(new EntityInfo(posVec, tag));
+                    }
                 }
+                catch (Exception ignore) {}
             }
 
-            schematicEntityList.addAll(list);
+            region.setEntityList(list);
         }
     }
 
@@ -174,19 +177,19 @@ public class SchematicCreationUtils
         for (Map.Entry<String, IntBoundingBox> entry : volumes.entrySet())
         {
             String regionName = entry.getKey();
-            Box box = boxes.get(regionName);
             ISchematicRegion region = schematic.getSchematicRegion(regionName);
-            List<EntityInfo> schematicEntityList = region != null ? region.getEntityList() : null;
+            Box box = boxes.get(regionName);
 
-            if (box == null || schematicEntityList == null)
+            if (box == null || region == null)
             {
-                InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, "litematica.message.error.schematic_save.missing_entity_list", regionName);
+                InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, "litematica.message.error.schematic_save_invalid_region_name", regionName);
                 continue;
             }
 
             AxisAlignedBB bb = PositionUtils.createAABBFrom(entry.getValue());
             List<Entity> entities = world.getEntitiesInAABBexcluding(null, bb, null);
             BlockPos regionPosAbs = box.getPos1();
+            ArrayList<EntityInfo> list = new ArrayList<>();
 
             for (Entity entity : entities)
             {
@@ -204,11 +207,13 @@ public class SchematicCreationUtils
                     {
                         Vec3d posVec = new Vec3d(entity.posX - regionPosAbs.getX(), entity.posY - regionPosAbs.getY(), entity.posZ - regionPosAbs.getZ());
                         NBTUtils.writeVec3dToListTag(posVec, tag);
-                        schematicEntityList.add(new EntityInfo(posVec, tag));
+                        list.add(new EntityInfo(posVec, tag));
                         existingEntities.add(uuid);
                     }
                 }
             }
+
+            region.setEntityList(list);
         }
     }
 
@@ -221,16 +226,23 @@ public class SchematicCreationUtils
         {
             String regionName = box.getName();
             ISchematicRegion region = schematic.getSchematicRegion(regionName);
-            ILitematicaBlockStateContainer container = region != null ? region.getBlockStateContainer() : null;
-            Map<BlockPos, NBTTagCompound> blockEntityMap = region != null ? region.getBlockEntityMap() : null;
-            Map<BlockPos, NextTickListEntry> tickMap = region != null ? region.getBlockTickMap() : null;
 
-            if (container == null || blockEntityMap == null || tickMap == null)
+            if (region == null)
+            {
+                InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, "litematica.message.error.schematic_save_invalid_region_name", regionName);
+                continue;
+            }
+
+            ILitematicaBlockStateContainer container = region != null ? region.getBlockStateContainer() : null;
+
+            if (container == null)
             {
                 InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, "litematica.message.error.schematic_save.missing_container", regionName);
                 continue;
             }
 
+            ImmutableMap.Builder<BlockPos, NBTTagCompound> builderBlockEntities = ImmutableMap.builder();
+            ImmutableMap.Builder<BlockPos, NextTickListEntry> builderBlockTicks = ImmutableMap.builder();
             Vec3i size = box.getSize();
             final int sizeX = Math.abs(size.getX());
             final int sizeY = Math.abs(size.getY());
@@ -269,12 +281,14 @@ public class SchematicCreationUtils
                                 BlockPos pos = new BlockPos(x, y, z);
                                 NBTTagCompound tag = te.writeToNBT(new NBTTagCompound());
                                 NBTUtils.writeBlockPosToTag(pos, tag);
-                                blockEntityMap.put(pos, tag);
+                                builderBlockEntities.put(pos, tag);
                             }
                         }
                     }
                 }
             }
+
+            region.setBlockEntityMap(builderBlockEntities.build());
 
             if (world instanceof WorldServer)
             {
@@ -304,9 +318,11 @@ public class SchematicCreationUtils
                             newEntry.setPriority(entry.priority);
                             newEntry.setScheduledTime(entry.scheduledTime - currentTime);
 
-                            tickMap.put(posRelative, newEntry);
+                            builderBlockTicks.put(posRelative, newEntry);
                         }
                     }
+
+                    region.setBlockTickMap(builderBlockTicks.build());
                 }
             }
         }
@@ -334,15 +350,15 @@ public class SchematicCreationUtils
             }
 
             ILitematicaBlockStateContainer container = region.getBlockStateContainer();
-            Map<BlockPos, NBTTagCompound> blockEntityMap = region.getBlockEntityMap();
-            Map<BlockPos, NextTickListEntry> tickMap = region.getBlockTickMap();
 
-            if (container == null || blockEntityMap == null || tickMap == null)
+            if (container == null)
             {
                 InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, "litematica.message.error.schematic_save.missing_container", regionName);
-                Litematica.logger.error("null map(s) for sub-region '{}' while trying to save chunk-wise schematic", regionName);
                 continue;
             }
+
+            ImmutableMap.Builder<BlockPos, NBTTagCompound> builderBlockEntities = ImmutableMap.builder();
+            ImmutableMap.Builder<BlockPos, NextTickListEntry> builderBlockTicks = ImmutableMap.builder();
 
             // We want to loop nice & easy from 0 to n here, but the per-sub-region pos1 can be at
             // any corner of the area. Thus we need to offset from the total area origin
@@ -384,12 +400,14 @@ public class SchematicCreationUtils
                                 BlockPos pos = new BlockPos(x, y, z);
                                 NBTTagCompound tag = te.writeToNBT(new NBTTagCompound());
                                 NBTUtils.writeBlockPosToTag(pos, tag);
-                                blockEntityMap.put(pos, tag);
+                                builderBlockEntities.put(pos, tag);
                             }
                         }
                     }
                 }
             }
+
+            region.setBlockEntityMap(builderBlockEntities.build());
 
             if (world instanceof WorldServer)
             {
@@ -419,9 +437,11 @@ public class SchematicCreationUtils
                             newEntry.setPriority(entry.priority);
                             newEntry.setScheduledTime(entry.scheduledTime - currentTime);
 
-                            tickMap.put(posRelative, newEntry);
+                            builderBlockTicks.put(posRelative, newEntry);
                         }
                     }
+
+                    region.setBlockTickMap(builderBlockTicks.build());
                 }
             }
         }

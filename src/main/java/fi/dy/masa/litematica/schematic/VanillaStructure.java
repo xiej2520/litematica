@@ -1,10 +1,8 @@
 package fi.dy.masa.litematica.schematic;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import javax.annotation.Nullable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
@@ -17,6 +15,7 @@ import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerSparse;
 import fi.dy.masa.litematica.schematic.container.VanillaStructurePalette;
+import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.malilib.util.Constants;
 import fi.dy.masa.malilib.util.InfoUtils;
@@ -42,13 +41,31 @@ public class VanillaStructure extends SingleRegionSchematic
     {
         if (tag.hasKey("blocks", Constants.NBT.TAG_LIST) &&
             tag.hasKey("palette", Constants.NBT.TAG_LIST) &&
-            tag.hasKey("size", Constants.NBT.TAG_LIST) &&
-            tag.hasKey("DataVersion", Constants.NBT.TAG_INT))
+            tag.hasKey("size", Constants.NBT.TAG_LIST))
         {
             return isSizeValid(readSizeFromTagImpl(tag));
         }
 
         return false;
+    }
+
+    @Override
+    protected boolean initFromTag(NBTTagCompound tag)
+    {
+        int dataVersion;
+
+        if (tag.hasKey("DataVersion", Constants.NBT.TAG_INT))
+        {
+            dataVersion = tag.getInteger("DataVersion");
+        }
+        else
+        {
+            dataVersion = MinecraftVersion.MC_1_12.getMinDataVersion();
+        }
+
+        this.setCurrentDataVersionWithFallback(dataVersion);
+
+        return true;
     }
 
     @Override
@@ -77,7 +94,7 @@ public class VanillaStructure extends SingleRegionSchematic
     }
 
     @Override
-    protected boolean readBlocksFromTag(NBTTagCompound tag)
+    protected boolean readBlocksFromTag(NBTTagCompound tag, boolean needsVersionConversion)
     {
         if (tag.hasKey("palette", Constants.NBT.TAG_LIST) &&
             tag.hasKey("blocks", Constants.NBT.TAG_LIST) &&
@@ -86,6 +103,11 @@ public class VanillaStructure extends SingleRegionSchematic
             NBTTagList paletteTag = tag.getTagList("palette", Constants.NBT.TAG_COMPOUND);
             LitematicaBlockStateContainerSparse container = (LitematicaBlockStateContainerSparse) this.blockContainer;
             ILitematicaBlockStatePalette palette = container.getPalette();
+
+            if (needsVersionConversion)
+            {
+                paletteTag = this.convertBlockStatePaletteToCurrentGameVersion(paletteTag);
+            }
 
             if (this.readPaletteFromLitematicaFormatTag(paletteTag, palette) == false)
             {
@@ -99,6 +121,7 @@ public class VanillaStructure extends SingleRegionSchematic
             }
 
             NBTTagList blockList = tag.getTagList("blocks", Constants.NBT.TAG_COMPOUND);
+            ImmutableMap.Builder<BlockPos, NBTTagCompound> builderBlockEntities = ImmutableMap.builder();
             final int count = blockList.tagCount();
 
             for (int i = 0; i < count; ++i)
@@ -124,9 +147,11 @@ public class VanillaStructure extends SingleRegionSchematic
 
                 if (blockTag.hasKey("nbt", Constants.NBT.TAG_COMPOUND))
                 {
-                    this.blockEntities.put(pos, blockTag.getCompoundTag("nbt"));
+                    builderBlockEntities.put(pos, blockTag.getCompoundTag("nbt"));
                 }
             }
+
+            this.blockEntities = builderBlockEntities.build();
 
             return true;
         }
@@ -135,15 +160,21 @@ public class VanillaStructure extends SingleRegionSchematic
     }
 
     @Override
-    protected Map<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag)
+    protected void readAllEntityData(NBTTagCompound tag, boolean needsVersionConversion)
+    {
+        this.entities = this.readEntitiesFromTag(tag, needsVersionConversion);
+    }
+
+    @Override
+    protected ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion)
     {
         return ImmutableMap.of();
     }
 
     @Override
-    protected List<EntityInfo> readEntitiesFromTag(NBTTagCompound tag)
+    protected ImmutableList<EntityInfo> readEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion)
     {
-        List<EntityInfo> entities = new ArrayList<>();
+        ImmutableList.Builder<EntityInfo> builder = ImmutableList.builder();
         NBTTagList tagList = tag.getTagList("entities", Constants.NBT.TAG_COMPOUND);
         final int size = tagList.tagCount();
 
@@ -154,11 +185,11 @@ public class VanillaStructure extends SingleRegionSchematic
 
             if (pos != null && entityData.hasKey("nbt", Constants.NBT.TAG_COMPOUND))
             {
-                entities.add(new EntityInfo(pos, entityData.getCompoundTag("nbt")));
+                builder.add(new EntityInfo(pos, entityData.getCompoundTag("nbt")));
             }
         }
 
-        return entities;
+        return builder.build();
     }
 
     protected void writeMetadataToTag(NBTTagCompound tag)
@@ -170,8 +201,8 @@ public class VanillaStructure extends SingleRegionSchematic
     protected void writeBlocksToTag(NBTTagCompound tag)
     {
         // Dummy resize handler, the hash map palette doesn't need to be re-created
-        ILitematicaBlockStatePalette palette = new VanillaStructurePalette();
-        NBTTagList blockList = new NBTTagList();
+        final ILitematicaBlockStatePalette palette = new VanillaStructurePalette();
+        final NBTTagList blockList = new NBTTagList();
 
         if (this.blockContainer instanceof LitematicaBlockStateContainerSparse)
         {
