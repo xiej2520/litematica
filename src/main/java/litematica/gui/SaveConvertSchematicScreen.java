@@ -14,6 +14,7 @@ import litematica.schematic.SchematicMetadata;
 import litematica.schematic.SchematicType;
 import litematica.schematic.placement.SchematicPlacementManager;
 import litematica.schematic.util.SchematicFileUtils;
+import malilib.util.game.MinecraftVersion;
 
 public class SaveConvertSchematicScreen extends BaseSaveSchematicScreen
 {
@@ -121,6 +122,8 @@ public class SaveConvertSchematicScreen extends BaseSaveSchematicScreen
                 return;
             }
         }
+
+        schematic.getMetadata().setMinecraftVersion(MinecraftVersion.CURRENT_VERSION);
 
         if (SchematicFileUtils.writeToFile(schematic, file, overwrite))
         {

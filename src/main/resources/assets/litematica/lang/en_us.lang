@@ -498,7 +498,7 @@ litematica.message.error.schematic_verifier.no_placement_selected=No selected Ve
 
 litematica.message.info.material_cache_cleared=Material List Cache cleared
 litematica.message.info.material_list.written_to_file=Material List written to file §e%s§r
-litematica.message.info.schematic_changed_in_placement=Schematic §e%s§r loaded and changed to the placement 
+litematica.message.info.schematic_changed_in_placement=Schematic §e%s§r loaded and changed to the placement
 litematica.message.info.schematic_loaded_to_memory=Schematic '%s' successfully loaded to memory
 litematica.message.info.schematic_manager.description_set=Schematic description set
 litematica.message.info.schematic_manager.preview_removed=Schematic preview image removed
@@ -518,10 +518,10 @@ litematica.message.warn.pick_block.no_valid_slots_configured=The pick block feat
 litematica.message.warn.schematic_read.failed_to_read_block_entities=Failed to read §b%s§r block entities, successfully read §b%s§r
 litematica.message.warn.schematic_read.failed_to_read_entities=Failed to read §b%s§r entities, successfully read §b%s§r
 litematica.message.warn.schematic_read.failed_to_read_blocks=Failed to read §b%s§r blocks, successfully read §b%s§r
-litematica.message.warn.schematic_read.litematica.block_entity_errors=Failed to read §b%s§r block entities from file (successfully read §b%s§r) in region §e%s§r 
-litematica.message.warn.schematic_read.litematica.block_tick_errors=Failed to read §b%s§r scheduled block ticks from file (successfully read §b%s§r) in region §e%s§r 
-litematica.message.warn.schematic_read.litematica.entity_errors=Failed to read §b%s§r entities from file (successfully read §b%s§r) in region §e%s§r 
-litematica.message.warn.schematic_write.indev_world.block_write_errors=Failed to write §b%s§r blocks to the file (too large block ID?) 
+litematica.message.warn.schematic_read.litematica.block_entity_errors=Failed to read §b%s§r block entities from file (successfully read §b%s§r) in region §e%s§r
+litematica.message.warn.schematic_read.litematica.block_tick_errors=Failed to read §b%s§r scheduled block ticks from file (successfully read §b%s§r) in region §e%s§r
+litematica.message.warn.schematic_read.litematica.entity_errors=Failed to read §b%s§r entities from file (successfully read §b%s§r) in region §e%s§r
+litematica.message.warn.schematic_write.indev_world.block_write_errors=Failed to write §b%s§r blocks to the file (too large block ID?)
 
 litematica.error.area_selection.copy_failed=Failed to copy the selection
 litematica.error.area_selection.create_failed=Failed to create a new selection by the name §e'%s'§r, file already exists
