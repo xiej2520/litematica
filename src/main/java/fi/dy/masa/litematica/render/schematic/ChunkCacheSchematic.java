@@ -9,6 +9,7 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockRenderView;
 import net.minecraft.world.LightType;
+import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.light.LightingProvider;
@@ -19,7 +20,6 @@ public class ChunkCacheSchematic implements BlockRenderView
 {
     private static final BlockState AIR = Blocks.AIR.getDefaultState();
 
-    protected final ClientWorld world;
     protected final ClientWorld worldClient;
     protected final FakeLightingProvider lightingProvider;
     protected int chunkStartX;
@@ -27,11 +27,10 @@ public class ChunkCacheSchematic implements BlockRenderView
     protected WorldChunk[][] chunkArray;
     protected boolean empty;
 
-    public ChunkCacheSchematic(ClientWorld worldIn, ClientWorld clientWorld, BlockPos pos, int expand)
+    public ChunkCacheSchematic(World worldIn, ClientWorld clientWorld, BlockPos pos, int expand)
     {
         this.lightingProvider = new FakeLightingProvider();
 
-        this.world = worldIn;
         this.worldClient = clientWorld;
         this.chunkStartX = (pos.getX() - expand) >> 4;
         this.chunkStartZ = (pos.getZ() - expand) >> 4;
@@ -44,7 +43,7 @@ public class ChunkCacheSchematic implements BlockRenderView
         {
             for (int cz = this.chunkStartZ; cz <= chunkEndZ; ++cz)
             {
-                this.chunkArray[cx - this.chunkStartX][cz - this.chunkStartZ] = (WorldChunk) worldIn.getChunk(cx, cz);
+                this.chunkArray[cx - this.chunkStartX][cz - this.chunkStartZ] = worldIn.getChunk(cx, cz);
             }
         }
 

@@ -7,6 +7,7 @@ import net.minecraft.world.GameMode;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.level.LevelGeneratorType;
 import net.minecraft.world.level.LevelInfo;
+import net.minecraft.world.level.LevelProperties;
 
 public class SchematicWorldHandler
 {
@@ -21,7 +22,7 @@ public class SchematicWorldHandler
     public static WorldSchematic createSchematicWorld()
     {
         LevelInfo info = new LevelInfo(0, GameMode.CREATIVE, false, false, LevelGeneratorType.FLAT);
-        return new WorldSchematic(null, info, DimensionType.THE_END, MinecraftClient.getInstance().getProfiler());
+        return new WorldSchematic(new LevelProperties(info, "SchematicWorld"), DimensionType.THE_END, MinecraftClient.getInstance().getProfiler());
     }
 
     public static void recreateSchematicWorld(boolean remove)
