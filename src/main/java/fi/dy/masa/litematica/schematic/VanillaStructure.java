@@ -15,7 +15,11 @@ import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerSparse;
 import fi.dy.masa.litematica.schematic.container.VanillaStructurePalette;
+import fi.dy.masa.litematica.schematic.conversion.BlockEntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.EntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.InventoryDataConverter;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataConversionManager;
 import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.malilib.util.Constants;
 import fi.dy.masa.malilib.util.InfoUtils;
@@ -50,7 +54,20 @@ public class VanillaStructure extends SingleRegionSchematic
     }
 
     @Override
-    protected boolean initFromTag(NBTTagCompound tag)
+    @Nullable
+    protected Vec3i readSizeFromTag(NBTTagCompound tag)
+    {
+        return readSizeFromTagImpl(tag);
+    }
+
+    @Nullable
+    private static Vec3i readSizeFromTagImpl(NBTTagCompound tag)
+    {
+        return NBTUtils.readBlockPosFromListTag(tag, "size");
+    }
+
+    @Override
+    protected boolean setDataVersionFromTag(NBTTagCompound tag)
     {
         int dataVersion;
 
@@ -60,7 +77,7 @@ public class VanillaStructure extends SingleRegionSchematic
         }
         else
         {
-            dataVersion = MinecraftVersion.MC_1_12.getMinDataVersion();
+            dataVersion = MinecraftVersion.MC_1_12_X.getMaxDataVersion();
         }
 
         this.setCurrentDataVersionWithFallback(dataVersion);
@@ -81,25 +98,17 @@ public class VanillaStructure extends SingleRegionSchematic
     }
 
     @Override
-    @Nullable
-    protected Vec3i readSizeFromTag(NBTTagCompound tag)
-    {
-        return readSizeFromTagImpl(tag);
-    }
-
-    @Nullable
-    private static Vec3i readSizeFromTagImpl(NBTTagCompound tag)
-    {
-        return NBTUtils.readBlockPosFromListTag(tag, "size");
-    }
-
-    @Override
     protected boolean readBlocksFromTag(NBTTagCompound tag, boolean needsVersionConversion)
     {
         if (tag.hasKey("palette", Constants.NBT.TAG_LIST) &&
             tag.hasKey("blocks", Constants.NBT.TAG_LIST) &&
             isSizeValid(this.getSize()))
         {
+            final MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
+            final MinecraftVersion versionTo = CURRENT_MINECRAFT_VERSION;
+            final BlockEntityDataConverter beConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom, versionTo) : null;
+            final InventoryDataConverter invConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getInventoryDataConverter(versionFrom, versionTo) : null;
+
             NBTTagList paletteTag = tag.getTagList("palette", Constants.NBT.TAG_COMPOUND);
             LitematicaBlockStateContainerSparse container = (LitematicaBlockStateContainerSparse) this.blockContainer;
             ILitematicaBlockStatePalette palette = container.getPalette();
@@ -147,7 +156,22 @@ public class VanillaStructure extends SingleRegionSchematic
 
                 if (blockTag.hasKey("nbt", Constants.NBT.TAG_COMPOUND))
                 {
-                    builderBlockEntities.put(pos, blockTag.getCompoundTag("nbt"));
+                    NBTTagCompound nbt = blockTag.getCompoundTag("nbt").copy();
+
+                    if (needsVersionConversion)
+                    {
+                        if (beConverter != null)
+                        {
+                            beConverter.convertName(nbt, "id");
+                        }
+
+                        if (invConverter != null)
+                        {
+                            invConverter.convertAnyInventoryContents(nbt.getString("id"), nbt);
+                        }
+                    }
+
+                    builderBlockEntities.put(pos, nbt);
                 }
             }
 
@@ -160,19 +184,14 @@ public class VanillaStructure extends SingleRegionSchematic
     }
 
     @Override
-    protected void readAllEntityData(NBTTagCompound tag, boolean needsVersionConversion)
+    protected ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag, @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter)
     {
-        this.entities = this.readEntitiesFromTag(tag, needsVersionConversion);
+        // The data is read together with the blocks themselves, so just return the existing map
+        return this.blockEntities;
     }
 
     @Override
-    protected ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion)
-    {
-        return ImmutableMap.of();
-    }
-
-    @Override
-    protected ImmutableList<EntityInfo> readEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion)
+    protected ImmutableList<EntityInfo> readEntitiesFromTag(NBTTagCompound tag, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
     {
         ImmutableList.Builder<EntityInfo> builder = ImmutableList.builder();
         NBTTagList tagList = tag.getTagList("entities", Constants.NBT.TAG_COMPOUND);
@@ -185,34 +204,82 @@ public class VanillaStructure extends SingleRegionSchematic
 
             if (pos != null && entityData.hasKey("nbt", Constants.NBT.TAG_COMPOUND))
             {
-                builder.add(new EntityInfo(pos, entityData.getCompoundTag("nbt")));
+                NBTTagCompound nbt = entityData.getCompoundTag("nbt").copy();
+                this.convertEntityTag(nbt, "id", entityConverter, invConverter);
+                builder.add(new EntityInfo(pos, nbt));
             }
         }
 
         return builder.build();
     }
 
-    protected void writeMetadataToTag(NBTTagCompound tag)
+    @Override
+    public NBTTagCompound toTag()
     {
-        tag.setTag("Metadata", this.getMetadata().toTag());
-        tag.setString("author", this.getMetadata().getAuthor());
+        NBTTagCompound tag = this.toTagBase();
+
+        tag.setInteger("DataVersion", this.requestedOutputMinecraftVersion.getMaxDataVersion());
+
+        return tag;
     }
 
-    protected void writeBlocksToTag(NBTTagCompound tag)
+    @Override
+    protected void onWriteToTag(NBTTagCompound tagOut, @Nullable NBTTagCompound cachedTag)
     {
+        // The block data has been modified, overwrite the cached values with the current values
+        if (cachedTag == null)
+        {
+            NBTUtils.writeBlockPosToListTag(this.getSize(), tagOut, "size");
+        }
+    }
+
+    @Override
+    protected void writeMetadataToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag)
+    {
+        NBTTagCompound metaTag = this.getMetadataTagForWriting(cachedTag);
+        String author = this.getMetadata().getAuthor();
+
+        if (author.isEmpty() == false && metaTag.hasKey("author", Constants.NBT.TAG_STRING) == false)
+        {
+            tag.setString("author", author);
+        }
+
+        tag.setTag("Metadata", metaTag);
+    }
+
+    @Override
+    protected void writeBlocksToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, boolean needsConversion)
+    {
+        final MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
+        final MinecraftVersion versionTo = this.requestedOutputMinecraftVersion;
         // Dummy resize handler, the hash map palette doesn't need to be re-created
         final ILitematicaBlockStatePalette palette = new VanillaStructurePalette();
-        final NBTTagList blockList = new NBTTagList();
+        final BlockPos.MutableBlockPos posMutable = new BlockPos.MutableBlockPos();
+        final BlockEntityDataConverter beConverter = needsConversion ? SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom, versionTo) : null;
+        final InventoryDataConverter invConverter = needsConversion ? SchematicDataConversionManager.INSTANCE.getInventoryDataConverter(versionFrom, versionTo) : null;
+        NBTTagList blockList = new NBTTagList();
+        NBTTagList paletteList;
 
-        if (this.blockContainer instanceof LitematicaBlockStateContainerSparse)
+        if (cachedTag != null &&
+            this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCKS) &&
+            this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_ENTITIES))
+        {
+            blockList = cachedTag.getTagList("blocks", Constants.NBT.TAG_COMPOUND);
+            paletteList = cachedTag.getTagList("palette", Constants.NBT.TAG_COMPOUND);
+        }
+        else if (this.blockContainer instanceof LitematicaBlockStateContainerSparse)
         {
             LitematicaBlockStateContainerSparse container = (LitematicaBlockStateContainerSparse) this.blockContainer;
             Long2ObjectOpenHashMap<IBlockState> blockMap = container.getBlockMap();
+            final NBTTagList blockListTmp = blockList;
 
             blockMap.forEach((posLong, state) -> {
                 long pos = posLong.longValue();
-                this.writeBlockToList((int) (pos & 0xFFFF), (int) ((pos >>> 32) & 0xFFFF), (int) ((pos >> 16) & 0xFFFF), palette.idFor(state), blockList);
+                posMutable.setPos((int) (pos & 0xFFFF), (int) ((pos >>> 32) & 0xFFFF), (int) ((pos >> 16) & 0xFFFF));
+                this.writeBlockToList(posMutable, palette.idFor(state), blockListTmp, beConverter, invConverter);
             });
+
+            paletteList = this.writePaletteToLitematicaFormatTag(palette);
         }
         else
         {
@@ -234,47 +301,88 @@ public class VanillaStructure extends SingleRegionSchematic
 
                         if (state != ignore)
                         {
-                            this.writeBlockToList(sizeX, y, z, palette.idFor(state), blockList);
+                            posMutable.setPos(x, y, z);
+                            this.writeBlockToList(posMutable, palette.idFor(state), blockList, beConverter, invConverter);
                         }
                     }
                 }
             }
+
+            paletteList = this.writePaletteToLitematicaFormatTag(palette);
         }
 
-        NBTTagList paletteTag = this.writePaletteToLitematicaFormatTag(palette);
+        if (needsConversion)
+        {
+            paletteList = this.convertBlockStatePalette(paletteList, this.getCurrentSchematicDataVersion(), versionTo);
+        }
 
-        tag.setTag("palette", paletteTag);
+        tag.setTag("palette", paletteList);
         tag.setTag("blocks", blockList);
     }
 
-    private void writeBlockToList(int x, int y, int z, int id, NBTTagList blockList)
+    private void writeBlockToList(BlockPos.MutableBlockPos posMutable, int id, NBTTagList blockList,
+                                  @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter)
     {
         NBTTagCompound blockTag = new NBTTagCompound();
-        BlockPos pos = new BlockPos(x, y, z);
 
-        NBTUtils.writeBlockPosToListTag(pos, blockTag, "pos");
+        NBTUtils.writeBlockPosToListTag(posMutable, blockTag, "pos");
         blockTag.setInteger("state", id);
 
-        NBTTagCompound beTag = this.blockEntities.get(pos);
+        NBTTagCompound beTag = this.blockEntities.get(posMutable);
 
         if (beTag != null)
         {
-            blockTag.setTag("nbt", beTag.copy());
+            beTag = beTag.copy();
+
+            if (beConverter != null)
+            {
+                beConverter.convertName(beTag, "id");
+            }
+
+            if (invConverter != null)
+            {
+                invConverter.convertAnyInventoryContents(beTag.getString("id"), beTag);
+            }
+
+            blockTag.setTag("nbt", beTag);
         }
 
         blockList.appendTag(blockTag);
     }
 
-    protected void writeEntitiesToTag(NBTTagCompound tag)
+    @Override
+    protected void writeBlockEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag,
+                                           @Nullable BlockEntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
+    {
+        // NO-OP because the BlockEntity data is stored together with the block data in the vanilla format
+    }
+
+    @Override
+    protected void writeEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag,
+                                      @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
     {
         NBTTagList tagList = new NBTTagList();
+        BlockPos.MutableBlockPos posMutable = new BlockPos.MutableBlockPos();
 
         for (EntityInfo info : this.entities)
         {
             NBTTagCompound entityData = new NBTTagCompound();
+            posMutable.setPos(info.pos.x, info.pos.y, info.pos.z);
+
             NBTUtils.writeVec3dToListTag(info.pos, entityData, "pos");
-            NBTUtils.writeBlockPosToListTag(new BlockPos(info.pos), entityData, "blockPos");
+            NBTUtils.writeBlockPosToListTag(posMutable, entityData, "blockPos");
+
             NBTTagCompound entityTag = info.nbt.copy();
+
+            if (entityConverter != null)
+            {
+                entityConverter.convertName(entityTag, "id");
+            }
+
+            if (invConverter != null)
+            {
+                invConverter.convertAnyInventoryContents(entityTag.getString("id"), entityTag);
+            }
 
             entityTag.removeTag("Pos");
             entityData.setTag("nbt", entityTag);
@@ -283,21 +391,5 @@ public class VanillaStructure extends SingleRegionSchematic
         }
 
         tag.setTag("entities", tagList);
-    }
-
-    @Override
-    public NBTTagCompound toTag()
-    {
-        NBTTagCompound tag = new NBTTagCompound();
-
-        this.writeBlocksToTag(tag);
-        this.writeEntitiesToTag(tag);
-        this.writeMetadataToTag(tag);
-
-        NBTUtils.writeBlockPosToListTag(this.getSize(), tag, "size");
-
-        tag.setInteger("DataVersion", LitematicaSchematic.MINECRAFT_DATA_VERSION);
-
-        return tag;
     }
 }

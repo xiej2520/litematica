@@ -24,7 +24,14 @@ litematica.error.area_editor.switch_mode.no_selection=Can't switch to Selection 
 
 litematica.error.execute_operation_no_tool=As a safety measure the executeOperation hotkey requires you to hold the tool item, and the main rendering toggle option and the tool item both need to be enabled (Visuals -> 'enableRendering' ['%s'] and Generic -> 'toolItemEnabled' ['%s']). This requirement can be disabled in Generic -> 'executeRequireHoldingTool'.
 
-litematica.error.schematic_conversion.block_state_mapping.failed_to_read_mapping_from_json_data=Failed to read a block state mapping entry from the mapping JSON data
+litematica.error.schematic_conversion.block_state_mapping.failed_to_read_mapping_from_json_data=Failed to read a block state mapping entry from the mapping JSON
+litematica.error.schematic_conversion.block_entity_name_mapping.failed_to_read_names_from_json_data=Failed to read a block entity name mapping entry from the mapping JSON
+litematica.error.schematic_conversion.entity_name_mapping.failed_to_read_names_from_json_data=Failed to read an entity name mapping entry from the mapping JSON
+litematica.error.schematic_conversion.item_mapping.failed_to_read_data_from_json=Failed to read data for item mapping from the mapping JSON
+litematica.error.schematic_conversion.missing_converter.block_states=Missing converter for block state palette from version MC %s (DataVersion: %s) to version MC %s
+litematica.error.schematic_conversion.missing_converter.block_entity_data=Missing converter for block entity data from version MC %s (DataVersion: %s) to version MC %s
+litematica.error.schematic_conversion.missing_converter.block_tick_data=Missing converter for scheduled block tick data from version MC %s (DataVersion: %s) to version MC %s
+litematica.error.schematic_conversion.missing_converter.entity_data=Missing converter for entity data from version MC %s (DataVersion: %s) to version MC %s
 litematica.error.schematic_conversion.schematic_to_litematica.failed_to_create_schematic=Failed to create the Litematica schematic
 litematica.error.schematic_conversion.schematic_to_litematica.failed_to_read_schematic=Failed to load the Schematic
 litematica.error.schematic_conversion.structure_to_litematica_failed=Failed to convert the Structure to a Litematica Schematic
@@ -542,6 +549,9 @@ litematica.message.error.schematic_save_no_area_selected=§cSchematic saving fai
 litematica.message.error.schematic_write.schematica.palette.invalid_id=SchematicaSchematic: Block id %s for block '%s' is out of range, max = %s
 litematica.message.error.update_blocks_aborted=Aborted updating the blocks in the area
 
+litematica.message.info.schematic_conversion.block_entity_rename=Renamed %s block entities, kept the names of %s block entities
+litematica.message.info.schematic_conversion.entity_rename=Renamed %s entities, kept the names of %s entities
+
 litematica.message.added_selection_box=Added a new selection box at %s
 litematica.message.area_clear_fail=§cFailed to clear the area(s)§r
 litematica.message.area_cleared=Area cleared
@@ -596,7 +606,7 @@ litematica.message.warn.layer_mode_currently_at=Note: You are currently in the '
 litematica.message.warn.main_rendering_disabled=Warning: The main rendering is currently disabled\nSee Visuals -> %s, or Hotkeys -> %s ['%s']
 litematica.message.warn.schematic_blocks_rendering_disabled=Warning: Schematic blocks rendering is currently disabled\nSee Visuals -> %s, or Hotkeys -> %s ['%s']
 litematica.message.warn.schematic_conversion.non_native_data_version=Warning: The schematic is from a different Minecraft version (DataVersion: %s, interpreted as Minecraft %s). It will be automatically converted, but it's possible that the conversion is not perfect and some things may be wrong with it. Also any future blocks WILL turn into air.
-litematica.message.warn.schematic_load.palette_conversion_failures=Failed to convert some block states in the palette from a different Minecraft version to the current version. Tried to convert version from '%s' to '%s', and successfully converted %s states and failed to convert %s states.
+litematica.message.warn.schematic_conversion.palette_conversion_failures=Failed to convert some block states in the palette from a different Minecraft version to the current version. Tried to convert version from '%s' to '%s', and successfully converted %s states and failed to convert %s states.
 litematica.message.warn.schematic_load_non_litematica=Warning: When you directly load non-Litematica schematics, the created placements won't be persistent.\nAlso if you have to load the schematic many times, then the schematic type conversion lag spike (for large schematics) will happen each time you load it.\n\nIt is therefore recommended to either import the schematic and save it in the Litematica format via the Schematic Manager menu, or better yet, paste the original schematic into a temporary world using MCEdit or the Paste mode in Litematica, and then make a new Litematica schematic from that, preferably using multiple sub-regions to tightly capture the build, where applicable.
 litematica.message.warn.schematic_rebuild.subregion_not_selected=The targeted placement has a different sub-region selected. The Replace All action only works on the currently selected sub-region(s), if one is selected. To replace blocks in the entire schematic (all sub-regions), don't select any sub-regions. The blocks are also only replaced within the area limited by the current Render Layers setting.\n\n(You can select or unselect sub-regions in the Placement configuration GUI, by clicking on the sub-regions in the list. A hilighted entry is the currently selected sub-region.)
 litematica.message.warn.schematic_rendering_disabled=Warning: Schematic rendering is currently disabled\nSee Visuals -> %s, or Hotkeys -> %s ['%s']

@@ -1,8 +1,10 @@
 package fi.dy.masa.litematica.schematic.conversion;
 
+import javax.annotation.Nullable;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import javax.annotation.Nullable;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.nbt.NBTTagCompound;
@@ -17,7 +19,7 @@ public class BlockStateConverter extends DataConverterBase
 
     public BlockStateConverter(MinecraftVersion versionFrom, MinecraftVersion versionTo)
     {
-        super(versionFrom, versionTo);
+        super(versionFrom, versionTo, "block_state_map.json", "block_states");
     }
 
     @Override
@@ -35,16 +37,17 @@ public class BlockStateConverter extends DataConverterBase
         this.stateMapping.put(tagFrom, tagTo);
     }
 
-    @Nullable
-    public NBTTagCompound getConvertedBlockStateTag(NBTTagCompound stateTagIn)
-    {
-        return this.stateMapping.get(stateTagIn);
-    }
-
+    /**
+     * Converts the provided block state palette.<br>
+     * <b>Note:</b> The returned palette is independent of the input palette, all the tags are copied.
+     * @param paletteTagIn
+     * @return
+     */
     public NBTTagList convertPalette(NBTTagList paletteTagIn)
     {
         final int paletteSize = paletteTagIn.tagCount();
         NBTTagList paletteTagOut = new NBTTagList();
+        ArrayList<String> failedStates = new ArrayList<>();
         int successCount = 0;
         int failCount = 0;
 
@@ -55,14 +58,15 @@ public class BlockStateConverter extends DataConverterBase
 
             if (convertedTag != null)
             {
-                System.out.printf("converted: %s => %s\n", tag, convertedTag);
-                paletteTagOut.appendTag(convertedTag);
+                //System.out.printf("converted: %s => %s\n", tag, convertedTag);
+                paletteTagOut.appendTag(convertedTag.copy());
                 ++successCount;
             }
             else
             {
                 System.out.printf("FAILED: %s => %s\n", tag, convertedTag);
-                paletteTagOut.appendTag(tag);
+                failedStates.add(tag.toString());
+                paletteTagOut.appendTag(tag.copy());
                 ++failCount;
             }
         }
@@ -73,7 +77,8 @@ public class BlockStateConverter extends DataConverterBase
             String verTo = this.versionTo.getMcVersionDisplayName();
             String strSu = String.valueOf(successCount);
             String strFa = String.valueOf(failCount);
-            InfoUtils.showGuiOrInGameMessage(MessageType.WARNING, 8000, "litematica.message.warn.schematic_load.palette_conversion_failures", verFrom, verTo, strSu, strFa);
+            InfoUtils.showGuiOrInGameMessage(MessageType.WARNING, 8000, "litematica.message.warn.schematic_conversion.palette_conversion_failures", verFrom, verTo, strSu, strFa);
+            InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, 8000, String.join("\n", failedStates));
         }
 
         return paletteTagOut;

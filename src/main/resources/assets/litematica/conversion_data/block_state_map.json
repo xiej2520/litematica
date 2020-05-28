@@ -1242,7 +1242,8 @@
 		},
 		{
 			"1.12": { "id": 44, "meta": 8, "meta_state": true, "block": "minecraft:stone_slab", "properties": { "half": "top", "variant": "stone" } },
-			"1.13": { "block": "minecraft:stone_slab", "properties": { "type": "top", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:stone_slab", "properties": { "type": "top", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:smooth_stone_slab", "properties": { "type": "top", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 44, "meta": 9, "meta_state": true, "block": "minecraft:stone_slab", "properties": { "half": "top", "variant": "sandstone" } },
@@ -1274,7 +1275,8 @@
 		},
 		{
 			"1.12": { "id": 44, "meta": 0, "meta_state": true, "block": "minecraft:stone_slab", "properties": { "half": "bottom", "variant": "stone" } },
-			"1.13": { "block": "minecraft:stone_slab", "properties": { "type": "bottom", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:stone_slab", "properties": { "type": "bottom", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:smooth_stone_slab", "properties": { "type": "bottom", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 44, "meta": 1, "meta_state": true, "block": "minecraft:stone_slab", "properties": { "half": "bottom", "variant": "sandstone" } },
@@ -8870,67 +8872,83 @@
 		},
 		{
 			"1.12": { "id": 63, "meta": 0, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "0" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "0", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "0", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "0", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 1, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "1" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "1", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "1", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "1", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 2, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "2" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "2", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "2", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "2", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 3, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "3" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "3", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "3", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "3", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 4, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "4" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "4", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "4", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "4", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 5, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "5" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "5", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "5", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "5", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 6, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "6" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "6", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "6", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "6", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 7, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "7" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "7", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "7", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "7", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 8, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "8" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "8", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "8", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "8", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 9, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "9" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "9", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "9", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "9", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 10, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "10" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "10", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "10", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "10", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 11, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "11" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "11", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "11", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "11", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 12, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "12" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "12", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "12", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "12", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 13, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "13" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "13", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "13", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "13", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 14, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "14" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "14", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "14", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "14", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 63, "meta": 15, "meta_state": true, "block": "minecraft:standing_sign", "properties": { "rotation": "15" } },
-			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "15", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:sign", "properties": { "rotation": "15", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_sign", "properties": { "rotation": "15", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 64, "meta": 10, "meta_state": false, "block": "minecraft:wooden_door", "properties": { "facing": "north", "half": "upper", "hinge": "left", "open": "true", "powered": "true" } },
@@ -9406,19 +9424,23 @@
 		},
 		{
 			"1.12": { "id": 68, "meta": 2, "meta_state": true, "block": "minecraft:wall_sign", "properties": { "facing": "north" } },
-			"1.13": { "block": "minecraft:wall_sign", "properties": { "facing": "north", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:wall_sign", "properties": { "facing": "north", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_wall_sign", "properties": { "facing": "north", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 68, "meta": 3, "meta_state": true, "block": "minecraft:wall_sign", "properties": { "facing": "south" } },
-			"1.13": { "block": "minecraft:wall_sign", "properties": { "facing": "south", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:wall_sign", "properties": { "facing": "south", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_wall_sign", "properties": { "facing": "south", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 68, "meta": 4, "meta_state": true, "block": "minecraft:wall_sign", "properties": { "facing": "west" } },
-			"1.13": { "block": "minecraft:wall_sign", "properties": { "facing": "west", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:wall_sign", "properties": { "facing": "west", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_wall_sign", "properties": { "facing": "west", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 68, "meta": 5, "meta_state": true, "block": "minecraft:wall_sign", "properties": { "facing": "east" } },
-			"1.13": { "block": "minecraft:wall_sign", "properties": { "facing": "east", "waterlogged": "false" } }
+			"1.13": { "block": "minecraft:wall_sign", "properties": { "facing": "east", "waterlogged": "false" } },
+			"1.14": { "block": "minecraft:oak_wall_sign", "properties": { "facing": "east", "waterlogged": "false" } }
 		},
 		{
 			"1.12": { "id": 69, "meta": 8, "meta_state": true, "block": "minecraft:lever", "properties": { "facing": "down_x", "powered": "true" } },

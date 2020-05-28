@@ -9,11 +9,27 @@ public abstract class DataConverterBase implements IBlockStateMapReader
 {
     protected final MinecraftVersion versionFrom;
     protected final MinecraftVersion versionTo;
+    protected final String fileName;
+    protected final String arrayName;
 
-    protected DataConverterBase(MinecraftVersion versionFrom, MinecraftVersion versionTo)
+    protected DataConverterBase(MinecraftVersion versionFrom, MinecraftVersion versionTo, String fileName, String arrayName)
     {
         this.versionFrom = versionFrom;
         this.versionTo = versionTo;
+        this.fileName = fileName;
+        this.arrayName = arrayName;
+    }
+
+    @Override
+    public final String getFileName()
+    {
+        return this.fileName;
+    }
+
+    @Override
+    public final String getArrayName()
+    {
+        return this.arrayName;
     }
 
     protected abstract void addMapping(JsonObject objFrom, JsonObject objTo);
@@ -39,9 +55,9 @@ public abstract class DataConverterBase implements IBlockStateMapReader
     }
 
     @Nullable
-    protected JsonObject getNewestDataEntryForVersion(JsonObject mappingEntry, MinecraftVersion version)
+    protected JsonObject getNewestDataEntryForVersion(JsonObject mappingEntry, MinecraftVersion targetVersion)
     {
-        String versionName = version.getMcVersionDisplayName();
+        String versionName = targetVersion.getVersionName();
 
         if (mappingEntry.has(versionName))
         {
@@ -52,23 +68,24 @@ public abstract class DataConverterBase implements IBlockStateMapReader
                 return el.getAsJsonObject();
             }
         }
+        // Target version is not found directly, find the newest version that is older than the target version
         else
         {
             MinecraftVersion newestFound = null;
 
-            for (MinecraftVersion v : MinecraftVersion.KNOWN_VERSIONS)
+            for (MinecraftVersion version : MinecraftVersion.KNOWN_VERSIONS)
             {
-                if (v.isOlderThan(version) &&
-                    (newestFound == null || newestFound.isOlderThan(v)) &&
-                    mappingEntry.has(v.getMcVersionDisplayName()))
+                if (version.isOlderThan(targetVersion) &&
+                    (newestFound == null || newestFound.isOlderThan(version)) &&
+                    mappingEntry.has(version.getVersionName()))
                 {
-                    newestFound = v;
+                    newestFound = version;
                 }
             }
 
             if (newestFound != null)
             {
-                versionName = newestFound.getMcVersionDisplayName();
+                versionName = newestFound.getVersionName();
                 JsonElement el = mappingEntry.get(versionName);
 
                 if (el.isJsonObject())

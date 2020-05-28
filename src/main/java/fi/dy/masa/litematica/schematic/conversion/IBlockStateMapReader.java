@@ -20,10 +20,30 @@ import fi.dy.masa.malilib.util.JsonUtils;
 
 public interface IBlockStateMapReader
 {
+    /**
+     * Returns the JSON file name to read the data from
+     * @return
+     */
+    String getFileName();
+
+    /**
+     * Returns the JSON array name within the file
+     * @return
+     */
+    String getArrayName();
+
+    /**
+     * Reads the conversion data from the provided JSON array
+     * @param arr the JSON array that was read from the file
+     * @return true if reading the data was successful
+     */
+    boolean read(JsonArray arr);
+
     default boolean read()
     {
         FileSystem filesystem = null;
-        String location = "/assets/litematica/block_state_map/block_state_map.json";
+        String fileName = this.getFileName();
+        String location = "/assets/litematica/conversion_data/" + fileName;
 
         try
         {
@@ -76,15 +96,14 @@ public interface IBlockStateMapReader
         if (element != null && element.isJsonObject())
         {
             JsonObject obj = element.getAsJsonObject();
+            String arrayName = this.getArrayName();
 
-            if (JsonUtils.hasArray(obj, "block_states"))
+            if (JsonUtils.hasArray(obj, arrayName))
             {
-                return this.read(obj.get("block_states").getAsJsonArray());
+                return this.read(obj.get(arrayName).getAsJsonArray());
             }
         }
 
         return false;
     }
-
-    boolean read(JsonArray arr);
 }

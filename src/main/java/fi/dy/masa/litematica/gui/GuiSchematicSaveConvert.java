@@ -44,7 +44,7 @@ public class GuiSchematicSaveConvert extends GuiSchematicSaveBase
 
         x += this.widgetOutputType.getWidth() + 4;
         this.widgetOutputDataVersion = new WidgetDropDownList<>(x, 56, -1, 20, 200, 10, MinecraftVersion.KNOWN_VERSIONS, (entry) -> "MC " + entry.getMcVersionDisplayName());
-        this.widgetOutputDataVersion.setSelectedEntry(SchematicBase.CURRENT_GAME_SCHEMATIC_DATA_VERSION);
+        this.widgetOutputDataVersion.setSelectedEntry(SchematicBase.CURRENT_MINECRAFT_VERSION);
     }
 
     @Override

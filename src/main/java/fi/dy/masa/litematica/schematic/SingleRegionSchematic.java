@@ -16,6 +16,12 @@ import net.minecraft.world.NextTickListEntry;
 import fi.dy.masa.litematica.Litematica;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
+import fi.dy.masa.litematica.schematic.conversion.BlockEntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.BlockTickDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.EntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.InventoryDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataConversionManager;
 import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.malilib.util.InfoUtils;
 import fi.dy.masa.malilib.util.NBTUtils;
@@ -132,21 +138,21 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
     public void setEntityList(List<EntityInfo> list)
     {
         this.entities = ImmutableList.copyOf(list);
-        this.dirtyData.add(SchematicDataPiece.ENTITIES);
+        this.markDataModified(SchematicDataPiece.ENTITIES);
     }
 
     @Override
     public void setBlockEntityMap(Map<BlockPos, NBTTagCompound> map)
     {
         this.blockEntities = ImmutableMap.copyOf(map);
-        this.dirtyData.add(SchematicDataPiece.BLOCK_ENTITIES);
+        this.markDataModified(SchematicDataPiece.BLOCK_ENTITIES);
     }
 
     @Override
     public void setBlockTickMap(Map<BlockPos, NextTickListEntry> map)
     {
         this.pendingBlockTicks = ImmutableMap.copyOf(map);
-        this.dirtyData.add(SchematicDataPiece.BLOCK_TICKS);
+        this.markDataModified(SchematicDataPiece.BLOCK_TICKS);
     }
 
     @Override
@@ -247,15 +253,15 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
 
         for (ISchematicRegion region : regions.values())
         {
-            ImmutableMap.Builder<BlockPos, NBTTagCompound> builderBlockEntities = ImmutableMap.builder();
-            ImmutableMap.Builder<BlockPos, NextTickListEntry> builderBlockTicks = ImmutableMap.builder();
-            ImmutableList.Builder<EntityInfo> builderEntities = ImmutableList.builder();
+            final ImmutableMap.Builder<BlockPos, NBTTagCompound> builderBlockEntities = ImmutableMap.builder();
+            final ImmutableMap.Builder<BlockPos, NextTickListEntry> builderBlockTicks = ImmutableMap.builder();
+            final ImmutableList.Builder<EntityInfo> builderEntities = ImmutableList.builder();
 
             // No offset for this sub-region, use the positions in the maps without modifications
             if (region.getPosition().equals(BlockPos.ORIGIN))
             {
-                region.getBlockEntityMap().entrySet().forEach((entry) -> builderBlockEntities.put(entry.getKey(), entry.getValue().copy()));
-                region.getBlockTickMap().entrySet().forEach((entry) -> builderBlockTicks.put(entry.getKey(), entry.getValue()));
+                region.getBlockEntityMap().forEach((key, value) -> builderBlockEntities.put(key, value.copy()));
+                region.getBlockTickMap().forEach(builderBlockTicks::put);
                 region.getEntityList().forEach((info) -> builderEntities.add(info.copy()));
             }
             else
@@ -263,14 +269,14 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
                 // This is the relative position of this sub-region within the new single region enclosing schematic volume
                 Vec3i regionOffsetBlocks = this.getRegionOffset(region, minCorner);
 
-                region.getBlockEntityMap().entrySet().forEach((entry) -> {
-                    BlockPos pos = entry.getKey().add(regionOffsetBlocks);
-                    builderBlockEntities.put(pos, entry.getValue().copy());
+                region.getBlockEntityMap().forEach((key, value) -> {
+                    BlockPos pos = key.add(regionOffsetBlocks);
+                    builderBlockEntities.put(pos, value.copy());
                 });
 
-                region.getBlockTickMap().entrySet().forEach((entry) -> {
-                    BlockPos pos = entry.getKey().add(regionOffsetBlocks);
-                    builderBlockTicks.put(pos, entry.getValue());
+                region.getBlockTickMap().forEach((key, value) -> {
+                    BlockPos pos = key.add(regionOffsetBlocks);
+                    builderBlockTicks.put(pos, value);
                 });
 
                 // The entity positions are not relative to the sub-region's minimum corner,
@@ -305,14 +311,14 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
     }
 
     @Override
-    protected final boolean fromCachedTag(NBTTagCompound tag)
+    protected final void fromCachedTag(NBTTagCompound tag)
     {
         this.setSize(this.readSizeFromTag(tag), true);
 
         if (isSizeValid(this.regionSize) == false)
         {
             InfoUtils.printErrorMessage("litematica.message.error.schematic_read.invalid_or_missing_size", this.getFile().getAbsolutePath());
-            return false;
+            return;
         }
 
         final boolean needsVersionConversion = this.isFromDifferentMinecraftVersion();
@@ -321,20 +327,23 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
         {
             this.readAllEntityData(tag, needsVersionConversion);
             this.readMetadataFromTag(tag);
-
-            return true;
         }
         else
         {
             InfoUtils.printErrorMessage("litematica.message.error.schematic_read.missing_or_invalid_data", this.getFile().getAbsolutePath());
-            return false;
         }
     }
 
     protected void readAllEntityData(NBTTagCompound tag, boolean needsVersionConversion)
     {
-        this.blockEntities = this.readBlockEntitiesFromTag(tag, needsVersionConversion);
-        this.entities = this.readEntitiesFromTag(tag, needsVersionConversion);
+        final MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
+        final MinecraftVersion versionTo = CURRENT_MINECRAFT_VERSION;
+        final BlockEntityDataConverter beConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom, versionTo) : null;
+        final InventoryDataConverter invConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getInventoryDataConverter(versionFrom, versionTo) : null;
+        final EntityDataConverter entityConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getEntityDataConverter(versionFrom, versionTo) : null;
+
+        this.blockEntities = this.readBlockEntitiesFromTag(tag, beConverter, invConverter);
+        this.entities = this.readEntitiesFromTag(tag, entityConverter, invConverter);
     }
 
     @Override
@@ -354,7 +363,49 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
 
     protected abstract boolean readBlocksFromTag(NBTTagCompound tag, boolean needsVersionConversion);
 
-    protected abstract ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion);
+    protected abstract ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag, @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter);
 
-    protected abstract ImmutableList<EntityInfo> readEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion);
+    protected abstract ImmutableList<EntityInfo> readEntitiesFromTag(NBTTagCompound tag, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter);
+
+    protected NBTTagCompound toTagBase()
+    {
+        NBTTagCompound cachedTag = null;
+
+        // No rebuild actions done, use the cached data originally read from file
+        if (this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCKS) &&
+            this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_ENTITIES))
+        {
+            cachedTag = this.getCachedDataFromFile();
+        }
+
+        final NBTTagCompound tag = cachedTag != null ? cachedTag.copy() : new NBTTagCompound();
+
+        final boolean needsConversion = this.needsVersionConversion();
+        final MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
+        final MinecraftVersion versionTo = this.requestedOutputMinecraftVersion;
+        final BlockEntityDataConverter beConverter = needsConversion ? SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom, versionTo) : null;
+        final EntityDataConverter entityConverter = needsConversion ? SchematicDataConversionManager.INSTANCE.getEntityDataConverter(versionFrom, versionTo) : null;
+        final InventoryDataConverter invConverter = needsConversion ? SchematicDataConversionManager.INSTANCE.getInventoryDataConverter(versionFrom, versionTo) : null;
+
+        this.writeBlocksToTag(tag, cachedTag, needsConversion);
+        this.writeBlockEntitiesToTag(tag, cachedTag, beConverter, invConverter);
+        this.writeEntitiesToTag(tag, cachedTag, entityConverter, invConverter);
+        this.writeMetadataToTag(tag, cachedTag);
+
+        this.onWriteToTag(tag, cachedTag);
+
+        return tag;
+    }
+
+    protected abstract void writeBlocksToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, boolean needsConversion);
+
+    protected abstract void writeBlockEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable BlockEntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter);
+
+    protected abstract void writeEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter);
+
+    protected abstract void writeMetadataToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag);
+
+    protected void onWriteToTag(NBTTagCompound tagOut, @Nullable NBTTagCompound cachedTag)
+    {
+    }
 }

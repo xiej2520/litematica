@@ -18,6 +18,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3i;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
+import fi.dy.masa.litematica.schematic.conversion.BlockEntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.EntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.InventoryDataConverter;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 import fi.dy.masa.litematica.schematic.conversion.SchematicDataVersion;
 import fi.dy.masa.litematica.util.NbtUtils;
@@ -28,14 +31,15 @@ public class SchematicaSchematic extends SingleRegionSchematic
 {
     public static final String FILE_NAME_EXTENSION = ".schematic";
 
+    private static final SchematicDataVersion SCHEMATICA_FORCED_DATA_VERSION = SchematicDataVersion.getVersionFor(MinecraftVersion.MC_1_12_X.getMaxDataVersion());
+
     private Block[] palette;
 
     SchematicaSchematic(@Nullable File fileName)
     {
         super(fileName);
 
-        this.currentDataSchematicDataVersion = SchematicDataVersion.getVersionFor(MinecraftVersion.MC_1_12.getMaxDataVersion());
-        this.requestedOutputMinecraftVersion = MinecraftVersion.MC_1_12;
+        this.requestedOutputMinecraftVersion = MinecraftVersion.MC_1_12_X;
     }
 
     @Override
@@ -51,19 +55,19 @@ public class SchematicaSchematic extends SingleRegionSchematic
     }
 
     @Override
-    protected void setCurrentDataVersionWithFallback(int dataVersion)
+    public SchematicDataVersion getCurrentSchematicDataVersion()
     {
-        this.currentDataSchematicDataVersion = SchematicDataVersion.getVersionFor(MinecraftVersion.MC_1_12.getMaxDataVersion());
+        return SCHEMATICA_FORCED_DATA_VERSION;
     }
 
     @Override
-    protected void setToCurrentGameVersion()
+    protected void setCurrentDataVersionWithFallback(int dataVersion)
     {
         // NO-OP
     }
 
     @Override
-    protected boolean initFromTag(NBTTagCompound tag)
+    protected boolean setDataVersionFromTag(NBTTagCompound tag)
     {
         return true;
     }
@@ -100,45 +104,80 @@ public class SchematicaSchematic extends SingleRegionSchematic
     }
 
     @Override
-    protected ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion)
+    protected ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag, @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter)
     {
         NBTTagList listBlockEntities = tag.getTagList("TileEntities", Constants.NBT.TAG_COMPOUND);
-
-        if (needsVersionConversion)
-        {
-            // TODO
-        }
-
-        return this.readBlockEntitiesFromListTag(listBlockEntities);
+        return this.readBlockEntitiesFromListTag(listBlockEntities, beConverter, invConverter);
     }
 
     @Override
-    protected ImmutableList<EntityInfo> readEntitiesFromTag(NBTTagCompound tag, boolean needsVersionConversion)
+    protected ImmutableList<EntityInfo> readEntitiesFromTag(NBTTagCompound tag, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
     {
         NBTTagList listEntities = tag.getTagList("Entities", Constants.NBT.TAG_COMPOUND);
-
-        if (needsVersionConversion)
-        {
-            // TODO
-        }
-
-        return this.readEntitiesFromListTag(listEntities);
+        return this.readEntitiesFromListTag(listEntities, entityConverter, invConverter);
     }
 
     @Override
     public NBTTagCompound toTag()
     {
-        NBTTagCompound nbt = new NBTTagCompound();
+        NBTTagCompound tag = this.toTagBase();
 
+        tag.setInteger("DataVersion", this.requestedOutputMinecraftVersion.getMaxDataVersion());
+
+        return tag;
+    }
+
+    @Override
+    protected void writeBlocksToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, boolean needsConversion)
+    {
         this.createPalette();
-        this.writeBlocksToTag(nbt);
-        this.writePaletteToTag(nbt);
+        this.writeBlocksToTag(tag);
+        this.writePaletteToTag(tag);
+    }
 
-        nbt.setTag("TileEntities", this.writeBlockEntitiesToListTag(this.blockEntities));
-        nbt.setTag("Entities", this.writeEntitiesToListTag(this.entities));
-        nbt.setTag("Metadata", this.getMetadata().toTag());
+    @Override
+    protected void writeBlockEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter)
+    {
+        NBTTagList tagList;
 
-        return nbt;
+        if (cachedTag != null && this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_ENTITIES))
+        {
+            tagList = cachedTag.getTagList("TileEntities", Constants.NBT.TAG_COMPOUND).copy();
+        }
+        else
+        {
+            tagList = this.writeBlockEntitiesToListTag(this.blockEntities);
+        }
+
+        this.convertEntitiesInList(tagList, "id", beConverter, invConverter);
+
+        tag.setTag("TileEntities", tagList);
+    }
+
+    @Override
+    protected void writeEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
+    {
+        NBTTagList tagList;
+
+        if (cachedTag != null && this.canSaveCachedDataDirectly(SchematicDataPiece.ENTITIES))
+        {
+            tagList = cachedTag.getTagList("Entities", Constants.NBT.TAG_COMPOUND).copy();
+        }
+        else
+        {
+            tagList = this.writeEntitiesToListTag(this.entities);
+        }
+
+        this.convertEntitiesInList(tagList, "id", entityConverter, invConverter);
+
+        tag.setTag("Entities", tagList);
+    }
+
+    @Override
+    protected void writeMetadataToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag)
+    {
+        NBTTagCompound metaTag = this.getMetadataTagForWriting(cachedTag);
+        tag.setTag("Metadata", metaTag);
     }
 
     protected boolean readPaletteFromTag(NBTTagCompound nbt)

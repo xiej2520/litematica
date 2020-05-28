@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -22,7 +24,14 @@ import net.minecraft.world.NextTickListEntry;
 import fi.dy.masa.litematica.Litematica;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
+import fi.dy.masa.litematica.schematic.conversion.BlockEntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.BlockTickDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.EntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.EntityDataConverterBase;
+import fi.dy.masa.litematica.schematic.conversion.InventoryDataConverter;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataConversionManager;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataVersion;
 import fi.dy.masa.litematica.selection.Box;
 import fi.dy.masa.litematica.selection.SelectionBox;
 import fi.dy.masa.litematica.util.PositionUtils;
@@ -35,7 +44,6 @@ import fi.dy.masa.malilib.util.NBTUtils;
 public class LitematicaSchematic extends SchematicBase
 {
     public static final String FILE_NAME_EXTENSION = ".litematic";
-    public static final int SCHEMATIC_VERSION = 4;
 
     private final Map<String, LitematicaBlockStateContainerFull> blockContainers = new HashMap<>();
     private final Map<String, ImmutableMap<BlockPos, NBTTagCompound>> blockEntities = new HashMap<>();
@@ -58,12 +66,6 @@ public class LitematicaSchematic extends SchematicBase
     }
 
     @Override
-    public int getSubRegionCount()
-    {
-        return this.subRegionCount;
-    }
-
-    @Override
     public void clear()
     {
         super.clear();
@@ -76,6 +78,34 @@ public class LitematicaSchematic extends SchematicBase
         this.getMetadata().clearModifiedSinceSaved();
 
         this.subRegionCount = -1;
+        this.litematicaSchematicVersionFromFile = -1;
+    }
+
+    public static boolean isValidSchematic(NBTTagCompound tag)
+    {
+        return tag.hasKey("Version", Constants.NBT.TAG_INT) &&
+                tag.hasKey("Regions", Constants.NBT.TAG_COMPOUND) &&
+                tag.hasKey("Metadata", Constants.NBT.TAG_COMPOUND);
+    }
+
+    @Nullable
+    public static LitematicaSchematic createFromFile(File dir, String fileName)
+    {
+        if (fileName.endsWith(FILE_NAME_EXTENSION) == false)
+        {
+            fileName = fileName + FILE_NAME_EXTENSION;
+        }
+
+        File file = new File(dir, fileName);
+        LitematicaSchematic schematic = new LitematicaSchematic(file);
+
+        return schematic.readFromFile() ? schematic : null;
+    }
+
+    @Override
+    public int getSubRegionCount()
+    {
+        return this.subRegionCount;
     }
 
     @Override
@@ -91,10 +121,6 @@ public class LitematicaSchematic extends SchematicBase
         return this.subRegions.containsKey(regionName) ? new LitematicaSubRegion(this, regionName) : null;
     }
 
-    /**
-     * Returns an immutable view of the sub-regions in this schematic
-     * @return
-     */
     @Override
     protected ImmutableMap<String, ISchematicRegion> getRegionsImpl()
     {
@@ -138,7 +164,7 @@ public class LitematicaSchematic extends SchematicBase
             }
         }
 
-        return null;
+        return Vec3i.NULL_VECTOR;
     }
 
     /**
@@ -204,11 +230,11 @@ public class LitematicaSchematic extends SchematicBase
                     this.blockContainers.put(regionName, container);
                 }
 
-                ImmutableMap.Builder<BlockPos, NBTTagCompound> builderBlockEntities = ImmutableMap.builder();
-                ImmutableMap.Builder<BlockPos, NextTickListEntry> builderBlockTicks = ImmutableMap.builder();
-                ImmutableList.Builder<EntityInfo> builderEntities = ImmutableList.builder();
+                final ImmutableMap.Builder<BlockPos, NBTTagCompound> builderBlockEntities = ImmutableMap.builder();
+                final ImmutableMap.Builder<BlockPos, NextTickListEntry> builderBlockTicks = ImmutableMap.builder();
+                final ImmutableList.Builder<EntityInfo> builderEntities = ImmutableList.builder();
 
-                region.getBlockEntityMap().entrySet().forEach((entry) -> builderBlockEntities.put(entry.getKey(), entry.getValue().copy()));
+                region.getBlockEntityMap().forEach((key, value) -> builderBlockEntities.put(key, value.copy()));
                 region.getEntityList().forEach((info) -> builderEntities.add(info.copy()));
                 builderBlockTicks.putAll(region.getBlockTickMap());
 
@@ -222,29 +248,7 @@ public class LitematicaSchematic extends SchematicBase
     }
 
     @Override
-    public NBTTagCompound toTag()
-    {
-        NBTTagCompound nbt = new NBTTagCompound();
-
-        nbt.setTag("Metadata", this.getMetadata().toTag());
-        nbt.setTag("Regions", this.writeSubRegionsToNBT());
-
-        if (this.requestedOutputMinecraftVersion != CURRENT_GAME_SCHEMATIC_DATA_VERSION)
-        {
-            nbt.setInteger("Version", SCHEMATIC_VERSION);
-            nbt.setInteger("MinecraftDataVersion", this.requestedOutputMinecraftVersion.getMaxDataVersion());
-        }
-        else
-        {
-            nbt.setInteger("Version", SCHEMATIC_VERSION);
-            nbt.setInteger("MinecraftDataVersion", MINECRAFT_DATA_VERSION);
-        }
-
-        return nbt;
-    }
-
-    @Override
-    protected boolean initFromTag(NBTTagCompound tag)
+    protected boolean setDataVersionFromTag(NBTTagCompound tag)
     {
         if (tag.hasKey("Version", Constants.NBT.TAG_INT))
         {
@@ -256,22 +260,26 @@ public class LitematicaSchematic extends SchematicBase
             {
                 dataVersion = tag.getInteger("MinecraftDataVersion");
             }
+            // Old schematics didn't have the DataVersion value yet...
             else
             {
-                // The early 1.13.2 builds (between 2018-11 .. 2019-06) didn't have the MinecraftDataVersion field yet
+                // The early 1.13.2 builds (between 2018-11 .. 2019-06) didn't have the MinecraftDataVersion field yet >_>
                 if (this.litematicaSchematicVersionFromFile == 5)
                 {
                     // And also additionally, the saved value was actually accidentally hard coded to
-                    // that of 1.13.2 until some 1.15.1 builds >_> So there is no real way to fix that case...
-                    dataVersion = MinecraftVersion.MC_1_13.getMaxDataVersion();
+                    // that of 1.13.2 until some 1.15.1 builds >_> So there is no real way to fix that case automatically...
+                    dataVersion = MinecraftVersion.MC_1_13_X.getMaxDataVersion();
                 }
                 else
                 {
-                    dataVersion = MinecraftVersion.MC_1_12.getMinDataVersion(); // 1.12.0 because... /shrug
+                    dataVersion = MinecraftVersion.MC_1_12_X.getMinDataVersion(); // 1.12.0 because... /shrug
                 }
             }
 
             this.setCurrentDataVersionWithFallback(dataVersion);
+
+            // This needs to be set here, so that the schematic browser can show
+            // the correct sub region count, without parsing the cached NBT data.
             this.subRegionCount = tag.getCompoundTag("Regions").getKeySet().size();
 
             return true;
@@ -283,110 +291,397 @@ public class LitematicaSchematic extends SchematicBase
     }
 
     @Override
-    protected boolean fromCachedTag(NBTTagCompound tag)
+    protected void fromCachedTag(NBTTagCompound tag)
     {
         final int version = this.litematicaSchematicVersionFromFile;
 
-        //if (version >= 1 && version <= SCHEMATIC_VERSION)
-        if (version >= 1 && version <= 5)
+        if (version >= 1 && version <= MinecraftVersion.getLatestKnownVersion().getSchematicVersion())
         {
-            final boolean needsVersionConversion = this.isFromDifferentMinecraftVersion();
-
-            this.readMetadataFromTag(tag);
+            boolean needsVersionConversion = this.isFromDifferentMinecraftVersion();
             this.readSubRegionsFromTag(tag, version, needsVersionConversion);
-
-            return true;
         }
         else
         {
             InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, "litematica.error.schematic_load.unsupported_schematic_version", version);
         }
+    }
 
-        return false;
+    private void readSubRegionsFromTag(NBTTagCompound tag, int version, boolean needsVersionConversion)
+    {
+        final MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
+        final MinecraftVersion versionTo = CURRENT_MINECRAFT_VERSION;
+        final BlockEntityDataConverter beConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom, versionTo) : null;
+        final BlockTickDataConverter blockTickConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getBlockTickDataConverter(versionFrom, versionTo) : null;
+        final InventoryDataConverter invConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getInventoryDataConverter(versionFrom, versionTo) : null;
+        final EntityDataConverter entityConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getEntityDataConverter(versionFrom, versionTo) : null;
+
+        tag = tag.getCompoundTag("Regions");
+
+        for (String regionName : tag.getKeySet())
+        {
+            if (tag.getTag(regionName).getId() != Constants.NBT.TAG_COMPOUND)
+            {
+                Litematica.logger.warn("Invalid sub-region tag type for region '{}'", regionName);
+                continue;
+            }
+
+            NBTTagCompound regionTag = tag.getCompoundTag(regionName);
+            BlockPos regionPos = NBTUtils.readBlockPos(regionTag.getCompoundTag("Position"));
+            BlockPos regionSize = NBTUtils.readBlockPos(regionTag.getCompoundTag("Size"));
+
+            if (regionPos == null || regionSize == null)
+            {
+                Litematica.logger.warn("Invalid sub-region position or size for region '{}'", regionName);
+                continue;
+            }
+
+            this.subRegions.put(regionName, new SubRegion(regionPos, regionSize));
+
+            NBTTagList listBlockEntities = regionTag.getTagList("TileEntities", Constants.NBT.TAG_COMPOUND);
+            NBTTagList listEntities = regionTag.getTagList("Entities", Constants.NBT.TAG_COMPOUND);
+
+            if (needsVersionConversion && (beConverter != null || invConverter != null))
+            {
+                listBlockEntities = listBlockEntities.copy();
+            }
+
+            if (version >= 2)
+            {
+                this.blockEntities.put(regionName, this.readBlockEntitiesFromListTag(listBlockEntities, beConverter, invConverter));
+                this.entities.put(regionName, this.readEntitiesFromListTag(listEntities, entityConverter, invConverter));
+            }
+            else if (version == 1)
+            {
+                this.blockEntities.put(regionName, this.readTileEntitiesFromNBT_v1(listBlockEntities, beConverter, invConverter));
+                this.entities.put(regionName, this.readEntitiesFromNBT_v1(listEntities, entityConverter, invConverter));
+            }
+
+            if (version >= 3)
+            {
+                NBTTagList listBlockTicks = regionTag.getTagList("PendingBlockTicks", Constants.NBT.TAG_COMPOUND);
+
+                if (needsVersionConversion && blockTickConverter != null)
+                {
+                    listBlockTicks = listBlockTicks.copy();
+                }
+
+                this.pendingBlockTicks.put(regionName, this.readBlockTicksFromNBT(listBlockTicks, blockTickConverter));
+            }
+
+            NBTBase nbtBase = regionTag.getTag("BlockStates");
+
+            // There are no convenience methods in NBTTagCompound yet in 1.12, so we'll have to do it the ugly way...
+            if (nbtBase != null && nbtBase.getId() == Constants.NBT.TAG_LONG_ARRAY)
+            {
+                Vec3i size = new Vec3i(Math.abs(regionSize.getX()), Math.abs(regionSize.getY()), Math.abs(regionSize.getZ()));
+                NBTTagList paletteTag = regionTag.getTagList("BlockStatePalette", Constants.NBT.TAG_COMPOUND);
+                long[] blockStateArr = ((IMixinNBTTagLongArray) nbtBase).getArray();
+                final int paletteSize = paletteTag.tagCount();
+
+                LitematicaBlockStateContainerFull container = LitematicaBlockStateContainerFull.createContainer(paletteSize, blockStateArr, size);
+
+                if (container == null)
+                {
+                    InfoUtils.printErrorMessage("litematica.error.schematic_read_from_file_failed.region_container",
+                                                regionName, this.getFile() != null ? this.getFile().getName() : "<null>");
+                    return;
+                }
+
+                // Loading a schematic from a different MC version, convert the palette
+                if (needsVersionConversion)
+                {
+                    paletteTag = this.convertBlockStatePaletteToCurrentGameVersion(paletteTag);
+                }
+
+                this.readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette());
+                this.blockContainers.put(regionName, container);
+            }
+            else
+            {
+                return;
+            }
+        }
+    }
+
+    private ImmutableMap<BlockPos, NextTickListEntry> readBlockTicksFromNBT(NBTTagList tagList, @Nullable BlockTickDataConverter blockTickConverter)
+    {
+        ImmutableMap.Builder<BlockPos, NextTickListEntry> builder = ImmutableMap.builder();
+        final int size = tagList.tagCount();
+
+        for (int i = 0; i < size; ++i)
+        {
+            NBTTagCompound tag = tagList.getCompoundTagAt(i);
+
+            if (tag.hasKey("Block", Constants.NBT.TAG_STRING) &&
+                tag.hasKey("Time", Constants.NBT.TAG_ANY_NUMERIC)) // XXX these were accidentally saved as longs in version 3
+            {
+                String name = tag.getString("Block");
+
+                if (blockTickConverter != null)
+                {
+                    name = blockTickConverter.convertBlockName(name);
+                }
+
+                Block block = Block.REGISTRY.getObject(new ResourceLocation(name));
+
+                if (block != null && block != Blocks.AIR)
+                {
+                    BlockPos pos = new BlockPos(tag.getInteger("x"), tag.getInteger("y"), tag.getInteger("z"));
+                    NextTickListEntry entry = new NextTickListEntry(pos, block);
+                    entry.setPriority(tag.getInteger("Priority"));
+
+                    // Note: the time is a relative delay at this point
+                    entry.setScheduledTime(tag.getInteger("Time"));
+
+                    builder.put(pos, entry);
+                }
+            }
+        }
+
+        return builder.build();
+    }
+
+    private ImmutableList<EntityInfo> readEntitiesFromNBT_v1(NBTTagList tagList, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
+    {
+        ImmutableList.Builder<EntityInfo> builder = ImmutableList.builder();
+        final int size = tagList.tagCount();
+
+        for (int i = 0; i < size; ++i)
+        {
+            NBTTagCompound tag = tagList.getCompoundTagAt(i);
+            Vec3d posVec = NBTUtils.readVec3d(tag);
+            NBTTagCompound entityData = tag.getCompoundTag("EntityData");
+
+            if (posVec != null && entityData.isEmpty() == false)
+            {
+                tag = tag.copy();
+                this.convertEntityTag(tag, "id", entityConverter, invConverter);
+                // Update the correct position to the Entity NBT, where it is stored in version 2
+                NBTUtils.writeVec3dToListTag(posVec, entityData);
+                builder.add(new EntityInfo(posVec, entityData));
+            }
+        }
+
+        return builder.build();
+    }
+
+    private ImmutableMap<BlockPos, NBTTagCompound> readTileEntitiesFromNBT_v1(NBTTagList tagList, @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter)
+    {
+        ImmutableMap.Builder<BlockPos, NBTTagCompound> builder = ImmutableMap.builder();
+        final int size = tagList.tagCount();
+
+        for (int i = 0; i < size; ++i)
+        {
+            NBTTagCompound wrapperTag = tagList.getCompoundTagAt(i);
+            NBTTagCompound tag = wrapperTag.getCompoundTag("TileNBT");
+
+            // Note: This within-schematic relative position is not inside the tile tag!
+            BlockPos pos = NBTUtils.readBlockPos(wrapperTag);
+
+            if (pos != null && tag.isEmpty() == false)
+            {
+                tag = tag.copy();
+                this.convertEntityTag(tag, "id", beConverter, invConverter);
+                builder.put(pos, tag);
+            }
+        }
+
+        return builder.build();
+    }
+
+    @Override
+    public NBTTagCompound toTag()
+    {
+        NBTTagCompound nbt = new NBTTagCompound();
+
+        nbt.setTag("Metadata", this.getMetadata().toTag());
+        nbt.setTag("Regions", this.writeSubRegionsToNBT());
+        nbt.setInteger("Version", this.requestedOutputMinecraftVersion.getSchematicVersion());
+        nbt.setInteger("MinecraftDataVersion", this.requestedOutputMinecraftVersion.getMaxDataVersion());
+
+        /*
+        if (this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCKS) &&
+            this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_ENTITIES))
+        {
+            nbt.setInteger("Version", this.litematicaSchematicVersionFromFile);
+        }
+        else
+        {
+            nbt.setInteger("Version", CURRENT_SCHEMATIC_VERSION);
+        }
+        */
+
+        return nbt;
     }
 
     private NBTTagCompound writeSubRegionsToNBT()
     {
-        NBTTagCompound wrapper = new NBTTagCompound();
-        MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
-        MinecraftVersion versionTo = this.requestedOutputMinecraftVersion;
-        boolean needsVersionConversion = versionFrom != versionTo;
+        final boolean needsConversion = this.needsVersionConversion();
+        final MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
+        final MinecraftVersion versionTo = this.requestedOutputMinecraftVersion;
+        final BlockEntityDataConverter beConverter = SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom, versionTo);
+        final EntityDataConverter entityConverter = SchematicDataConversionManager.INSTANCE.getEntityDataConverter(versionFrom, versionTo);
+        final InventoryDataConverter invConverter = SchematicDataConversionManager.INSTANCE.getInventoryDataConverter(versionFrom, versionTo);
 
-        if (this.getShouldLoadFromCachedData())
+        NBTTagCompound regionsContainerTagNew = new NBTTagCompound();
+        NBTTagCompound cachedRegionsContainerTag = null;
+        Set<String> regionNames;
+
+        // No rebuild actions done, use the cached data originally read from file
+        if (this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCKS) &&
+            this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_ENTITIES))
         {
-            // FIXME remove this, it was just for testing
-            this.getRegions();
+            cachedRegionsContainerTag = this.getCachedDataFromFile().getCompoundTag("Regions");
+            regionNames = cachedRegionsContainerTag.getKeySet();
+        }
+        else
+        {
+            regionNames = this.blockContainers.keySet();
         }
 
-        if (this.blockContainers.isEmpty() == false)
+        for (String regionName : regionNames)
         {
-            for (String regionName : this.blockContainers.keySet())
+            @Nullable
+            NBTTagCompound oldRegionTag = null;
+            NBTTagCompound regionTag = new NBTTagCompound();
+
+            if (cachedRegionsContainerTag != null && cachedRegionsContainerTag.hasKey(regionName, Constants.NBT.TAG_COMPOUND))
             {
-                LitematicaBlockStateContainerFull blockContainer = (LitematicaBlockStateContainerFull) this.blockContainers.get(regionName);
-                Map<BlockPos, NBTTagCompound> tileMap = this.blockEntities.get(regionName);
-                List<EntityInfo> entityList = this.entities.get(regionName);
-                Map<BlockPos, NextTickListEntry> pendingTicks = this.pendingBlockTicks.get(regionName);
+                oldRegionTag = cachedRegionsContainerTag.getCompoundTag(regionName);
+            }
 
-                NBTTagCompound tag = new NBTTagCompound();
-                NBTTagList paletteTag = this.writePaletteToLitematicaFormatTag(blockContainer.getPalette());
+            SubRegion region = this.subRegions.get(regionName);
 
-                if (needsVersionConversion)
-                {
-                    paletteTag = this.convertBlockStatePalette(paletteTag, this.getCurrentSchematicDataVersion(), versionTo);
-                }
+            if (region != null)
+            {
+                regionTag.setTag("Position", NBTUtils.createBlockPosTag(region.pos));
+                regionTag.setTag("Size", NBTUtils.createBlockPosTag(region.size));
+            }
+            else if (oldRegionTag != null)
+            {
+                regionTag.setTag("Position", oldRegionTag.getCompoundTag("Position"));
+                regionTag.setTag("Size", oldRegionTag.getCompoundTag("Size"));
+            }
+            else
+            {
+                continue;
+            }
 
-                tag.setTag("BlockStatePalette", paletteTag);
-                tag.setTag("BlockStates", new NBTTagLongArray(blockContainer.getBackingLongArray()));
+            this.writeBlocksToRegionTag(regionName, regionTag, oldRegionTag);
 
-                if (tileMap != null)
-                {
-                    NBTTagList listBlockEntities = this.writeBlockEntitiesToListTag(tileMap);
+            this.writeListDataToRegionTag(regionName, "TileEntities", regionTag, oldRegionTag,
+                                          SchematicDataPiece.BLOCK_ENTITIES, beConverter, invConverter, (rn) ->
+            {
+                Map<BlockPos, NBTTagCompound> map = this.blockEntities.get(rn);
+                return map != null ? this.writeBlockEntitiesToListTag(map) : null;
+            });
 
-                    if (needsVersionConversion)
-                    {
-                        
-                    }
+            this.writeListDataToRegionTag(regionName, "Entities", regionTag, oldRegionTag,
+                                          SchematicDataPiece.ENTITIES, entityConverter, invConverter, (rn) ->
+            {
+                List<EntityInfo> list = this.entities.get(rn);
+                return list != null ? this.writeEntitiesToListTag(list) : null;
+            });
 
-                    tag.setTag("TileEntities", listBlockEntities);
-                }
+            this.writeBlockTicksToRegionTag(regionName, regionTag, oldRegionTag);
 
-                if (pendingTicks != null)
-                {
-                    NBTTagList listBlockTicks = this.writeBlockTicksToNBT(pendingTicks);
+            regionsContainerTagNew.setTag(regionName, regionTag);
+        }
 
-                    if (needsVersionConversion)
-                    {
-                        
-                    }
+        return regionsContainerTagNew;
+    }
 
-                    tag.setTag("PendingBlockTicks", listBlockTicks);
-                }
+    private void writeBlocksToRegionTag(String regionName, NBTTagCompound regionTag, @Nullable NBTTagCompound cachedRegionTag)
+    {
+        NBTTagList paletteTag = null;
+        NBTBase blockStatesTag = null;
 
-                // The entity list will not exist, if takeEntities is false when creating the schematic
-                if (entityList != null)
-                {
-                    NBTTagList listEntities = this.writeEntitiesToListTag(entityList);
+        if (cachedRegionTag != null && this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCKS))
+        {
+            blockStatesTag = cachedRegionTag.getTag("BlockStates");
+            paletteTag = cachedRegionTag.getTagList("BlockStatePalette", Constants.NBT.TAG_COMPOUND);
+        }
+        else
+        {
+            LitematicaBlockStateContainerFull blockContainer = this.blockContainers.get(regionName);
 
-                    if (needsVersionConversion)
-                    {
-                        
-                    }
-
-                    tag.setTag("Entities", listEntities);
-                }
-
-                SubRegion region = this.subRegions.get(regionName);
-                tag.setTag("Position", NBTUtils.createBlockPosTag(region.pos));
-                tag.setTag("Size", NBTUtils.createBlockPosTag(region.size));
-
-                wrapper.setTag(regionName, tag);
+            if (blockContainer != null)
+            {
+                blockStatesTag = new NBTTagLongArray(blockContainer.getBackingLongArray());
+                paletteTag = this.writePaletteToLitematicaFormatTag(blockContainer.getPalette());
             }
         }
 
-        return wrapper;
+        if (paletteTag != null && blockStatesTag != null)
+        {
+            if (this.needsVersionConversion())
+            {
+                paletteTag = this.convertBlockStatePalette(paletteTag, this.getCurrentSchematicDataVersion(), this.requestedOutputMinecraftVersion);
+            }
+
+            regionTag.setTag("BlockStatePalette", paletteTag);
+            regionTag.setTag("BlockStates", blockStatesTag);
+        }
     }
 
-    private NBTTagList writeBlockTicksToNBT(Map<BlockPos, NextTickListEntry> tickMap)
+    private void writeListDataToRegionTag(
+            String regionName,
+            String tagName,
+            NBTTagCompound regionTag,
+            @Nullable NBTTagCompound cachedRegionTag,
+            SchematicDataPiece piece,
+            EntityDataConverterBase entityConverter,
+            InventoryDataConverter invConverter,
+            Function<String, NBTTagList> dataSource)
+    {
+        NBTTagList list;
+
+        if (cachedRegionTag != null && this.canSaveCachedDataDirectly(piece))
+        {
+            list = cachedRegionTag.getTagList(tagName, Constants.NBT.TAG_COMPOUND).copy();
+        }
+        else
+        {
+            list = dataSource.apply(regionName);
+
+            if (list == null)
+            {
+                list = new NBTTagList();
+            }
+        }
+
+        this.convertEntitiesInList(list, "id", entityConverter, invConverter);
+
+        regionTag.setTag(tagName, list);
+    }
+
+    private void writeBlockTicksToRegionTag(String regionName, NBTTagCompound regionTag, @Nullable NBTTagCompound cachedRegionTag)
+    {
+        NBTTagList listBlockTicks = new NBTTagList();
+
+        if (cachedRegionTag != null && this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_TICKS))
+        {
+            listBlockTicks = cachedRegionTag.getTagList("PendingBlockTicks", Constants.NBT.TAG_COMPOUND).copy();
+        }
+        else
+        {
+            Map<BlockPos, NextTickListEntry> pendingTicks = this.pendingBlockTicks.get(regionName);
+
+            if (pendingTicks != null)
+            {
+                listBlockTicks = this.writeBlockTicksToListTag(pendingTicks);
+            }
+        }
+
+        if (this.needsVersionConversion())
+        {
+            listBlockTicks = this.convertBlockTickData(listBlockTicks, "Block", this.getCurrentSchematicDataVersion(), this.requestedOutputMinecraftVersion);
+        }
+
+        regionTag.setTag("PendingBlockTicks", listBlockTicks);
+    }
+
+    private NBTTagList writeBlockTicksToListTag(Map<BlockPos, NextTickListEntry> tickMap)
     {
         NBTTagList tagList = new NBTTagList();
 
@@ -413,193 +708,6 @@ public class LitematicaSchematic extends SchematicBase
         }
 
         return tagList;
-    }
-
-    private boolean readSubRegionsFromTag(NBTTagCompound tag, int version, boolean needsVersionConversion)
-    {
-        tag = tag.getCompoundTag("Regions");
-
-        for (String regionName : tag.getKeySet())
-        {
-            if (tag.getTag(regionName).getId() == Constants.NBT.TAG_COMPOUND)
-            {
-                NBTTagCompound regionTag = tag.getCompoundTag(regionName);
-                BlockPos regionPos = NBTUtils.readBlockPos(regionTag.getCompoundTag("Position"));
-                BlockPos regionSize = NBTUtils.readBlockPos(regionTag.getCompoundTag("Size"));
-
-                if (regionPos != null && regionSize != null)
-                {
-                    this.subRegions.put(regionName, new SubRegion(regionPos, regionSize));
-
-                    NBTTagList listBlockEntities = regionTag.getTagList("TileEntities", Constants.NBT.TAG_COMPOUND);
-                    NBTTagList listEntities = regionTag.getTagList("Entities", Constants.NBT.TAG_COMPOUND);
-
-                    if (needsVersionConversion)
-                    {
-                        // TODO
-                    }
-
-                    if (version >= 2)
-                    {
-                        this.blockEntities.put(regionName, this.readBlockEntitiesFromListTag(listBlockEntities));
-                        this.entities.put(regionName, this.readEntitiesFromListTag(listEntities));
-                    }
-                    else if (version == 1)
-                    {
-                        this.blockEntities.put(regionName, this.readTileEntitiesFromNBT_v1(listBlockEntities));
-                        this.entities.put(regionName, this.readEntitiesFromNBT_v1(listEntities));
-                    }
-
-                    if (version >= 3)
-                    {
-                        NBTTagList listBlockTicks = regionTag.getTagList("PendingBlockTicks", Constants.NBT.TAG_COMPOUND);
-
-                        if (needsVersionConversion)
-                        {
-                            // TODO
-                        }
-
-                        this.pendingBlockTicks.put(regionName, this.readBlockTicksFromNBT(listBlockTicks));
-                    }
-
-                    NBTBase nbtBase = regionTag.getTag("BlockStates");
-
-                    // There are no convenience methods in NBTTagCompound yet in 1.12, so we'll have to do it the ugly way...
-                    if (nbtBase != null && nbtBase.getId() == Constants.NBT.TAG_LONG_ARRAY)
-                    {
-                        Vec3i size = new Vec3i(Math.abs(regionSize.getX()), Math.abs(regionSize.getY()), Math.abs(regionSize.getZ()));
-                        NBTTagList paletteTag = regionTag.getTagList("BlockStatePalette", Constants.NBT.TAG_COMPOUND);
-                        long[] blockStateArr = ((IMixinNBTTagLongArray) nbtBase).getArray();
-                        final int paletteSize = paletteTag.tagCount();
-
-                        LitematicaBlockStateContainerFull container = LitematicaBlockStateContainerFull.createContainer(paletteSize, blockStateArr, size);
-
-                        if (container == null)
-                        {
-                            InfoUtils.printErrorMessage("litematica.error.schematic_read_from_file_failed.region_container",
-                                    regionName, this.getFile() != null ? this.getFile().getName() : "<null>");
-                            return false;
-                        }
-
-                        // Loading a schematic from a different MC version, convert the palette
-                        if (needsVersionConversion)
-                        {
-                            paletteTag = this.convertBlockStatePaletteToCurrentGameVersion(paletteTag);
-                        }
-
-                        this.readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette());
-                        this.blockContainers.put(regionName, container);
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        return true;
-    }
-
-    private ImmutableMap<BlockPos, NextTickListEntry> readBlockTicksFromNBT(NBTTagList tagList)
-    {
-        ImmutableMap.Builder<BlockPos, NextTickListEntry> builder = ImmutableMap.builder();
-        final int size = tagList.tagCount();
-
-        for (int i = 0; i < size; ++i)
-        {
-            NBTTagCompound tag = tagList.getCompoundTagAt(i);
-
-            if (tag.hasKey("Block", Constants.NBT.TAG_STRING) &&
-                tag.hasKey("Time", Constants.NBT.TAG_ANY_NUMERIC)) // XXX these were accidentally saved as longs in version 3
-            {
-                Block block = Block.REGISTRY.getObject(new ResourceLocation(tag.getString("Block")));
-
-                if (block != null && block != Blocks.AIR)
-                {
-                    BlockPos pos = new BlockPos(tag.getInteger("x"), tag.getInteger("y"), tag.getInteger("z"));
-                    NextTickListEntry entry = new NextTickListEntry(pos, block);
-                    entry.setPriority(tag.getInteger("Priority"));
-
-                    // Note: the time is a relative delay at this point
-                    entry.setScheduledTime(tag.getInteger("Time"));
-
-                    builder.put(pos, entry);
-                }
-            }
-        }
-
-        return builder.build();
-    }
-
-    private ImmutableList<EntityInfo> readEntitiesFromNBT_v1(NBTTagList tagList)
-    {
-        ImmutableList.Builder<EntityInfo> builder = ImmutableList.builder();
-        final int size = tagList.tagCount();
-
-        for (int i = 0; i < size; ++i)
-        {
-            NBTTagCompound tag = tagList.getCompoundTagAt(i);
-            Vec3d posVec = NBTUtils.readVec3d(tag);
-            NBTTagCompound entityData = tag.getCompoundTag("EntityData");
-
-            if (posVec != null && entityData.isEmpty() == false)
-            {
-                // Update the correct position to the Entity NBT, where it is stored in version 2
-                NBTUtils.writeVec3dToListTag(posVec, entityData);
-                builder.add(new EntityInfo(posVec, entityData));
-            }
-        }
-
-        return builder.build();
-    }
-
-    private ImmutableMap<BlockPos, NBTTagCompound> readTileEntitiesFromNBT_v1(NBTTagList tagList)
-    {
-        ImmutableMap.Builder<BlockPos, NBTTagCompound> builder = ImmutableMap.builder();
-        final int size = tagList.tagCount();
-
-        for (int i = 0; i < size; ++i)
-        {
-            NBTTagCompound tag = tagList.getCompoundTagAt(i);
-            NBTTagCompound tileNbt = tag.getCompoundTag("TileNBT");
-
-            // Note: This within-schematic relative position is not inside the tile tag!
-            BlockPos pos = NBTUtils.readBlockPos(tag);
-
-            if (pos != null && tileNbt.isEmpty() == false)
-            {
-                builder.put(pos, tileNbt);
-            }
-        }
-
-        return builder.build();
-    }
-
-    public static Boolean isValidSchematic(NBTTagCompound tag)
-    {
-        if (tag.hasKey("Version", Constants.NBT.TAG_INT) &&
-            tag.hasKey("Regions", Constants.NBT.TAG_COMPOUND) &&
-            tag.hasKey("Metadata", Constants.NBT.TAG_COMPOUND))
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    @Nullable
-    public static LitematicaSchematic createFromFile(File dir, String fileName)
-    {
-        if (fileName.endsWith(FILE_NAME_EXTENSION) == false)
-        {
-            fileName = fileName + FILE_NAME_EXTENSION;
-        }
-
-        File file = new File(dir, fileName);
-        LitematicaSchematic schematic = new LitematicaSchematic(file);
-
-        return schematic.readFromFile() ? schematic : null;
     }
 
     public static class LitematicaSubRegion implements ISchematicRegion
@@ -634,40 +742,45 @@ public class LitematicaSchematic extends SchematicBase
         @Override
         public ImmutableList<EntityInfo> getEntityList()
         {
-            return this.schematic.entities.computeIfAbsent(this.regionName, (name) -> { return ImmutableList.of(); });
+            return this.schematic.entities.computeIfAbsent(this.regionName, (name) -> ImmutableList.of());
         }
 
         @Override
         public ImmutableMap<BlockPos, NBTTagCompound> getBlockEntityMap()
         {
-            return this.schematic.blockEntities.computeIfAbsent(this.regionName, (name) -> { return ImmutableMap.of(); });
+            return this.schematic.blockEntities.computeIfAbsent(this.regionName, (name) -> ImmutableMap.of());
         }
 
         @Override
         public ImmutableMap<BlockPos, NextTickListEntry> getBlockTickMap()
         {
-            return this.schematic.pendingBlockTicks.computeIfAbsent(this.regionName, (name) -> { return ImmutableMap.of(); });
+            return this.schematic.pendingBlockTicks.computeIfAbsent(this.regionName, (name) -> ImmutableMap.of());
         }
 
         @Override
         public void setEntityList(List<EntityInfo> list)
         {
             this.schematic.entities.put(this.regionName, ImmutableList.copyOf(list));
-            this.schematic.dirtyData.add(SchematicDataPiece.ENTITIES);
+            this.schematic.markDataModified(SchematicDataPiece.ENTITIES);
         }
 
         @Override
         public void setBlockEntityMap(Map<BlockPos, NBTTagCompound> map)
         {
             this.schematic.blockEntities.put(this.regionName, ImmutableMap.copyOf(map));
-            this.schematic.dirtyData.add(SchematicDataPiece.BLOCK_ENTITIES);
+            this.schematic.markDataModified(SchematicDataPiece.BLOCK_ENTITIES);
         }
 
         @Override
         public void setBlockTickMap(Map<BlockPos, NextTickListEntry> map)
         {
             this.schematic.pendingBlockTicks.put(this.regionName, ImmutableMap.copyOf(map));
-            this.schematic.dirtyData.add(SchematicDataPiece.BLOCK_TICKS);
+            this.schematic.markDataModified(SchematicDataPiece.BLOCK_TICKS);
         }
+    }
+
+    private interface IDataConverter
+    {
+        NBTTagList convert(NBTTagList blockEntityList, String idTagName, SchematicDataVersion versionFrom, MinecraftVersion versionTo);
     }
 }

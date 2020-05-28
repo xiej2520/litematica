@@ -1,5 +1,6 @@
 package fi.dy.masa.litematica.schematic.container;
 
+import javax.annotation.Nullable;
 import net.minecraft.block.state.IBlockState;
 
 public class VanillaStructurePalette extends LitematicaBlockStatePaletteHashMap
@@ -23,7 +24,7 @@ public class VanillaStructurePalette extends LitematicaBlockStatePaletteHashMap
     }
 
     @Override
-    public VanillaStructurePalette copy(IPaletteResizeHandler resizeHandler)
+    public VanillaStructurePalette copy(@Nullable IPaletteResizeHandler resizeHandler)
     {
         VanillaStructurePalette copy = new VanillaStructurePalette();
 

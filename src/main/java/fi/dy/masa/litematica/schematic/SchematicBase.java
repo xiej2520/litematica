@@ -20,7 +20,12 @@ import fi.dy.masa.litematica.mixin.IMixinDataFixer;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
+import fi.dy.masa.litematica.schematic.conversion.BlockEntityDataConverter;
 import fi.dy.masa.litematica.schematic.conversion.BlockStateConverter;
+import fi.dy.masa.litematica.schematic.conversion.BlockTickDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.EntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.EntityDataConverterBase;
+import fi.dy.masa.litematica.schematic.conversion.InventoryDataConverter;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion.VersionClassification;
 import fi.dy.masa.litematica.schematic.conversion.SchematicDataConversionManager;
@@ -32,19 +37,24 @@ import fi.dy.masa.malilib.util.NBTUtils;
 
 public abstract class SchematicBase implements ISchematic
 {
-    public static final int MINECRAFT_DATA_VERSION = ((IMixinDataFixer) Minecraft.getMinecraft().getDataFixer()).getVersion();
-    public static final MinecraftVersion CURRENT_GAME_SCHEMATIC_DATA_VERSION = MinecraftVersion.MC_1_12;
+    public static final int CURRENT_MINECRAFT_DATA_VERSION = ((IMixinDataFixer) Minecraft.getMinecraft().getDataFixer()).getVersion();
+    public static final MinecraftVersion CURRENT_MINECRAFT_VERSION = MinecraftVersion.MC_1_12_X;
+
+    public static final SchematicDataVersion CURRENT_SCHEMATIC_DATA_VERSION = SchematicDataVersion.getVersionFor(CURRENT_MINECRAFT_DATA_VERSION);
 
     protected final SchematicMetadata metadata = new SchematicMetadata();
-    protected final EnumSet<SchematicDataPiece> dirtyData = EnumSet.noneOf(SchematicDataPiece.class);
-    @Nullable protected final File schematicFile;
-    @Nullable private NBTTagCompound cachedNbtDataFromFile;
-    private boolean shouldLoadFromCachedData;
+    @Nullable
+    protected final File schematicFile;
 
-    /** This is the data version that the in-memory NBT data is currently in */
-    protected SchematicDataVersion currentDataSchematicDataVersion = SchematicDataVersion.getVersionFor(CURRENT_GAME_SCHEMATIC_DATA_VERSION.getMaxDataVersion());
+    private final EnumSet<SchematicDataPiece> dirtyData = EnumSet.noneOf(SchematicDataPiece.class);
+    @Nullable
+    private NBTTagCompound cachedNbtDataFromFile;
+    private boolean shouldLoadFromCachedData;
+    /** This is the data version that the cached NBT data read from the file is in */
+    private SchematicDataVersion dataVersionFromFile = CURRENT_SCHEMATIC_DATA_VERSION;
+
     /** This is the schematic data version that the data should be written to file as */
-    protected MinecraftVersion requestedOutputMinecraftVersion = CURRENT_GAME_SCHEMATIC_DATA_VERSION;
+    protected MinecraftVersion requestedOutputMinecraftVersion = CURRENT_MINECRAFT_VERSION;
 
     protected long totalBlocksReadFromWorld;
 
@@ -66,30 +76,19 @@ public abstract class SchematicBase implements ISchematic
         return this.metadata;
     }
 
-    protected void setToCurrentGameVersion()
-    {
-        this.currentDataSchematicDataVersion = SchematicDataVersion.getVersionFor(CURRENT_GAME_SCHEMATIC_DATA_VERSION.getMaxDataVersion());
-        this.requestedOutputMinecraftVersion = CURRENT_GAME_SCHEMATIC_DATA_VERSION;
-    }
-
     @Override
     public void clear()
     {
         this.cachedNbtDataFromFile = null;
         this.shouldLoadFromCachedData = false;
-
-        this.setToCurrentGameVersion();
-    }
-
-    protected final boolean getShouldLoadFromCachedData()
-    {
-        return this.shouldLoadFromCachedData;
+        this.dataVersionFromFile = CURRENT_SCHEMATIC_DATA_VERSION;
+        this.requestedOutputMinecraftVersion = CURRENT_MINECRAFT_VERSION;
     }
 
     @Override
     public SchematicDataVersion getCurrentSchematicDataVersion()
     {
-        return this.currentDataSchematicDataVersion;
+        return this.dataVersionFromFile;
     }
 
     @Override
@@ -100,46 +99,82 @@ public abstract class SchematicBase implements ISchematic
 
     protected void setCurrentDataVersionWithFallback(int dataVersion)
     {
-        this.currentDataSchematicDataVersion = SchematicDataVersion.getVersionFor(dataVersion);
+        this.dataVersionFromFile = SchematicDataVersion.getVersionFor(dataVersion);
         boolean usedFallback = false;
 
-        if (this.currentDataSchematicDataVersion == null)
+        if (this.dataVersionFromFile == null)
         {
+            MinecraftVersion fallback = CURRENT_MINECRAFT_VERSION; // this init version should never actually be used
             VersionClassification classification = MinecraftVersion.getVersionClassification(dataVersion);
-            MinecraftVersion fallback = CURRENT_GAME_SCHEMATIC_DATA_VERSION; // this version should never actually be used
             usedFallback = true;
 
             if (classification == VersionClassification.OLD)
             {
-                fallback = MinecraftVersion.KNOWN_VERSIONS.get(0);
+                fallback = MinecraftVersion.getOldestKnownVersion();
 
                 InfoUtils.showGuiOrInGameMessage(MessageType.WARNING, 8000, "litematica.error.schematic_conversion.unknown_data_version.old",
                         String.valueOf(dataVersion), fallback.getMcVersionDisplayName(), String.valueOf(fallback.getMaxDataVersion()));
             }
             else if (classification == VersionClassification.FUTURE)
             {
-                fallback = MinecraftVersion.KNOWN_VERSIONS.get(MinecraftVersion.KNOWN_VERSIONS.size() - 1);
+                fallback = MinecraftVersion.getLatestKnownVersion();
 
                 String strLastKnown = fallback.getMcVersionDisplayName();
                 InfoUtils.showGuiOrInGameMessage(MessageType.WARNING, 8000, "litematica.error.schematic_conversion.unknown_data_version.future",
                         String.valueOf(dataVersion), strLastKnown, fallback.getMcVersionDisplayName(), String.valueOf(fallback.getMaxDataVersion()));
             }
 
-            this.currentDataSchematicDataVersion = SchematicDataVersion.getVersionFor(fallback.getMaxDataVersion());
+            this.dataVersionFromFile = SchematicDataVersion.getVersionFor(fallback.getMaxDataVersion());
         }
 
         if (usedFallback == false && this.isFromDifferentMinecraftVersion())
         {
             InfoUtils.showGuiOrInGameMessage(MessageType.WARNING, 8000, "litematica.message.warn.schematic_conversion.non_native_data_version",
-                    String.valueOf(dataVersion), this.currentDataSchematicDataVersion.getMcVersionDisplayName());
+                    String.valueOf(dataVersion), this.dataVersionFromFile.getMcVersionDisplayName());
         }
 
-        this.setOutputMinecraftVersion(this.currentDataSchematicDataVersion.getMinecraftVersion());
+        this.setOutputMinecraftVersion(this.dataVersionFromFile.getMinecraftVersion());
+    }
+
+    protected void markDataModified(SchematicDataPiece data)
+    {
+        this.dirtyData.add(data);
     }
 
     protected boolean isFromDifferentMinecraftVersion()
     {
-        return this.getCurrentSchematicDataVersion().getMinecraftVersion() != CURRENT_GAME_SCHEMATIC_DATA_VERSION;
+        return this.getCurrentSchematicDataVersion().getMinecraftVersion() != CURRENT_MINECRAFT_VERSION;
+    }
+
+    protected boolean needsVersionConversion()
+    {
+        MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
+        MinecraftVersion versionTo = this.requestedOutputMinecraftVersion;
+        return versionFrom != versionTo;
+    }
+
+    /**
+     * Returns true if there is NBT data read from the original file, and that
+     * given piece of data has not been modified since loading from file.
+     */
+    protected final boolean canSaveCachedDataDirectly(SchematicDataPiece piece)
+    {
+        return this.cachedNbtDataFromFile != null && this.dirtyData.contains(piece) == false;
+    }
+
+    public final void loadFromCachedDataIfNeeded()
+    {
+        if (this.shouldLoadFromCachedData && this.cachedNbtDataFromFile != null)
+        {
+            this.fromCachedTag(this.cachedNbtDataFromFile);
+            this.shouldLoadFromCachedData = false;
+        }
+    }
+
+    @Nullable
+    protected final NBTTagCompound getCachedDataFromFile()
+    {
+        return this.cachedNbtDataFromFile;
     }
 
     public long getTotalBlocksReadFromWorld()
@@ -186,41 +221,36 @@ public abstract class SchematicBase implements ISchematic
     @Override
     public final ImmutableMap<String, ISchematicRegion> getRegions()
     {
-        if (this.shouldLoadFromCachedData && this.cachedNbtDataFromFile != null)
-        {
-            this.fromCachedTag(this.cachedNbtDataFromFile);
-            this.shouldLoadFromCachedData = false;
-        }
-
+        this.loadFromCachedDataIfNeeded();
         return this.getRegionsImpl();
     }
 
     @Override
     public final ISchematicRegion getSchematicRegion(String regionName)
     {
-        if (this.shouldLoadFromCachedData && this.cachedNbtDataFromFile != null)
-        {
-            this.fromCachedTag(this.cachedNbtDataFromFile);
-            this.shouldLoadFromCachedData = false;
-        }
-
+        this.loadFromCachedDataIfNeeded();
         return this.getSchematicRegionImpl(regionName);
     }
 
     /**
      * This method is called first, when reading data from NBT.
-     * It allows the schematic to initialize any required custom things before the common methods are called.
-     * One such thing is the schematic data version read from the file.
-     * @param tag
-     * @return true on success, false if there is an irrecoverable error and reading should stop
+     * It allows the schematic to initialize any required custom things before
+     * the other common methods are called.
+     * This method should also set the schematic data version based on whatever
+     * values are stored in the file for the given schematic type.
+     * @param tag the compound tag read from the file
+     * @return true if the data version was successfully detected and other early checks of the NBT data passed
      */
-    protected abstract boolean initFromTag(NBTTagCompound tag);
+    protected abstract boolean setDataVersionFromTag(NBTTagCompound tag);
 
-    protected abstract boolean fromCachedTag(NBTTagCompound tag);
+    protected abstract void fromCachedTag(NBTTagCompound tag);
 
     @Nullable
     protected abstract ISchematicRegion getSchematicRegionImpl(String regionName);
 
+    /**
+     * @return an immutable view of the sub-regions in this schematic
+     */
     protected abstract ImmutableMap<String, ISchematicRegion> getRegionsImpl();
 
     @Override
@@ -228,7 +258,7 @@ public abstract class SchematicBase implements ISchematic
     {
         this.clear();
 
-        if (this.initFromTag(tag))
+        if (this.setDataVersionFromTag(tag))
         {
             this.readMetadataFromTag(tag);
             this.cachedNbtDataFromFile = tag;
@@ -263,16 +293,77 @@ public abstract class SchematicBase implements ISchematic
         }
         else
         {
-            InfoUtils.printErrorMessage("litematica.error.schematic_read_from_file.missing_converter",
+            InfoUtils.printErrorMessage("litematica.error.schematic_conversion.missing_converter.block_states",
                     versionFrom.getMcVersionDisplayName(), String.valueOf(versionFrom.getDataVersion()), versionTo.getMcVersionDisplayName());
         }
 
         return paletteTag;
     }
 
+    protected NBTTagList convertBlockEntityData(NBTTagList blockEntityList, String idTagName, SchematicDataVersion versionFrom, MinecraftVersion versionTo)
+    {
+        BlockEntityDataConverter converter = SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom.getMinecraftVersion(), versionTo);
+
+        if (converter != null)
+        {
+            blockEntityList = converter.convertEntityNames(blockEntityList, idTagName);
+        }
+        else
+        {
+            InfoUtils.printErrorMessage("litematica.error.schematic_conversion.missing_converter.block_entity_data",
+                                        versionFrom.getMcVersionDisplayName(), String.valueOf(versionFrom.getDataVersion()), versionTo.getMcVersionDisplayName());
+        }
+
+        return blockEntityList;
+    }
+
+    protected NBTTagList convertBlockTickData(NBTTagList blockTickList, String idTagName, SchematicDataVersion versionFrom, MinecraftVersion versionTo)
+    {
+        BlockTickDataConverter converter = SchematicDataConversionManager.INSTANCE.getBlockTickDataConverter(versionFrom.getMinecraftVersion(), versionTo);
+
+        if (converter != null)
+        {
+            blockTickList = converter.convertBlockNames(blockTickList, idTagName);
+        }
+        else
+        {
+            InfoUtils.printErrorMessage("litematica.error.schematic_conversion.missing_converter.block_tick_data",
+                                        versionFrom.getMcVersionDisplayName(), String.valueOf(versionFrom.getDataVersion()), versionTo.getMcVersionDisplayName());
+        }
+
+        return blockTickList;
+    }
+
+    protected NBTTagList convertEntityData(NBTTagList entityList, String idTagName, SchematicDataVersion versionFrom, MinecraftVersion versionTo)
+    {
+        EntityDataConverter converter = SchematicDataConversionManager.INSTANCE.getEntityDataConverter(versionFrom.getMinecraftVersion(), versionTo);
+
+        if (converter != null)
+        {
+            entityList = converter.convertEntityNames(entityList, idTagName);
+        }
+        else
+        {
+            InfoUtils.printErrorMessage("litematica.error.schematic_conversion.missing_converter.entity_data",
+                                        versionFrom.getMcVersionDisplayName(), String.valueOf(versionFrom.getDataVersion()), versionTo.getMcVersionDisplayName());
+        }
+
+        return entityList;
+    }
+
     protected NBTTagList convertBlockStatePaletteToCurrentGameVersion(NBTTagList paletteTag)
     {
-        return this.convertBlockStatePalette(paletteTag, this.getCurrentSchematicDataVersion(), CURRENT_GAME_SCHEMATIC_DATA_VERSION);
+        return this.convertBlockStatePalette(paletteTag, this.getCurrentSchematicDataVersion(), CURRENT_MINECRAFT_VERSION);
+    }
+
+    protected NBTTagList convertBlockEntityDataToCurrentGameVersion(NBTTagList blockEntityList, String idTagName)
+    {
+        return this.convertBlockEntityData(blockEntityList, idTagName, this.getCurrentSchematicDataVersion(), CURRENT_MINECRAFT_VERSION);
+    }
+
+    protected NBTTagList convertEntityDataToCurrentGameVersion(NBTTagList entityList, String idTagName)
+    {
+        return this.convertEntityData(entityList, idTagName, this.getCurrentSchematicDataVersion(), CURRENT_MINECRAFT_VERSION);
     }
 
     protected boolean readPaletteFromLitematicaFormatTag(NBTTagList tagList, ILitematicaBlockStatePalette palette)
@@ -290,26 +381,7 @@ public abstract class SchematicBase implements ISchematic
         return palette.setMapping(list);
     }
 
-    protected ImmutableList<EntityInfo> readEntitiesFromListTag(NBTTagList tagList)
-    {
-        ImmutableList.Builder<EntityInfo> builder = ImmutableList.builder();
-        final int size = tagList.tagCount();
-
-        for (int i = 0; i < size; ++i)
-        {
-            NBTTagCompound entityData = tagList.getCompoundTagAt(i);
-            Vec3d posVec = NBTUtils.readVec3dFromListTag(entityData);
-
-            if (posVec != null && entityData.isEmpty() == false)
-            {
-                builder.add(new EntityInfo(posVec, entityData));
-            }
-        }
-
-        return builder.build();
-    }
-
-    protected ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromListTag(NBTTagList tagList)
+    protected ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromListTag(NBTTagList tagList, @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter)
     {
         ImmutableMap.Builder<BlockPos, NBTTagCompound> builder = ImmutableMap.builder();
         final int size = tagList.tagCount();
@@ -318,15 +390,84 @@ public abstract class SchematicBase implements ISchematic
         {
             NBTTagCompound tag = tagList.getCompoundTagAt(i);
             BlockPos pos = NBTUtils.readBlockPos(tag);
-            NBTUtils.removeBlockPosFromTag(tag);
 
             if (pos != null && tag.isEmpty() == false)
             {
+                tag = tag.copy();
+                NBTUtils.removeBlockPosFromTag(tag);
+                this.convertEntityTag(tag, "id", beConverter, invConverter);
                 builder.put(pos, tag);
             }
         }
 
         return builder.build();
+    }
+
+    protected ImmutableList<EntityInfo> readEntitiesFromListTag(NBTTagList tagList, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
+    {
+        ImmutableList.Builder<EntityInfo> builder = ImmutableList.builder();
+        final int size = tagList.tagCount();
+
+        for (int i = 0; i < size; ++i)
+        {
+            NBTTagCompound tag = tagList.getCompoundTagAt(i);
+            Vec3d posVec = NBTUtils.readVec3dFromListTag(tag);
+
+            if (posVec != null && tag.isEmpty() == false)
+            {
+                tag = tag.copy();
+                this.convertEntityTag(tag, "id", entityConverter, invConverter);
+                builder.add(new EntityInfo(posVec, tag));
+            }
+        }
+
+        return builder.build();
+    }
+
+    protected void convertEntitiesInList(NBTTagList entityList, String idTagName, @Nullable EntityDataConverterBase entityConverter, @Nullable InventoryDataConverter invConverter)
+    {
+        if (entityConverter != null)
+        {
+            entityConverter.convertEntityNames(entityList, idTagName);
+        }
+
+        if (invConverter != null)
+        {
+            invConverter.convertAnyInventoryContentsInList(entityList, idTagName);
+        }
+    }
+
+    protected void convertEntityTag(NBTTagCompound tag, String idTagName, @Nullable EntityDataConverterBase entityConverter, @Nullable InventoryDataConverter invConverter)
+    {
+        if (entityConverter != null)
+        {
+            entityConverter.convertName(tag, idTagName);
+        }
+
+        if (invConverter != null)
+        {
+            // Get the converted name
+            idTagName = tag.getString(idTagName);
+            invConverter.convertAnyInventoryContents(idTagName, tag);
+        }
+    }
+
+    protected NBTTagCompound getMetadataTagForWriting(@Nullable NBTTagCompound cachedTag)
+    {
+        NBTTagCompound metaTag;
+
+        if (cachedTag != null &&
+            cachedTag.hasKey("Metadata", Constants.NBT.TAG_COMPOUND) &&
+            this.canSaveCachedDataDirectly(SchematicDataPiece.METADATA))
+        {
+            metaTag = cachedTag.getCompoundTag("Metadata").copy();
+        }
+        else
+        {
+            metaTag = this.getMetadata().toTag();
+        }
+
+        return metaTag;
     }
 
     protected NBTTagList writePaletteToLitematicaFormatTag(ILitematicaBlockStatePalette palette)
@@ -353,7 +494,7 @@ public abstract class SchematicBase implements ISchematic
         {
             for (EntityInfo info : entityList)
             {
-                tagList.appendTag(info.nbt);
+                tagList.appendTag(info.nbt.copy());
             }
         }
 
@@ -368,7 +509,7 @@ public abstract class SchematicBase implements ISchematic
         {
             for (Map.Entry<BlockPos, NBTTagCompound> entry : tileMap.entrySet())
             {
-                NBTTagCompound tag = entry.getValue();
+                NBTTagCompound tag = entry.getValue().copy();
                 NBTUtils.writeBlockPosToTag(entry.getKey(), tag);
                 tagList.appendTag(tag);
             }
