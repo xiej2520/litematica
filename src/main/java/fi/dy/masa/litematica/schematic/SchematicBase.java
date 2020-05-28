@@ -1,39 +1,25 @@
 package fi.dy.masa.litematica.schematic;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
 import javax.annotation.Nullable;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import net.minecraft.nbt.NBTUtil;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import fi.dy.masa.litematica.mixin.IMixinDataFixer;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
-import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
-import fi.dy.masa.litematica.schematic.conversion.BlockEntityDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.BlockStateConverter;
-import fi.dy.masa.litematica.schematic.conversion.BlockTickDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.EntityDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.EntityDataConverterBase;
-import fi.dy.masa.litematica.schematic.conversion.InventoryDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.ConversionUtils;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion.VersionClassification;
-import fi.dy.masa.litematica.schematic.conversion.SchematicDataConversionManager;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataPiece;
 import fi.dy.masa.litematica.schematic.conversion.SchematicDataVersion;
 import fi.dy.masa.malilib.gui.util.Message.MessageType;
 import fi.dy.masa.malilib.util.Constants;
 import fi.dy.masa.malilib.util.InfoUtils;
-import fi.dy.masa.malilib.util.NBTUtils;
 
 public abstract class SchematicBase implements ISchematic
 {
@@ -283,173 +269,19 @@ public abstract class SchematicBase implements ISchematic
         }
     }
 
-    protected NBTTagList convertBlockStatePalette(NBTTagList paletteTag, SchematicDataVersion versionFrom, MinecraftVersion versionTo)
-    {
-        BlockStateConverter converter = SchematicDataConversionManager.INSTANCE.getBlockStateConverter(versionFrom.getMinecraftVersion(), versionTo);
-
-        if (converter != null)
-        {
-            paletteTag = converter.convertPalette(paletteTag);
-        }
-        else
-        {
-            InfoUtils.printErrorMessage("litematica.error.schematic_conversion.missing_converter.block_states",
-                    versionFrom.getMcVersionDisplayName(), String.valueOf(versionFrom.getDataVersion()), versionTo.getMcVersionDisplayName());
-        }
-
-        return paletteTag;
-    }
-
-    protected NBTTagList convertBlockEntityData(NBTTagList blockEntityList, String idTagName, SchematicDataVersion versionFrom, MinecraftVersion versionTo)
-    {
-        BlockEntityDataConverter converter = SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom.getMinecraftVersion(), versionTo);
-
-        if (converter != null)
-        {
-            blockEntityList = converter.convertEntityNames(blockEntityList, idTagName);
-        }
-        else
-        {
-            InfoUtils.printErrorMessage("litematica.error.schematic_conversion.missing_converter.block_entity_data",
-                                        versionFrom.getMcVersionDisplayName(), String.valueOf(versionFrom.getDataVersion()), versionTo.getMcVersionDisplayName());
-        }
-
-        return blockEntityList;
-    }
-
-    protected NBTTagList convertBlockTickData(NBTTagList blockTickList, String idTagName, SchematicDataVersion versionFrom, MinecraftVersion versionTo)
-    {
-        BlockTickDataConverter converter = SchematicDataConversionManager.INSTANCE.getBlockTickDataConverter(versionFrom.getMinecraftVersion(), versionTo);
-
-        if (converter != null)
-        {
-            blockTickList = converter.convertBlockNames(blockTickList, idTagName);
-        }
-        else
-        {
-            InfoUtils.printErrorMessage("litematica.error.schematic_conversion.missing_converter.block_tick_data",
-                                        versionFrom.getMcVersionDisplayName(), String.valueOf(versionFrom.getDataVersion()), versionTo.getMcVersionDisplayName());
-        }
-
-        return blockTickList;
-    }
-
-    protected NBTTagList convertEntityData(NBTTagList entityList, String idTagName, SchematicDataVersion versionFrom, MinecraftVersion versionTo)
-    {
-        EntityDataConverter converter = SchematicDataConversionManager.INSTANCE.getEntityDataConverter(versionFrom.getMinecraftVersion(), versionTo);
-
-        if (converter != null)
-        {
-            entityList = converter.convertEntityNames(entityList, idTagName);
-        }
-        else
-        {
-            InfoUtils.printErrorMessage("litematica.error.schematic_conversion.missing_converter.entity_data",
-                                        versionFrom.getMcVersionDisplayName(), String.valueOf(versionFrom.getDataVersion()), versionTo.getMcVersionDisplayName());
-        }
-
-        return entityList;
-    }
-
     protected NBTTagList convertBlockStatePaletteToCurrentGameVersion(NBTTagList paletteTag)
     {
-        return this.convertBlockStatePalette(paletteTag, this.getCurrentSchematicDataVersion(), CURRENT_MINECRAFT_VERSION);
+        return ConversionUtils.convertBlockStatePalette(paletteTag, this.getCurrentSchematicDataVersion(), CURRENT_MINECRAFT_VERSION);
     }
 
     protected NBTTagList convertBlockEntityDataToCurrentGameVersion(NBTTagList blockEntityList, String idTagName)
     {
-        return this.convertBlockEntityData(blockEntityList, idTagName, this.getCurrentSchematicDataVersion(), CURRENT_MINECRAFT_VERSION);
+        return ConversionUtils.convertBlockEntityData(blockEntityList, idTagName, this.getCurrentSchematicDataVersion(), CURRENT_MINECRAFT_VERSION);
     }
 
     protected NBTTagList convertEntityDataToCurrentGameVersion(NBTTagList entityList, String idTagName)
     {
-        return this.convertEntityData(entityList, idTagName, this.getCurrentSchematicDataVersion(), CURRENT_MINECRAFT_VERSION);
-    }
-
-    protected boolean readPaletteFromLitematicaFormatTag(NBTTagList tagList, ILitematicaBlockStatePalette palette)
-    {
-        final int size = tagList.tagCount();
-        List<IBlockState> list = new ArrayList<>(size);
-
-        for (int id = 0; id < size; ++id)
-        {
-            NBTTagCompound tag = tagList.getCompoundTagAt(id);
-            IBlockState state = NBTUtil.readBlockState(tag);
-            list.add(state);
-        }
-
-        return palette.setMapping(list);
-    }
-
-    protected ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromListTag(NBTTagList tagList, @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter)
-    {
-        ImmutableMap.Builder<BlockPos, NBTTagCompound> builder = ImmutableMap.builder();
-        final int size = tagList.tagCount();
-
-        for (int i = 0; i < size; ++i)
-        {
-            NBTTagCompound tag = tagList.getCompoundTagAt(i);
-            BlockPos pos = NBTUtils.readBlockPos(tag);
-
-            if (pos != null && tag.isEmpty() == false)
-            {
-                tag = tag.copy();
-                NBTUtils.removeBlockPosFromTag(tag);
-                this.convertEntityTag(tag, "id", beConverter, invConverter);
-                builder.put(pos, tag);
-            }
-        }
-
-        return builder.build();
-    }
-
-    protected ImmutableList<EntityInfo> readEntitiesFromListTag(NBTTagList tagList, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
-    {
-        ImmutableList.Builder<EntityInfo> builder = ImmutableList.builder();
-        final int size = tagList.tagCount();
-
-        for (int i = 0; i < size; ++i)
-        {
-            NBTTagCompound tag = tagList.getCompoundTagAt(i);
-            Vec3d posVec = NBTUtils.readVec3dFromListTag(tag);
-
-            if (posVec != null && tag.isEmpty() == false)
-            {
-                tag = tag.copy();
-                this.convertEntityTag(tag, "id", entityConverter, invConverter);
-                builder.add(new EntityInfo(posVec, tag));
-            }
-        }
-
-        return builder.build();
-    }
-
-    protected void convertEntitiesInList(NBTTagList entityList, String idTagName, @Nullable EntityDataConverterBase entityConverter, @Nullable InventoryDataConverter invConverter)
-    {
-        if (entityConverter != null)
-        {
-            entityConverter.convertEntityNames(entityList, idTagName);
-        }
-
-        if (invConverter != null)
-        {
-            invConverter.convertAnyInventoryContentsInList(entityList, idTagName);
-        }
-    }
-
-    protected void convertEntityTag(NBTTagCompound tag, String idTagName, @Nullable EntityDataConverterBase entityConverter, @Nullable InventoryDataConverter invConverter)
-    {
-        if (entityConverter != null)
-        {
-            entityConverter.convertName(tag, idTagName);
-        }
-
-        if (invConverter != null)
-        {
-            // Get the converted name
-            idTagName = tag.getString(idTagName);
-            invConverter.convertAnyInventoryContents(idTagName, tag);
-        }
+        return ConversionUtils.convertEntityData(entityList, idTagName, this.getCurrentSchematicDataVersion(), CURRENT_MINECRAFT_VERSION);
     }
 
     protected NBTTagCompound getMetadataTagForWriting(@Nullable NBTTagCompound cachedTag)
@@ -468,62 +300,5 @@ public abstract class SchematicBase implements ISchematic
         }
 
         return metaTag;
-    }
-
-    protected NBTTagList writePaletteToLitematicaFormatTag(ILitematicaBlockStatePalette palette)
-    {
-        final int size = palette.getPaletteSize();
-        List<IBlockState> list = palette.getMapping();
-        NBTTagList tagList = new NBTTagList();
-
-        for (int id = 0; id < size; ++id)
-        {
-            NBTTagCompound tag = new NBTTagCompound();
-            NBTUtil.writeBlockState(tag, list.get(id));
-            tagList.appendTag(tag);
-        }
-
-        return tagList;
-    }
-
-    protected NBTTagList writeEntitiesToListTag(List<EntityInfo> entityList)
-    {
-        NBTTagList tagList = new NBTTagList();
-
-        if (entityList.isEmpty() == false)
-        {
-            for (EntityInfo info : entityList)
-            {
-                tagList.appendTag(info.nbt.copy());
-            }
-        }
-
-        return tagList;
-    }
-
-    protected NBTTagList writeBlockEntitiesToListTag(Map<BlockPos, NBTTagCompound> tileMap)
-    {
-        NBTTagList tagList = new NBTTagList();
-
-        if (tileMap.isEmpty() == false)
-        {
-            for (Map.Entry<BlockPos, NBTTagCompound> entry : tileMap.entrySet())
-            {
-                NBTTagCompound tag = entry.getValue().copy();
-                NBTUtils.writeBlockPosToTag(entry.getKey(), tag);
-                tagList.appendTag(tag);
-            }
-        }
-
-        return tagList;
-    }
-
-    public enum SchematicDataPiece
-    {
-        BLOCKS,
-        ENTITIES,
-        BLOCK_ENTITIES,
-        BLOCK_TICKS,
-        METADATA;
     }
 }

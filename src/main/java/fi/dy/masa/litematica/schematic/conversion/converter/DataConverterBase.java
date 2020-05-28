@@ -1,9 +1,10 @@
-package fi.dy.masa.litematica.schematic.conversion;
+package fi.dy.masa.litematica.schematic.conversion.converter;
 
 import javax.annotation.Nullable;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 
 public abstract class DataConverterBase implements IBlockStateMapReader
 {

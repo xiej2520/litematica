@@ -73,6 +73,7 @@ public class GuiSchematicSave extends GuiSchematicSaveBase implements ICompletio
 
         String str = StringUtils.translate("litematica.gui.label.schematic_save.checkbox.ignore_entities");
         this.checkboxIgnoreEntities = new WidgetCheckBox(x, y + 24, LitematicaGuiIcons.CHECKBOX_UNSELECTED, LitematicaGuiIcons.CHECKBOX_SELECTED, str);
+        this.addWidget(this.textField);
         this.addWidget(this.checkboxIgnoreEntities);
 
         this.createButton(x, y, ButtonType.SAVE);

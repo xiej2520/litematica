@@ -1,8 +1,9 @@
-package fi.dy.masa.litematica.schematic.conversion;
+package fi.dy.masa.litematica.schematic.conversion.converter;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.minecraft.nbt.NBTTagCompound;
+import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 

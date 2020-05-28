@@ -1,8 +1,9 @@
-package fi.dy.masa.litematica.schematic.conversion;
+package fi.dy.masa.litematica.schematic.conversion.converter;
 
 import java.util.HashMap;
 import com.google.gson.JsonObject;
 import net.minecraft.nbt.NBTTagList;
+import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 
 public class BlockTickDataConverter extends DataConverterBase
 {

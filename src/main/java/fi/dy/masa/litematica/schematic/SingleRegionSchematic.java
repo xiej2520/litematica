@@ -16,12 +16,14 @@ import net.minecraft.world.NextTickListEntry;
 import fi.dy.masa.litematica.Litematica;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
-import fi.dy.masa.litematica.schematic.conversion.BlockEntityDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.BlockTickDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.EntityDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.InventoryDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.ConversionUtils;
+import fi.dy.masa.litematica.schematic.conversion.IListTagDataConverter;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 import fi.dy.masa.litematica.schematic.conversion.SchematicDataConversionManager;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataPiece;
+import fi.dy.masa.litematica.schematic.conversion.converter.BlockEntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.EntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.InventoryDataConverter;
 import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.malilib.util.InfoUtils;
 import fi.dy.masa.malilib.util.NBTUtils;
@@ -251,12 +253,12 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
             }
         }
 
+        final ImmutableMap.Builder<BlockPos, NBTTagCompound> builderBlockEntities = ImmutableMap.builder();
+        final ImmutableMap.Builder<BlockPos, NextTickListEntry> builderBlockTicks = ImmutableMap.builder();
+        final ImmutableList.Builder<EntityInfo> builderEntities = ImmutableList.builder();
+
         for (ISchematicRegion region : regions.values())
         {
-            final ImmutableMap.Builder<BlockPos, NBTTagCompound> builderBlockEntities = ImmutableMap.builder();
-            final ImmutableMap.Builder<BlockPos, NextTickListEntry> builderBlockTicks = ImmutableMap.builder();
-            final ImmutableList.Builder<EntityInfo> builderEntities = ImmutableList.builder();
-
             // No offset for this sub-region, use the positions in the maps without modifications
             if (region.getPosition().equals(BlockPos.ORIGIN))
             {
@@ -290,11 +292,11 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
                     builderEntities.add(new EntityInfo(pos, nbt));
                 });
             }
-
-            this.setBlockEntityMap(builderBlockEntities.build());
-            this.setBlockTickMap(builderBlockTicks.build());
-            this.setEntityList(builderEntities.build());
         }
+
+        this.setBlockEntityMap(builderBlockEntities.build());
+        this.setBlockTickMap(builderBlockTicks.build());
+        this.setEntityList(builderEntities.build());
     }
 
     protected Vec3i getRegionOffset(ISchematicRegion region, BlockPos minCorner)
@@ -380,16 +382,14 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
 
         final NBTTagCompound tag = cachedTag != null ? cachedTag.copy() : new NBTTagCompound();
 
-        final boolean needsConversion = this.needsVersionConversion();
-        final MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
-        final MinecraftVersion versionTo = this.requestedOutputMinecraftVersion;
-        final BlockEntityDataConverter beConverter = needsConversion ? SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom, versionTo) : null;
-        final EntityDataConverter entityConverter = needsConversion ? SchematicDataConversionManager.INSTANCE.getEntityDataConverter(versionFrom, versionTo) : null;
-        final InventoryDataConverter invConverter = needsConversion ? SchematicDataConversionManager.INSTANCE.getInventoryDataConverter(versionFrom, versionTo) : null;
+        MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
+        MinecraftVersion versionTo = this.requestedOutputMinecraftVersion;
+        IListTagDataConverter beConverter = ConversionUtils.createBlockEntityListConverter(versionFrom, versionTo);
+        IListTagDataConverter entityConverter = ConversionUtils.createEntityListConverter(versionFrom, versionTo);
 
-        this.writeBlocksToTag(tag, cachedTag, needsConversion);
-        this.writeBlockEntitiesToTag(tag, cachedTag, beConverter, invConverter);
-        this.writeEntitiesToTag(tag, cachedTag, entityConverter, invConverter);
+        this.writeBlocksToTag(tag, cachedTag, this.needsVersionConversion());
+        this.writeBlockEntitiesToTag(tag, cachedTag, beConverter);
+        this.writeEntitiesToTag(tag, cachedTag, entityConverter);
         this.writeMetadataToTag(tag, cachedTag);
 
         this.onWriteToTag(tag, cachedTag);
@@ -399,9 +399,9 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
 
     protected abstract void writeBlocksToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, boolean needsConversion);
 
-    protected abstract void writeBlockEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable BlockEntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter);
+    protected abstract void writeBlockEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable IListTagDataConverter converter);
 
-    protected abstract void writeEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter);
+    protected abstract void writeEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable IListTagDataConverter converter);
 
     protected abstract void writeMetadataToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag);
 

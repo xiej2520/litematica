@@ -15,11 +15,16 @@ import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerSparse;
 import fi.dy.masa.litematica.schematic.container.VanillaStructurePalette;
-import fi.dy.masa.litematica.schematic.conversion.BlockEntityDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.EntityDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.InventoryDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.ConversionUtils;
+import fi.dy.masa.litematica.schematic.conversion.IListTagDataConverter;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 import fi.dy.masa.litematica.schematic.conversion.SchematicDataConversionManager;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataPiece;
+import fi.dy.masa.litematica.schematic.conversion.converter.BlockEntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.EntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.EntityDataConverterBase;
+import fi.dy.masa.litematica.schematic.conversion.converter.InventoryDataConverter;
+import fi.dy.masa.litematica.schematic.util.SchematicDataUtils;
 import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.malilib.util.Constants;
 import fi.dy.masa.malilib.util.InfoUtils;
@@ -118,7 +123,7 @@ public class VanillaStructure extends SingleRegionSchematic
                 paletteTag = this.convertBlockStatePaletteToCurrentGameVersion(paletteTag);
             }
 
-            if (this.readPaletteFromLitematicaFormatTag(paletteTag, palette) == false)
+            if (SchematicDataUtils.readPaletteFromLitematicaFormatTag(paletteTag, palette) == false)
             {
                 InfoUtils.printErrorMessage("litematica.message.error.schematic_read.vanilla.failed_to_read_palette");
                 return false;
@@ -205,7 +210,7 @@ public class VanillaStructure extends SingleRegionSchematic
             if (pos != null && entityData.hasKey("nbt", Constants.NBT.TAG_COMPOUND))
             {
                 NBTTagCompound nbt = entityData.getCompoundTag("nbt").copy();
-                this.convertEntityTag(nbt, "id", entityConverter, invConverter);
+                ConversionUtils.convertEntityTag(nbt, "id", entityConverter, invConverter);
                 builder.add(new EntityInfo(pos, nbt));
             }
         }
@@ -279,7 +284,7 @@ public class VanillaStructure extends SingleRegionSchematic
                 this.writeBlockToList(posMutable, palette.idFor(state), blockListTmp, beConverter, invConverter);
             });
 
-            paletteList = this.writePaletteToLitematicaFormatTag(palette);
+            paletteList = SchematicDataUtils.writePaletteToLitematicaFormatTag(palette);
         }
         else
         {
@@ -308,12 +313,12 @@ public class VanillaStructure extends SingleRegionSchematic
                 }
             }
 
-            paletteList = this.writePaletteToLitematicaFormatTag(palette);
+            paletteList = SchematicDataUtils.writePaletteToLitematicaFormatTag(palette);
         }
 
         if (needsConversion)
         {
-            paletteList = this.convertBlockStatePalette(paletteList, this.getCurrentSchematicDataVersion(), versionTo);
+            paletteList = ConversionUtils.convertBlockStatePalette(paletteList, this.getCurrentSchematicDataVersion(), versionTo);
         }
 
         tag.setTag("palette", paletteList);
@@ -351,15 +356,13 @@ public class VanillaStructure extends SingleRegionSchematic
     }
 
     @Override
-    protected void writeBlockEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag,
-                                           @Nullable BlockEntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
+    protected void writeBlockEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable IListTagDataConverter converter)
     {
         // NO-OP because the BlockEntity data is stored together with the block data in the vanilla format
     }
 
     @Override
-    protected void writeEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag,
-                                      @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
+    protected void writeEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable IListTagDataConverter converter)
     {
         NBTTagList tagList = new NBTTagList();
         BlockPos.MutableBlockPos posMutable = new BlockPos.MutableBlockPos();
@@ -374,15 +377,10 @@ public class VanillaStructure extends SingleRegionSchematic
 
             NBTTagCompound entityTag = info.nbt.copy();
 
-            if (entityConverter != null)
-            {
-                entityConverter.convertName(entityTag, "id");
-            }
+            EntityDataConverterBase entityConverter = ((ConversionUtils.EntityListDataConverter) converter).getEntityDataConverter();
+            InventoryDataConverter invConverter = ((ConversionUtils.EntityListDataConverter) converter).getInventoryDataConverter();
 
-            if (invConverter != null)
-            {
-                invConverter.convertAnyInventoryContents(entityTag.getString("id"), entityTag);
-            }
+            ConversionUtils.convertEntityTag(entityTag, "id", entityConverter, invConverter);
 
             entityTag.removeTag("Pos");
             entityData.setTag("nbt", entityTag);

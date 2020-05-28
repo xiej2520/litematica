@@ -18,11 +18,14 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3i;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
-import fi.dy.masa.litematica.schematic.conversion.BlockEntityDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.EntityDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.InventoryDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.IListTagDataConverter;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataPiece;
 import fi.dy.masa.litematica.schematic.conversion.SchematicDataVersion;
+import fi.dy.masa.litematica.schematic.conversion.converter.BlockEntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.EntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.InventoryDataConverter;
+import fi.dy.masa.litematica.schematic.util.SchematicDataUtils;
 import fi.dy.masa.litematica.util.NbtUtils;
 import fi.dy.masa.malilib.util.Constants;
 import fi.dy.masa.malilib.util.InfoUtils;
@@ -107,14 +110,14 @@ public class SchematicaSchematic extends SingleRegionSchematic
     protected ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromTag(NBTTagCompound tag, @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter)
     {
         NBTTagList listBlockEntities = tag.getTagList("TileEntities", Constants.NBT.TAG_COMPOUND);
-        return this.readBlockEntitiesFromListTag(listBlockEntities, beConverter, invConverter);
+        return SchematicDataUtils.readBlockEntitiesFromListTag(listBlockEntities, beConverter, invConverter);
     }
 
     @Override
     protected ImmutableList<EntityInfo> readEntitiesFromTag(NBTTagCompound tag, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
     {
         NBTTagList listEntities = tag.getTagList("Entities", Constants.NBT.TAG_COMPOUND);
-        return this.readEntitiesFromListTag(listEntities, entityConverter, invConverter);
+        return SchematicDataUtils.readEntitiesFromListTag(listEntities, entityConverter, invConverter);
     }
 
     @Override
@@ -136,41 +139,19 @@ public class SchematicaSchematic extends SingleRegionSchematic
     }
 
     @Override
-    protected void writeBlockEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter)
+    protected void writeBlockEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable IListTagDataConverter converter)
     {
-        NBTTagList tagList;
-
-        if (cachedTag != null && this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_ENTITIES))
-        {
-            tagList = cachedTag.getTagList("TileEntities", Constants.NBT.TAG_COMPOUND).copy();
-        }
-        else
-        {
-            tagList = this.writeBlockEntitiesToListTag(this.blockEntities);
-        }
-
-        this.convertEntitiesInList(tagList, "id", beConverter, invConverter);
-
-        tag.setTag("TileEntities", tagList);
+        SchematicDataUtils.writeListDataToTag(() -> this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_ENTITIES),
+                                              tag, cachedTag, "TileEntities", "id", converter,
+                                              () -> SchematicDataUtils.writeBlockEntitiesToListTag(this.blockEntities));
     }
 
     @Override
-    protected void writeEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable EntityDataConverter entityConverter, @Nullable InventoryDataConverter invConverter)
+    protected void writeEntitiesToTag(NBTTagCompound tag, @Nullable NBTTagCompound cachedTag, @Nullable IListTagDataConverter converter)
     {
-        NBTTagList tagList;
-
-        if (cachedTag != null && this.canSaveCachedDataDirectly(SchematicDataPiece.ENTITIES))
-        {
-            tagList = cachedTag.getTagList("Entities", Constants.NBT.TAG_COMPOUND).copy();
-        }
-        else
-        {
-            tagList = this.writeEntitiesToListTag(this.entities);
-        }
-
-        this.convertEntitiesInList(tagList, "id", entityConverter, invConverter);
-
-        tag.setTag("Entities", tagList);
+        SchematicDataUtils.writeListDataToTag(() -> this.canSaveCachedDataDirectly(SchematicDataPiece.ENTITIES),
+                                              tag, cachedTag, "Entities", "id", converter,
+                                              () -> SchematicDataUtils.writeEntitiesToListTag(this.entities));
     }
 
     @Override

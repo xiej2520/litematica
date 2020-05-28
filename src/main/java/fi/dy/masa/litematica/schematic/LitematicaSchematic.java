@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -24,14 +23,16 @@ import net.minecraft.world.NextTickListEntry;
 import fi.dy.masa.litematica.Litematica;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
-import fi.dy.masa.litematica.schematic.conversion.BlockEntityDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.BlockTickDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.EntityDataConverter;
-import fi.dy.masa.litematica.schematic.conversion.EntityDataConverterBase;
-import fi.dy.masa.litematica.schematic.conversion.InventoryDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.ConversionUtils;
+import fi.dy.masa.litematica.schematic.conversion.IListTagDataConverter;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 import fi.dy.masa.litematica.schematic.conversion.SchematicDataConversionManager;
-import fi.dy.masa.litematica.schematic.conversion.SchematicDataVersion;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataPiece;
+import fi.dy.masa.litematica.schematic.conversion.converter.BlockEntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.BlockTickDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.EntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.InventoryDataConverter;
+import fi.dy.masa.litematica.schematic.util.SchematicDataUtils;
 import fi.dy.masa.litematica.selection.Box;
 import fi.dy.masa.litematica.selection.SelectionBox;
 import fi.dy.masa.litematica.util.PositionUtils;
@@ -347,8 +348,8 @@ public class LitematicaSchematic extends SchematicBase
 
             if (version >= 2)
             {
-                this.blockEntities.put(regionName, this.readBlockEntitiesFromListTag(listBlockEntities, beConverter, invConverter));
-                this.entities.put(regionName, this.readEntitiesFromListTag(listEntities, entityConverter, invConverter));
+                this.blockEntities.put(regionName, SchematicDataUtils.readBlockEntitiesFromListTag(listBlockEntities, beConverter, invConverter));
+                this.entities.put(regionName, SchematicDataUtils.readEntitiesFromListTag(listEntities, entityConverter, invConverter));
             }
             else if (version == 1)
             {
@@ -393,7 +394,7 @@ public class LitematicaSchematic extends SchematicBase
                     paletteTag = this.convertBlockStatePaletteToCurrentGameVersion(paletteTag);
                 }
 
-                this.readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette());
+                SchematicDataUtils.readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette());
                 this.blockContainers.put(regionName, container);
             }
             else
@@ -455,7 +456,7 @@ public class LitematicaSchematic extends SchematicBase
             if (posVec != null && entityData.isEmpty() == false)
             {
                 tag = tag.copy();
-                this.convertEntityTag(tag, "id", entityConverter, invConverter);
+                ConversionUtils.convertEntityTag(tag, "id", entityConverter, invConverter);
                 // Update the correct position to the Entity NBT, where it is stored in version 2
                 NBTUtils.writeVec3dToListTag(posVec, entityData);
                 builder.add(new EntityInfo(posVec, entityData));
@@ -481,7 +482,7 @@ public class LitematicaSchematic extends SchematicBase
             if (pos != null && tag.isEmpty() == false)
             {
                 tag = tag.copy();
-                this.convertEntityTag(tag, "id", beConverter, invConverter);
+                ConversionUtils.convertEntityTag(tag, "id", beConverter, invConverter);
                 builder.put(pos, tag);
             }
         }
@@ -516,12 +517,11 @@ public class LitematicaSchematic extends SchematicBase
 
     private NBTTagCompound writeSubRegionsToNBT()
     {
-        final boolean needsConversion = this.needsVersionConversion();
         final MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
         final MinecraftVersion versionTo = this.requestedOutputMinecraftVersion;
-        final BlockEntityDataConverter beConverter = SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom, versionTo);
-        final EntityDataConverter entityConverter = SchematicDataConversionManager.INSTANCE.getEntityDataConverter(versionFrom, versionTo);
-        final InventoryDataConverter invConverter = SchematicDataConversionManager.INSTANCE.getInventoryDataConverter(versionFrom, versionTo);
+        IListTagDataConverter beConverter = ConversionUtils.createBlockEntityListConverter(versionFrom, versionTo);
+        IListTagDataConverter entityConverter = ConversionUtils.createEntityListConverter(versionFrom, versionTo);
+        IListTagDataConverter blockTickConverter = ConversionUtils.createBlockTickListConverter(versionFrom, versionTo);
 
         NBTTagCompound regionsContainerTagNew = new NBTTagCompound();
         NBTTagCompound cachedRegionsContainerTag = null;
@@ -539,7 +539,7 @@ public class LitematicaSchematic extends SchematicBase
             regionNames = this.blockContainers.keySet();
         }
 
-        for (String regionName : regionNames)
+        for (final String regionName : regionNames)
         {
             @Nullable
             NBTTagCompound oldRegionTag = null;
@@ -569,21 +569,17 @@ public class LitematicaSchematic extends SchematicBase
 
             this.writeBlocksToRegionTag(regionName, regionTag, oldRegionTag);
 
-            this.writeListDataToRegionTag(regionName, "TileEntities", regionTag, oldRegionTag,
-                                          SchematicDataPiece.BLOCK_ENTITIES, beConverter, invConverter, (rn) ->
-            {
-                Map<BlockPos, NBTTagCompound> map = this.blockEntities.get(rn);
-                return map != null ? this.writeBlockEntitiesToListTag(map) : null;
-            });
+            SchematicDataUtils.writeListDataToTag(() -> this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_ENTITIES),
+                                                  regionTag, oldRegionTag, "TileEntities", "id", beConverter,
+                                                  () -> this.writeBlockEntitiesToListTag(regionName));
 
-            this.writeListDataToRegionTag(regionName, "Entities", regionTag, oldRegionTag,
-                                          SchematicDataPiece.ENTITIES, entityConverter, invConverter, (rn) ->
-            {
-                List<EntityInfo> list = this.entities.get(rn);
-                return list != null ? this.writeEntitiesToListTag(list) : null;
-            });
+            SchematicDataUtils.writeListDataToTag(() -> this.canSaveCachedDataDirectly(SchematicDataPiece.ENTITIES),
+                                                  regionTag, oldRegionTag, "Entities", "id", entityConverter,
+                                                  () -> this.writeEntitiesToListTag(regionName));
 
-            this.writeBlockTicksToRegionTag(regionName, regionTag, oldRegionTag);
+            SchematicDataUtils.writeListDataToTag(() -> this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_TICKS),
+                                                  regionTag, oldRegionTag, "PendingBlockTicks", "Block", blockTickConverter,
+                                                  () -> this.writeBlockTicksToListTag(regionName));
 
             regionsContainerTagNew.setTag(regionName, regionTag);
         }
@@ -608,7 +604,7 @@ public class LitematicaSchematic extends SchematicBase
             if (blockContainer != null)
             {
                 blockStatesTag = new NBTTagLongArray(blockContainer.getBackingLongArray());
-                paletteTag = this.writePaletteToLitematicaFormatTag(blockContainer.getPalette());
+                paletteTag = SchematicDataUtils.writePaletteToLitematicaFormatTag(blockContainer.getPalette());
             }
         }
 
@@ -616,7 +612,7 @@ public class LitematicaSchematic extends SchematicBase
         {
             if (this.needsVersionConversion())
             {
-                paletteTag = this.convertBlockStatePalette(paletteTag, this.getCurrentSchematicDataVersion(), this.requestedOutputMinecraftVersion);
+                paletteTag = ConversionUtils.convertBlockStatePalette(paletteTag, this.getCurrentSchematicDataVersion(), this.requestedOutputMinecraftVersion);
             }
 
             regionTag.setTag("BlockStatePalette", paletteTag);
@@ -624,61 +620,22 @@ public class LitematicaSchematic extends SchematicBase
         }
     }
 
-    private void writeListDataToRegionTag(
-            String regionName,
-            String tagName,
-            NBTTagCompound regionTag,
-            @Nullable NBTTagCompound cachedRegionTag,
-            SchematicDataPiece piece,
-            EntityDataConverterBase entityConverter,
-            InventoryDataConverter invConverter,
-            Function<String, NBTTagList> dataSource)
+    private NBTTagList writeBlockEntitiesToListTag(String regionName)
     {
-        NBTTagList list;
-
-        if (cachedRegionTag != null && this.canSaveCachedDataDirectly(piece))
-        {
-            list = cachedRegionTag.getTagList(tagName, Constants.NBT.TAG_COMPOUND).copy();
-        }
-        else
-        {
-            list = dataSource.apply(regionName);
-
-            if (list == null)
-            {
-                list = new NBTTagList();
-            }
-        }
-
-        this.convertEntitiesInList(list, "id", entityConverter, invConverter);
-
-        regionTag.setTag(tagName, list);
+        Map<BlockPos, NBTTagCompound> map = this.blockEntities.get(regionName);
+        return map != null ? SchematicDataUtils.writeBlockEntitiesToListTag(map) : null;
     }
 
-    private void writeBlockTicksToRegionTag(String regionName, NBTTagCompound regionTag, @Nullable NBTTagCompound cachedRegionTag)
+    private NBTTagList writeEntitiesToListTag(String regionName)
     {
-        NBTTagList listBlockTicks = new NBTTagList();
+        List<EntityInfo> list = this.entities.get(regionName);
+        return list != null ? SchematicDataUtils.writeEntitiesToListTag(list) : null;
+    }
 
-        if (cachedRegionTag != null && this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCK_TICKS))
-        {
-            listBlockTicks = cachedRegionTag.getTagList("PendingBlockTicks", Constants.NBT.TAG_COMPOUND).copy();
-        }
-        else
-        {
-            Map<BlockPos, NextTickListEntry> pendingTicks = this.pendingBlockTicks.get(regionName);
-
-            if (pendingTicks != null)
-            {
-                listBlockTicks = this.writeBlockTicksToListTag(pendingTicks);
-            }
-        }
-
-        if (this.needsVersionConversion())
-        {
-            listBlockTicks = this.convertBlockTickData(listBlockTicks, "Block", this.getCurrentSchematicDataVersion(), this.requestedOutputMinecraftVersion);
-        }
-
-        regionTag.setTag("PendingBlockTicks", listBlockTicks);
+    private NBTTagList writeBlockTicksToListTag(String regionName)
+    {
+        Map<BlockPos, NextTickListEntry> map = this.pendingBlockTicks.get(regionName);
+        return map != null ? this.writeBlockTicksToListTag(map) : null;
     }
 
     private NBTTagList writeBlockTicksToListTag(Map<BlockPos, NextTickListEntry> tickMap)
@@ -777,10 +734,5 @@ public class LitematicaSchematic extends SchematicBase
             this.schematic.pendingBlockTicks.put(this.regionName, ImmutableMap.copyOf(map));
             this.schematic.markDataModified(SchematicDataPiece.BLOCK_TICKS);
         }
-    }
-
-    private interface IDataConverter
-    {
-        NBTTagList convert(NBTTagList blockEntityList, String idTagName, SchematicDataVersion versionFrom, MinecraftVersion versionTo);
     }
 }

@@ -1,4 +1,4 @@
-package fi.dy.masa.litematica.schematic.conversion;
+package fi.dy.masa.litematica.schematic.conversion.converter;
 
 import java.io.BufferedReader;
 import java.io.IOException;

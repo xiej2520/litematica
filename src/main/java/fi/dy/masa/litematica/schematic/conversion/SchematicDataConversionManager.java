@@ -5,6 +5,12 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.Pair;
+import fi.dy.masa.litematica.schematic.conversion.converter.BlockEntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.BlockStateConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.BlockTickDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.DataConverterBase;
+import fi.dy.masa.litematica.schematic.conversion.converter.EntityDataConverter;
+import fi.dy.masa.litematica.schematic.conversion.converter.InventoryDataConverter;
 
 public class SchematicDataConversionManager
 {
