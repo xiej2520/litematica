@@ -21,6 +21,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.NextTickListEntry;
 import fi.dy.masa.litematica.Litematica;
+import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
 import fi.dy.masa.litematica.schematic.conversion.ConversionUtils;
@@ -299,6 +300,7 @@ public class LitematicaSchematic extends SchematicBase
         if (version >= 1 && version <= MinecraftVersion.getLatestKnownVersion().getSchematicVersion())
         {
             boolean needsVersionConversion = this.isFromDifferentMinecraftVersion();
+            if (Configs.Generic.DEBUG_MESSAGES.getBooleanValue()) System.out.printf("LitematicaSchematic::fromCachedTag(), needsConv: %s\n", needsVersionConversion);
             this.readSubRegionsFromTag(tag, version, needsVersionConversion);
         }
         else
@@ -375,9 +377,10 @@ public class LitematicaSchematic extends SchematicBase
             if (nbtBase != null && nbtBase.getId() == Constants.NBT.TAG_LONG_ARRAY)
             {
                 Vec3i size = new Vec3i(Math.abs(regionSize.getX()), Math.abs(regionSize.getY()), Math.abs(regionSize.getZ()));
-                NBTTagList paletteTag = regionTag.getTagList("BlockStatePalette", Constants.NBT.TAG_COMPOUND);
+                NBTTagList paletteTagOriginal = regionTag.getTagList("BlockStatePalette", Constants.NBT.TAG_COMPOUND).copy();
+                NBTTagList paletteTagConverted = paletteTagOriginal;
                 long[] blockStateArr = ((IMixinNBTTagLongArray) nbtBase).getArray();
-                final int paletteSize = paletteTag.tagCount();
+                final int paletteSize = paletteTagOriginal.tagCount();
 
                 LitematicaBlockStateContainerFull container = LitematicaBlockStateContainerFull.createContainer(paletteSize, blockStateArr, size);
 
@@ -391,10 +394,10 @@ public class LitematicaSchematic extends SchematicBase
                 // Loading a schematic from a different MC version, convert the palette
                 if (needsVersionConversion)
                 {
-                    paletteTag = this.convertBlockStatePaletteToCurrentGameVersion(paletteTag);
+                    paletteTagConverted = this.convertBlockStatePaletteToCurrentGameVersion(paletteTagOriginal);
                 }
 
-                SchematicDataUtils.readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette());
+                SchematicDataUtils.readPaletteFromLitematicaFormatTag(paletteTagConverted, paletteTagOriginal, container);
                 this.blockContainers.put(regionName, container);
             }
             else

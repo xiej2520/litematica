@@ -12,7 +12,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
-import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
+import fi.dy.masa.litematica.schematic.container.ILitematicaPalette;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerSparse;
 import fi.dy.masa.litematica.schematic.container.VanillaStructurePalette;
 import fi.dy.masa.litematica.schematic.conversion.ConversionUtils;
@@ -29,7 +29,7 @@ import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.malilib.util.Constants;
 import fi.dy.masa.malilib.util.InfoUtils;
 import fi.dy.masa.malilib.util.NBTUtils;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 
 public class VanillaStructure extends SingleRegionSchematic
 {
@@ -114,16 +114,17 @@ public class VanillaStructure extends SingleRegionSchematic
             final BlockEntityDataConverter beConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom, versionTo) : null;
             final InventoryDataConverter invConverter = needsVersionConversion ? SchematicDataConversionManager.INSTANCE.getInventoryDataConverter(versionFrom, versionTo) : null;
 
-            NBTTagList paletteTag = tag.getTagList("palette", Constants.NBT.TAG_COMPOUND);
+            NBTTagList paletteTagOriginal = tag.getTagList("palette", Constants.NBT.TAG_COMPOUND).copy();
+            NBTTagList paletteTagConverted = paletteTagOriginal;
             LitematicaBlockStateContainerSparse container = (LitematicaBlockStateContainerSparse) this.blockContainer;
-            ILitematicaBlockStatePalette palette = container.getPalette();
+            ILitematicaPalette<IBlockState> palette = container.getPalette();
 
             if (needsVersionConversion)
             {
-                paletteTag = this.convertBlockStatePaletteToCurrentGameVersion(paletteTag);
+                paletteTagConverted = this.convertBlockStatePaletteToCurrentGameVersion(paletteTagOriginal);
             }
 
-            if (SchematicDataUtils.readPaletteFromLitematicaFormatTag(paletteTag, palette) == false)
+            if (SchematicDataUtils.readPaletteFromLitematicaFormatTag(paletteTagConverted, paletteTagOriginal, container) == false)
             {
                 InfoUtils.printErrorMessage("litematica.message.error.schematic_read.vanilla.failed_to_read_palette");
                 return false;
@@ -150,7 +151,7 @@ public class VanillaStructure extends SingleRegionSchematic
                 }
 
                 int id = blockTag.getInteger("state");
-                IBlockState state = palette.getBlockState(id);
+                IBlockState state = palette.getValue(id);
 
                 if (state == null)
                 {
@@ -258,7 +259,7 @@ public class VanillaStructure extends SingleRegionSchematic
         final MinecraftVersion versionFrom = this.getCurrentSchematicDataVersion().getMinecraftVersion();
         final MinecraftVersion versionTo = this.requestedOutputMinecraftVersion;
         // Dummy resize handler, the hash map palette doesn't need to be re-created
-        final ILitematicaBlockStatePalette palette = new VanillaStructurePalette();
+        final ILitematicaPalette<IBlockState> palette = new VanillaStructurePalette();
         final BlockPos.MutableBlockPos posMutable = new BlockPos.MutableBlockPos();
         final BlockEntityDataConverter beConverter = needsConversion ? SchematicDataConversionManager.INSTANCE.getBlockEntityDataConverter(versionFrom, versionTo) : null;
         final InventoryDataConverter invConverter = needsConversion ? SchematicDataConversionManager.INSTANCE.getInventoryDataConverter(versionFrom, versionTo) : null;
@@ -275,13 +276,13 @@ public class VanillaStructure extends SingleRegionSchematic
         else if (this.blockContainer instanceof LitematicaBlockStateContainerSparse)
         {
             LitematicaBlockStateContainerSparse container = (LitematicaBlockStateContainerSparse) this.blockContainer;
-            Long2ObjectOpenHashMap<IBlockState> blockMap = container.getBlockMap();
+            Long2IntOpenHashMap blockMap = container.getBlockMap();
             final NBTTagList blockListTmp = blockList;
 
-            blockMap.forEach((posLong, state) -> {
+            blockMap.forEach((posLong, id) -> {
                 long pos = posLong.longValue();
                 posMutable.setPos((int) (pos & 0xFFFF), (int) ((pos >>> 32) & 0xFFFF), (int) ((pos >> 16) & 0xFFFF));
-                this.writeBlockToList(posMutable, palette.idFor(state), blockListTmp, beConverter, invConverter);
+                this.writeBlockToList(posMutable, id, blockListTmp, beConverter, invConverter);
             });
 
             paletteList = SchematicDataUtils.writePaletteToLitematicaFormatTag(palette);

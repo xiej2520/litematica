@@ -2,15 +2,15 @@ package fi.dy.masa.litematica.schematic.container;
 
 import net.minecraft.block.state.IBlockState;
 
-public interface IPaletteResizeHandler
+public interface IPaletteResizeHandler<T>
 {
     /**
      * Called when a palette runs out of IDs in the current entry width,
      * and the underlying container needs to be resized for the new entry bit width.
      * @param newSizeBits
-     * @param stateBeingAdded
+     * @param valueBeingAdded
      * @param oldPalette
-     * @return the ID for the new state being added when the resize happens
+     * @return the ID for the new value being added when the resize happens
      */
-    int onResize(int newSizeBits, IBlockState stateBeingAdded, ILitematicaBlockStatePalette oldPalette);
+    int onResize(int newSizeBits, T valueBeingAdded, ILitematicaPalette<T> oldPalette);
 }

@@ -7,7 +7,7 @@ import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.math.Vec3i;
 import io.netty.buffer.Unpooled;
 
-public class LitematicaBlockStateContainerFull extends LitematicaBlockStateContainerBase implements IPaletteResizeHandler
+public class LitematicaBlockStateContainerFull extends LitematicaBlockStateContainerBase implements IPaletteResizeHandler<IBlockState>
 {
     protected LitematicaBitArray storage;
     protected boolean checkForFreedIds = true;
@@ -24,7 +24,7 @@ public class LitematicaBlockStateContainerFull extends LitematicaBlockStateConta
         this.checkForFreedIds = checkForFreedIds;
     }
 
-    protected LitematicaBlockStateContainerFull(Vec3i size, int bits, @Nullable long[] backingLongArray)
+    public LitematicaBlockStateContainerFull(Vec3i size, int bits, @Nullable long[] backingLongArray)
     {
         super(size, bits);
 
@@ -41,11 +41,11 @@ public class LitematicaBlockStateContainerFull extends LitematicaBlockStateConta
             if (this.bits <= MAX_BITS_LINEAR)
             {
                 this.bits = Math.max(2, this.bits);
-                this.palette = new LitematicaBlockStatePaletteLinear(this.bits, this);
+                this.palette = new LitematicaPaletteLinear<>(this.bits, this);
             }
             else
             {
-                this.palette = new LitematicaBlockStatePaletteHashMap(this.bits, this);
+                this.palette = new LitematicaPaletteHashMap<>(this.bits, this);
             }
 
             // Always reserve ID 0 for air, so that the container doesn't need to be filled with air separately
@@ -66,22 +66,34 @@ public class LitematicaBlockStateContainerFull extends LitematicaBlockStateConta
     }
 
     @Override
+    public int getRawId(int x, int y, int z)
+    {
+        return this.storage.getAt(this.getIndex(x, y, z));
+    }
+
+    @Override
     public IBlockState getBlockState(int x, int y, int z)
     {
-        IBlockState state = this.palette.getBlockState(this.storage.getAt(this.getIndex(x, y, z)));
+        IBlockState state = this.palette.getValue(this.getRawId(x, y, z));
         return state == null ? AIR_BLOCK_STATE : state;
+    }
+
+    @Override
+    public void setRawId(int x, int y, int z, int id)
+    {
+        this.storage.setAt(this.getIndex(x, y, z), id);
     }
 
     @Override
     public void setBlockState(int x, int y, int z, IBlockState state)
     {
         int id = this.palette.idFor(state);
-        this.storage.setAt(this.getIndex(x, y, z), id);
+        this.setRawId(x, y, z, id);
         this.hasSetBlockCounts = false; // Force a re-count when next queried
     }
 
     @Override
-    public int onResize(int bits, IBlockState state, ILitematicaBlockStatePalette oldPalette)
+    public int onResize(int bits, IBlockState state, ILitematicaPalette<IBlockState> oldPalette)
     {
         if (this.checkForFreedIds)
         {
@@ -107,6 +119,7 @@ public class LitematicaBlockStateContainerFull extends LitematicaBlockStateConta
 
         // This creates the new palette with the increased size
         this.setBits(bits);
+
         // Copy over the full old palette mapping
         this.palette.setMapping(oldPalette.getMapping());
 
@@ -169,12 +182,14 @@ public class LitematicaBlockStateContainerFull extends LitematicaBlockStateConta
     public LitematicaBlockStateContainerFull copy()
     {
         LitematicaBlockStateContainerFull newContainer = new LitematicaBlockStateContainerFull(this.size, this.bits, this.storage.getBackingLongArray().clone());
+
         newContainer.palette = this.palette.copy(newContainer);
+        newContainer.tagPalette = this.tagPalette != null ? this.tagPalette.copy(null) : null;
 
         return newContainer;
     }
 
-    public static SpongeBlockstateConverterResults convertVarintByteArrayToPackedLongArray(Vec3i size, int bits, byte[] blockStates)
+    public static SpongeBlockStateConverterResults convertVarIntByteArrayToPackedLongArray(Vec3i size, int bits, byte[] blockStates)
     {
         int volume = size.getX() * size.getY() * size.getZ();
         LitematicaBitArray bitArray = new LitematicaBitArray(bits, volume);
@@ -188,7 +203,7 @@ public class LitematicaBlockStateContainerFull extends LitematicaBlockStateConta
             ++blockCounts[id];
         }
 
-        return new SpongeBlockstateConverterResults(bitArray.getBackingLongArray(), blockCounts);
+        return new SpongeBlockStateConverterResults(bitArray.getBackingLongArray(), blockCounts);
     }
 
     @Nullable
@@ -204,19 +219,19 @@ public class LitematicaBlockStateContainerFull extends LitematicaBlockStateConta
     public static LitematicaBlockStateContainerFull createContainer(int paletteSize, byte[] blockData, Vec3i size)
     {
         int bits = Math.max(2, Integer.SIZE - Integer.numberOfLeadingZeros(paletteSize - 1));
-        SpongeBlockstateConverterResults results = convertVarintByteArrayToPackedLongArray(size, bits, blockData);
+        SpongeBlockStateConverterResults results = convertVarIntByteArrayToPackedLongArray(size, bits, blockData);
         LitematicaBlockStateContainerFull container = new LitematicaBlockStateContainerFull(size, bits, results.backingArray);
         container.palette = createPalette(bits, container);
         container.setBlockCounts(results.blockCounts);
         return container;
     }
 
-    public static class SpongeBlockstateConverterResults
+    public static class SpongeBlockStateConverterResults
     {
         public final long[] backingArray;
         public final long[] blockCounts;
 
-        protected SpongeBlockstateConverterResults(long[] backingArray, long[] blockCounts)
+        protected SpongeBlockStateConverterResults(long[] backingArray, long[] blockCounts)
         {
             this.backingArray = backingArray;
             this.blockCounts = blockCounts;

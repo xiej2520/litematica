@@ -3,7 +3,7 @@ package fi.dy.masa.litematica.schematic.container;
 import javax.annotation.Nullable;
 import net.minecraft.block.state.IBlockState;
 
-public class VanillaStructurePalette extends LitematicaBlockStatePaletteHashMap
+public class VanillaStructurePalette extends LitematicaPaletteHashMap<IBlockState>
 {
     public VanillaStructurePalette()
     {

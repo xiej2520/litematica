@@ -10,7 +10,8 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
-import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
+import fi.dy.masa.litematica.config.Configs;
+import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
 import fi.dy.masa.litematica.schematic.conversion.ConversionUtils;
 import fi.dy.masa.litematica.schematic.conversion.IListTagDataConverter;
@@ -107,16 +108,17 @@ public class SpongeSchematic extends SingleRegionSchematic
         }
     }
 
-    private boolean readPaletteFromTag(NBTTagCompound tag, ILitematicaBlockStatePalette palette, boolean needsVersionConversion)
+    private boolean readPaletteFromTag(NBTTagCompound tag, ILitematicaBlockStateContainer container, boolean needsVersionConversion)
     {
-        NBTTagList paletteTag = SchematicDataUtils.convertSpongePaletteTagToLitematicaPalette(tag);
+        NBTTagList paletteTagOriginal = SchematicDataUtils.convertSpongePaletteTagToLitematicaPalette(tag);
+        NBTTagList paletteTagConverted = paletteTagOriginal;
 
         if (needsVersionConversion)
         {
-            paletteTag = this.convertBlockStatePaletteToCurrentGameVersion(paletteTag);
+            paletteTagConverted = this.convertBlockStatePaletteToCurrentGameVersion(paletteTagOriginal);
         }
 
-        return SchematicDataUtils.readPaletteFromLitematicaFormatTag(paletteTag, palette);
+        return SchematicDataUtils.readPaletteFromLitematicaFormatTag(paletteTagConverted, paletteTagOriginal, container);
     }
 
     @Override
@@ -130,6 +132,7 @@ public class SpongeSchematic extends SingleRegionSchematic
             byte[] blockData = tag.getByteArray("BlockData");
             int paletteSize = paletteTag.getKeySet().size();
 
+            if (Configs.Generic.DEBUG_MESSAGES.getBooleanValue()) System.out.printf("SpongeSchematic::readBlocksFromTag()\n");
             this.blockContainer = LitematicaBlockStateContainerFull.createContainer(paletteSize, blockData, this.getSize());
 
             if (this.blockContainer == null)
@@ -138,7 +141,7 @@ public class SpongeSchematic extends SingleRegionSchematic
                 return false;
             }
 
-            return this.readPaletteFromTag(paletteTag, this.blockContainer.getPalette(), needsVersionConversion);
+            return this.readPaletteFromTag(paletteTag, this.blockContainer, needsVersionConversion);
         }
 
         return false;
@@ -253,8 +256,9 @@ public class SpongeSchematic extends SingleRegionSchematic
         NBTTagCompound paletteCompound = null;
         NBTTagList paletteList = null;
         byte[] blockData = null;
+        boolean blocksUnmodified = this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCKS);
 
-        if (cachedTag != null && this.canSaveCachedDataDirectly(SchematicDataPiece.BLOCKS))
+        if (cachedTag != null && blocksUnmodified)
         {
             blockData = cachedTag.getByteArray("BlockData");
             paletteCompound = cachedTag.getCompoundTag("Palette");
@@ -266,7 +270,7 @@ public class SpongeSchematic extends SingleRegionSchematic
             if (blockContainer != null)
             {
                 blockData = blockContainer.getBackingArrayAsByteArray();
-                paletteList = SchematicDataUtils.writePaletteToLitematicaFormatTag(blockContainer.getPalette());
+                paletteList = SchematicDataUtils.writePaletteToLitematicaFormatTag(blockContainer, blocksUnmodified);
             }
         }
 

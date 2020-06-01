@@ -17,7 +17,7 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3i;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
-import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
+import fi.dy.masa.litematica.schematic.container.ILitematicaPalette;
 import fi.dy.masa.litematica.schematic.conversion.IListTagDataConverter;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
 import fi.dy.masa.litematica.schematic.conversion.SchematicDataPiece;
@@ -411,12 +411,12 @@ public class SchematicaSchematic extends SingleRegionSchematic
         if (this.palette == null)
         {
             this.palette = new Block[4096];
-            ILitematicaBlockStatePalette litematicaPalette = this.blockContainer.getPalette();
+            ILitematicaPalette<IBlockState> litematicaPalette = this.blockContainer.getPalette();
             final int numBlocks = litematicaPalette.getPaletteSize();
 
             for (int i = 0; i < numBlocks; ++i)
             {
-                IBlockState state = litematicaPalette.getBlockState(i);
+                IBlockState state = litematicaPalette.getValue(i);
                 Block block = state.getBlock();
                 int id = Block.getIdFromBlock(block);
 

@@ -7,14 +7,16 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.Pair;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.block.state.IBlockState;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.NextTickListEntry;
 import fi.dy.masa.litematica.Litematica;
+import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
+import fi.dy.masa.litematica.schematic.container.ILitematicaPalette;
+import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerBase;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
 import fi.dy.masa.litematica.schematic.conversion.ConversionUtils;
 import fi.dy.masa.litematica.schematic.conversion.IListTagDataConverter;
@@ -85,7 +87,7 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
         return this.regionSize;
     }
 
-    protected void setSize(@Nullable Vec3i size, boolean createBlockContainer)
+    protected boolean setSize(@Nullable Vec3i size)
     {
         this.regionSize = size;
 
@@ -94,17 +96,16 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
             if (isSizeValid(size) == false)
             {
                 InfoUtils.printErrorMessage("litematica.message.error.schematic_read.invalid_or_missing_size_value", size.getX(), size.getY(), size.getZ());
-                return;
-            }
-
-            if (createBlockContainer)
-            {
-                this.createEmptyContainer(size);
+                return false;
             }
 
             this.getMetadata().setEnclosingSize(size);
             this.getMetadata().setTotalVolume(PositionUtils.getAreaVolume(size));
+
+            return true;
         }
+
+        return false;
     }
 
     protected void createEmptyContainer(Vec3i size)
@@ -170,6 +171,7 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
 
         if (regions.isEmpty() == false)
         {
+            if (Configs.Generic.DEBUG_MESSAGES.getBooleanValue()) System.out.printf("SingleRegionSchematic::readFrom(other)\n");
             this.clear();
 
             Vec3i size = other.getEnclosingSize();
@@ -178,11 +180,13 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
             {
                 try
                 {
-                    this.setSize(size, regions.size() > 1);
-                    this.readFrom(regions);
+                    if (this.setSize(size))
+                    {
+                        this.readFrom(regions, other.wasDataModified(SchematicDataPiece.BLOCKS));
 
-                    this.getMetadata().copyFrom(other.getMetadata());
-                    this.getMetadata().setRegionCount(1);
+                        this.getMetadata().copyFrom(other.getMetadata());
+                        this.getMetadata().setRegionCount(1);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -192,7 +196,7 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
         }
     }
 
-    protected void readFrom(ImmutableMap<String, ISchematicRegion> regions)
+    protected void readFrom(ImmutableMap<String, ISchematicRegion> regions, boolean dataModified)
     {
         Pair<BlockPos, BlockPos> pair = PositionUtils.getEnclosingAreaCornersForRegions(regions.values());
 
@@ -203,53 +207,51 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
 
         final BlockPos minCorner = pair.getLeft();
 
+        // Create a palette that contains all the values from the containers in the other schematic
+        final ILitematicaPalette<NBTTagCompound> combinedTagPalette = ILitematicaPalette.createCombinedPalette(regions.values());
+
         if (regions.size() == 1)
         {
             for (ISchematicRegion region : regions.values())
             {
                 ILitematicaBlockStateContainer containerOther = region.getBlockStateContainer();
-                Vec3i size = containerOther.getSize();
 
                 if (this.getContainerClass() == containerOther.getClass())
                 {
+                    if (Configs.Generic.DEBUG_MESSAGES.getBooleanValue()) System.out.printf("SingleRegionSchematic::readFrom(regions), single, same, palette size: %d\n", combinedTagPalette.getPaletteSize());
                     this.blockContainer = containerOther.copy();
                 }
                 else
                 {
-                    this.createEmptyContainer(size);
+                    if (Configs.Generic.DEBUG_MESSAGES.getBooleanValue()) System.out.printf("SingleRegionSchematic::readFrom(regions), single, different, palette size: %d\n", combinedTagPalette.getPaletteSize());
+                    this.createEmptyContainer(containerOther.getSize());
+                    this.blockContainer.setTagPalette(combinedTagPalette);
                     this.copyContainerContents(containerOther, this.blockContainer);
                 }
             }
         }
         else
         {
+            if (regions.size() > 1 && dataModified)
+            {
+                this.createEmptyContainer(this.getSize());
+            }
+
+            if (Configs.Generic.DEBUG_MESSAGES.getBooleanValue()) System.out.printf("SingleRegionSchematic::readFrom(regions), multi to single, palette size: %d\n", combinedTagPalette.getPaletteSize());
+            // Set the pre-constructed tag palette to this schematic's container, so that the contents can be
+            // copied over using raw ID mapping constructed based on this tag palette
+            int bits = LitematicaBlockStateContainerBase.getBitsForCapacity(combinedTagPalette.getPaletteSize());
+            this.blockContainer = new LitematicaBlockStateContainerFull(this.getSize(), bits, null);
+            this.blockContainer.setTagPalette(combinedTagPalette);
+
             for (ISchematicRegion region : regions.values())
             {
                 ILitematicaBlockStateContainer containerOther = region.getBlockStateContainer();
-                ILitematicaBlockStateContainer containerThis = this.blockContainer;
-                Vec3i size = containerOther.getSize();
 
                 // This is the relative position of this sub-region within the new single region enclosing schematic volume
                 Vec3i regionOffset = this.getRegionOffset(region, minCorner);
 
-                final int sizeX = size.getX();
-                final int sizeY = size.getY();
-                final int sizeZ = size.getZ();
-                final int offX = regionOffset.getX();
-                final int offY = regionOffset.getY();
-                final int offZ = regionOffset.getZ();
-
-                for (int y = 0; y < sizeY; ++y)
-                {
-                    for (int z = 0; z < sizeZ; ++z)
-                    {
-                        for (int x = 0; x < sizeX; ++x)
-                        {
-                            IBlockState state = containerOther.getBlockState(x, y, z);
-                            containerThis.setBlockState(x + offX, y + offY, z + offZ, state);
-                        }
-                    }
-                }
+                containerOther.copyContentsTo(this.blockContainer, regionOffset, dataModified == false);
             }
         }
 
@@ -315,13 +317,15 @@ public abstract class SingleRegionSchematic extends SchematicBase implements ISc
     @Override
     protected final void fromCachedTag(NBTTagCompound tag)
     {
-        this.setSize(this.readSizeFromTag(tag), true);
+        this.setSize(this.readSizeFromTag(tag));
 
         if (isSizeValid(this.regionSize) == false)
         {
             InfoUtils.printErrorMessage("litematica.message.error.schematic_read.invalid_or_missing_size", this.getFile().getAbsolutePath());
             return;
         }
+
+        this.createEmptyContainer(this.regionSize);
 
         final boolean needsVersionConversion = this.isFromDifferentMinecraftVersion();
 

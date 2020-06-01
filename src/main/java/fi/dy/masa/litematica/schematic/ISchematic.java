@@ -10,7 +10,9 @@ import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.Vec3i;
 import fi.dy.masa.litematica.Litematica;
+import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.schematic.conversion.MinecraftVersion;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDataPiece;
 import fi.dy.masa.litematica.schematic.conversion.SchematicDataVersion;
 import fi.dy.masa.malilib.gui.util.Message.MessageType;
 import fi.dy.masa.malilib.util.InfoUtils;
@@ -90,6 +92,15 @@ public interface ISchematic
     void setOutputMinecraftVersion(MinecraftVersion version);
 
     /**
+     * Returns whether or not the provided type of data was modified since the schematic
+     * was first read from file (or first created if this is a newly created schematic).
+     * @param data
+     * @return
+     */
+    boolean wasDataModified(SchematicDataPiece data);
+
+    /**
+     *
      * Reads the data from the provided other schematic
      * @param other
      */
@@ -168,6 +179,7 @@ public interface ISchematic
      */
     default boolean readFromFile()
     {
+        if (Configs.Generic.DEBUG_MESSAGES.getBooleanValue()) System.out.printf("ISchematic::readFomFile()\n");
         File file = this.getFile();
 
         if (file == null)

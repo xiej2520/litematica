@@ -3,34 +3,33 @@ package fi.dy.masa.litematica.schematic.container;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
-import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.IntIdentityHashBiMap;
 
-public class LitematicaBlockStatePaletteHashMap implements ILitematicaBlockStatePalette
+public class LitematicaPaletteHashMap<T> implements ILitematicaPalette<T>
 {
-    protected final IntIdentityHashBiMap<IBlockState> statePaletteMap;
-    protected final IPaletteResizeHandler paletteResizer;
+    protected final IntIdentityHashBiMap<T> statePaletteMap;
+    protected final IPaletteResizeHandler<T> paletteResizeHandler;
     protected final int bits;
 
-    public LitematicaBlockStatePaletteHashMap(int bitsIn, IPaletteResizeHandler paletteResizer)
+    public LitematicaPaletteHashMap(int bitsIn, IPaletteResizeHandler<T> paletteResizeHandler)
     {
         this.bits = bitsIn;
-        this.paletteResizer = paletteResizer;
+        this.paletteResizeHandler = paletteResizeHandler;
         this.statePaletteMap = new IntIdentityHashBiMap<>(1 << bitsIn);
     }
 
     @Override
-    public int idFor(IBlockState state)
+    public int idFor(T value)
     {
-        int id = this.statePaletteMap.getId(state);
+        int id = this.statePaletteMap.getId(value);
 
         if (id == -1)
         {
-            id = this.statePaletteMap.add(state);
+            id = this.statePaletteMap.add(value);
 
             if (id >= (1 << this.bits))
             {
-                id = this.paletteResizer.onResize(this.bits + 1, state, this);
+                id = this.paletteResizeHandler.onResize(this.bits + 1, value, this);
             }
         }
 
@@ -39,7 +38,7 @@ public class LitematicaBlockStatePaletteHashMap implements ILitematicaBlockState
 
     @Override
     @Nullable
-    public IBlockState getBlockState(int indexKey)
+    public T getValue(int indexKey)
     {
         return this.statePaletteMap.get(indexKey);
     }
@@ -51,10 +50,10 @@ public class LitematicaBlockStatePaletteHashMap implements ILitematicaBlockState
     }
 
     @Override
-    public List<IBlockState> getMapping()
+    public List<T> getMapping()
     {
         final int size = this.statePaletteMap.size();
-        List<IBlockState> list = new ArrayList<>(size);
+        List<T> list = new ArrayList<>(size);
 
         for (int id = 0; id < size; ++id)
         {
@@ -65,23 +64,22 @@ public class LitematicaBlockStatePaletteHashMap implements ILitematicaBlockState
     }
 
     @Override
-    public boolean setMapping(List<IBlockState> list)
+    public boolean setMapping(List<T> list)
     {
         this.statePaletteMap.clear();
-        final int size = list.size();
 
-        for (int id = 0; id < size; ++id)
+        for (T value : list)
         {
-            this.statePaletteMap.add(list.get(id));
+            this.statePaletteMap.add(value);
         }
 
         return true;
     }
 
     @Override
-    public boolean overrideMapping(int id, IBlockState state)
+    public boolean overrideMapping(int id, T state)
     {
-        List<IBlockState> mapping = this.getMapping();
+        List<T> mapping = this.getMapping();
 
         if (id >= 0 && id < mapping.size())
         {
@@ -95,9 +93,9 @@ public class LitematicaBlockStatePaletteHashMap implements ILitematicaBlockState
     }
 
     @Override
-    public LitematicaBlockStatePaletteHashMap copy(IPaletteResizeHandler resizeHandler)
+    public LitematicaPaletteHashMap<T> copy(IPaletteResizeHandler<T> resizeHandler)
     {
-        LitematicaBlockStatePaletteHashMap copy = new LitematicaBlockStatePaletteHashMap(this.bits, resizeHandler);
+        LitematicaPaletteHashMap<T> copy = new LitematicaPaletteHashMap<>(this.bits, resizeHandler);
 
         for (int id = 0; id < this.statePaletteMap.size(); ++id)
         {

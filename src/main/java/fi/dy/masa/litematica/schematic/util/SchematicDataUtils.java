@@ -15,7 +15,9 @@ import net.minecraft.nbt.NBTUtil;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import fi.dy.masa.litematica.schematic.EntityInfo;
-import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStatePalette;
+import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
+import fi.dy.masa.litematica.schematic.container.ILitematicaPalette;
+import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerBase;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
 import fi.dy.masa.litematica.schematic.conversion.ConversionUtils;
 import fi.dy.masa.litematica.schematic.conversion.IListTagDataConverter;
@@ -30,19 +32,25 @@ import fi.dy.masa.malilib.util.NBTUtils;
 
 public class SchematicDataUtils
 {
-    public static boolean readPaletteFromLitematicaFormatTag(NBTTagList tagList, ILitematicaBlockStatePalette palette)
+    public static boolean readPaletteFromLitematicaFormatTag(NBTTagList convertedPaletteTag, NBTTagList originalPaletteTag, ILitematicaBlockStateContainer container)
     {
-        final int size = tagList.tagCount();
+        final int size = convertedPaletteTag.tagCount();
         List<IBlockState> list = new ArrayList<>(size);
+        ILitematicaPalette<NBTTagCompound> tagPalette = LitematicaBlockStateContainerBase.createPaletteWithSize(size);
 
         for (int id = 0; id < size; ++id)
         {
-            NBTTagCompound tag = tagList.getCompoundTagAt(id);
+            NBTTagCompound tag = convertedPaletteTag.getCompoundTagAt(id);
             IBlockState state = NBTUtil.readBlockState(tag);
             list.add(state);
+
+            NBTTagCompound tagOrig = originalPaletteTag.getCompoundTagAt(id);
+            tagPalette.idFor(tagOrig);
         }
 
-        return palette.setMapping(list);
+        container.setTagPalette(tagPalette);
+
+        return container.getPalette().setMapping(list);
     }
 
     public static ImmutableMap<BlockPos, NBTTagCompound> readBlockEntitiesFromListTag(NBTTagList tagList, @Nullable BlockEntityDataConverter beConverter, @Nullable InventoryDataConverter invConverter)
@@ -88,7 +96,21 @@ public class SchematicDataUtils
         return builder.build();
     }
 
-    public static NBTTagList writePaletteToLitematicaFormatTag(ILitematicaBlockStatePalette palette)
+    public static NBTTagList writePaletteToLitematicaFormatTag(ILitematicaBlockStateContainer container, boolean blocksUnmodified)
+    {
+        ILitematicaPalette<NBTTagCompound> tagPalette = container.getTagPalette();
+
+        if (blocksUnmodified && tagPalette != null)
+        {
+            return SchematicDataUtils.writeTagPaletteToLitematicaFormatTag(tagPalette);
+        }
+        else
+        {
+            return SchematicDataUtils.writePaletteToLitematicaFormatTag(container.getPalette());
+        }
+    }
+
+    public static NBTTagList writePaletteToLitematicaFormatTag(ILitematicaPalette<IBlockState> palette)
     {
         final int size = palette.getPaletteSize();
         List<IBlockState> list = palette.getMapping();
@@ -99,6 +121,19 @@ public class SchematicDataUtils
             NBTTagCompound tag = new NBTTagCompound();
             NBTUtil.writeBlockState(tag, list.get(id));
             tagList.appendTag(tag);
+        }
+
+        return tagList;
+    }
+
+    public static NBTTagList writeTagPaletteToLitematicaFormatTag(ILitematicaPalette<NBTTagCompound> palette)
+    {
+        List<NBTTagCompound> mapping = palette.getMapping();
+        NBTTagList tagList = new NBTTagList();
+
+        for (NBTTagCompound tag : mapping)
+        {
+            tagList.appendTag(tag.copy());
         }
 
         return tagList;

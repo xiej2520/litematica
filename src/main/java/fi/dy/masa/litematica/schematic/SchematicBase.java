@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.math.Vec3i;
+import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.mixin.IMixinDataFixer;
 import fi.dy.masa.litematica.schematic.container.ILitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainerFull;
@@ -83,6 +84,12 @@ public abstract class SchematicBase implements ISchematic
         this.requestedOutputMinecraftVersion = version;
     }
 
+    @Override
+    public boolean wasDataModified(SchematicDataPiece data)
+    {
+        return this.dirtyData.contains(data);
+    }
+
     protected void setCurrentDataVersionWithFallback(int dataVersion)
     {
         this.dataVersionFromFile = SchematicDataVersion.getVersionFor(dataVersion);
@@ -119,6 +126,7 @@ public abstract class SchematicBase implements ISchematic
                     String.valueOf(dataVersion), this.dataVersionFromFile.getMcVersionDisplayName());
         }
 
+        if (Configs.Generic.DEBUG_MESSAGES.getBooleanValue()) System.out.printf("SchematicBase::setCurrentDataVersionWithFallback(): %s\n", this.dataVersionFromFile.getMinecraftVersion());
         this.setOutputMinecraftVersion(this.dataVersionFromFile.getMinecraftVersion());
     }
 
@@ -242,10 +250,12 @@ public abstract class SchematicBase implements ISchematic
     @Override
     public final boolean fromTag(NBTTagCompound tag)
     {
+        if (Configs.Generic.DEBUG_MESSAGES.getBooleanValue()) System.out.printf("SchematicBase::fromTag()\n");
         this.clear();
 
         if (this.setDataVersionFromTag(tag))
         {
+            if (Configs.Generic.DEBUG_MESSAGES.getBooleanValue()) System.out.printf("SchematicBase::fromTag() inner\n");
             this.readMetadataFromTag(tag);
             this.cachedNbtDataFromFile = tag;
             this.shouldLoadFromCachedData = true;
