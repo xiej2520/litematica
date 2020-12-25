@@ -1,13 +1,15 @@
 package fi.dy.masa.litematica.world;
 
 import javax.annotation.Nullable;
-import fi.dy.masa.litematica.render.LitematicaRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.level.LevelGeneratorType;
 import net.minecraft.world.level.LevelInfo;
 import net.minecraft.world.level.LevelProperties;
+import fi.dy.masa.litematica.Litematica;
+import fi.dy.masa.litematica.config.Configs;
+import fi.dy.masa.litematica.render.LitematicaRenderer;
 
 public class SchematicWorldHandler
 {
@@ -29,12 +31,27 @@ public class SchematicWorldHandler
     {
         if (remove)
         {
+            if (Configs.Generic.DEBUG_LOGGING.getBooleanValue())
+            {
+                Litematica.logger.info("Removing the schematic world...");
+            }
+
             world = null;
         }
         else
         {
+            if (Configs.Generic.DEBUG_LOGGING.getBooleanValue())
+            {
+                Litematica.logger.info("(Re-)creating the schematic world...");
+            }
+
             // Note: The dimension used here must have no skylight, because the custom Chunks don't have those arrays
             world = createSchematicWorld();
+
+            if (Configs.Generic.DEBUG_LOGGING.getBooleanValue())
+            {
+                Litematica.logger.info("Schematic world created: {}", world);
+            }
         }
 
         LitematicaRenderer.getInstance().onSchematicWorldChanged(world);
