@@ -288,11 +288,9 @@ public class MaterialListHudRenderer implements IInfoHudRenderer
         int guiX = ((IMixinContainerScreen) gui).litematica_getX();
         int guiY = ((IMixinContainerScreen) gui).litematica_getY();
 
-        for (int slotNum = 0; slotNum < slots.size(); ++slotNum)
+        for (Slot slot : slots)
         {
-            Slot slot = slots.get(slotNum);
-
-            if (slot.hasStack() && (slot.inventory instanceof PlayerInventory) &&
+            if (slot.hasStack() &&
                 (fi.dy.masa.malilib.util.InventoryUtils.areStacksEqual(slot.getStack(), referenceItem) ||
                  InventoryUtils.doesShulkerBoxContainItem(slot.getStack(), referenceItem)))
             {
