@@ -84,7 +84,7 @@ public class InventoryUtils
                 PlayerInventory inventory = player.inventory;
                 inventory.selectedSlot = hotbarSlot;
 
-                if (player.abilities.creativeMode)
+                if (EntityUtils.isCreativeMode(player))
                 {
                     inventory.main.set(hotbarSlot, stack.copy());
                 }

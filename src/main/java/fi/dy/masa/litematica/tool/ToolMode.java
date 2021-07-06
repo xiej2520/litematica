@@ -2,6 +2,7 @@ package fi.dy.masa.litematica.tool;
 
 import javax.annotation.Nullable;
 import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.util.EntityUtils;
 import fi.dy.masa.malilib.util.StringUtils;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
@@ -96,7 +97,7 @@ public enum ToolMode
     public ToolMode cycle(PlayerEntity player, boolean forward)
     {
         ToolMode[] values = ToolMode.values();
-        final boolean isCreative = player.abilities.creativeMode;
+        final boolean isCreative = EntityUtils.isCreativeMode(player);
         final int numModes = values.length;
         final int inc = forward ? 1 : -1;
         int nextId = this.ordinal() + inc;

@@ -35,6 +35,11 @@ public class EntityUtils
         }
     };
 
+    public static boolean isCreativeMode(PlayerEntity player)
+    {
+        return player.abilities.creativeMode;
+    }
+
     public static boolean hasToolItem(LivingEntity entity)
     {
         return hasToolItemInHand(entity, Hand.MAIN_HAND) ||
