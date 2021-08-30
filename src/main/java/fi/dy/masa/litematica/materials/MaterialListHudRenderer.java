@@ -205,7 +205,6 @@ public class MaterialListHudRenderer implements IInfoHudRenderer
 
         RenderSystem.enableRescaleNormal();
         RenderUtils.setupBlend();
-        RenderUtils.enableDiffuseLightingGui3D();
 
         for (int i = 0; i < size; ++i)
         {
@@ -213,9 +212,7 @@ public class MaterialListHudRenderer implements IInfoHudRenderer
             y += lineHeight;
         }
 
-        RenderUtils.disableDiffuseLighting();
         RenderSystem.disableRescaleNormal();
-        RenderSystem.disableBlend();
 
         if (scale != 1d)
         {
