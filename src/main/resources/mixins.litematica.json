@@ -9,6 +9,7 @@
         "IMixinRedstoneWireBlock",
         "IMixinStairsBlock",
         "IMixinVineBlock",
+        "MixinBlockItem",
         "MixinBlockStateFlattening",
         "MixinClientPlayNetworkHandler",
         "MixinClientWorld",
