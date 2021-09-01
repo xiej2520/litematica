@@ -16,7 +16,6 @@ import net.minecraft.block.RepeaterBlock;
 import net.minecraft.block.SlabBlock;
 import net.minecraft.block.StairsBlock;
 import net.minecraft.block.TrapdoorBlock;
-import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.enums.BlockHalf;
 import net.minecraft.block.enums.ComparatorMode;
 import net.minecraft.block.enums.SlabType;
@@ -25,7 +24,6 @@ import net.minecraft.client.world.ClientChunkManager;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
@@ -61,7 +59,6 @@ import fi.dy.masa.litematica.util.RayTraceUtils.RayTraceWrapper;
 import fi.dy.masa.litematica.util.RayTraceUtils.RayTraceWrapper.HitType;
 import fi.dy.masa.litematica.world.SchematicWorldHandler;
 import fi.dy.masa.litematica.world.WorldSchematic;
-import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.malilib.gui.Message.MessageType;
 import fi.dy.masa.malilib.hotkeys.KeybindMulti;
 import fi.dy.masa.malilib.interfaces.IStringConsumer;
@@ -316,15 +313,15 @@ public class WorldUtils
     {
         BlockState state = Blocks.AIR.getDefaultState();
         Entity entity = fi.dy.masa.malilib.util.EntityUtils.getCameraEntity();
-        RayTraceWrapper wrapper = RayTraceUtils.getGenericTrace(mc.world, entity, 6, true);
+        RayTraceWrapper wrapper = RayTraceUtils.getGenericTrace(mc.world, entity, 6);
 
         if (wrapper != null)
         {
-            HitResult trace = wrapper.getBlockHitResult();
+            BlockHitResult trace = wrapper.getBlockHitResult();
 
             if (trace != null && trace.getType() == HitResult.Type.BLOCK)
             {
-                BlockPos pos = ((BlockHitResult) trace).getBlockPos();
+                BlockPos pos = trace.getBlockPos();
 
                 if (wrapper.getHitType() == HitType.SCHEMATIC_BLOCK)
                 {
@@ -411,7 +408,7 @@ public class WorldUtils
 
         if (Configs.Generic.EASY_PLACE_FIRST.getBooleanValue())
         {
-            traceWrapper = RayTraceUtils.getGenericTrace(mc.world, mc.player, 6, true);
+            traceWrapper = RayTraceUtils.getGenericTrace(mc.world, mc.player, 6);
         }
         else
         {
