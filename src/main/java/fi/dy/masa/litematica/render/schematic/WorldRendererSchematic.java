@@ -2,7 +2,6 @@ package fi.dy.masa.litematica.render.schematic;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -302,7 +301,7 @@ public class WorldRendererSchematic
             Set<SubChunkPos> set = DataManager.getSchematicPlacementManager().getAllTouchedSubChunks();
             List<SubChunkPos> positions = new ArrayList<>(set.size());
             positions.addAll(set);
-            Collections.sort(positions, new SubChunkPos.DistanceComparator(viewSubChunk));
+            positions.sort(new SubChunkPos.DistanceComparator(viewSubChunk));
 
             //Queue<SubChunkPos> queuePositions = new PriorityQueue<>(new SubChunkPos.DistanceComparator(viewSubChunk));
             //queuePositions.addAll(set);
@@ -312,11 +311,9 @@ public class WorldRendererSchematic
             this.world.getProfiler().swap("iteration");
 
             //while (queuePositions.isEmpty() == false)
-            for (int i = 0; i < positions.size(); ++i)
+            for (SubChunkPos subChunk : positions)
             {
                 //SubChunkPos subChunk = queuePositions.poll();
-                SubChunkPos subChunk = positions.get(i);
-
                 // Only render sub-chunks that are within the client's render distance, and that
                 // have been already properly loaded on the client
                 if (Math.abs(subChunk.getX() - centerChunkX) <= renderDistance &&
@@ -570,15 +567,8 @@ public class WorldRendererSchematic
             }
             else
             {
-                switch (renderType)
-                {
-                    case MODEL:
-                        return this.blockModelRenderer.renderModel(world, this.getModelForState(state), state, pos, matrices, bufferBuilderIn, state.getRenderingSeed(pos));
-                    case ENTITYBLOCK_ANIMATED:
-                        return false;
-                    default:
-                        return false;
-                }
+                return renderType == BlockRenderType.MODEL &&
+                       this.blockModelRenderer.renderModel(world, this.getModelForState(state), state, pos, matrices, bufferBuilderIn, state.getRenderingSeed(pos));
             }
         }
         catch (Throwable throwable)
@@ -691,7 +681,7 @@ public class WorldRendererSchematic
 
                                 matrices.pop();
                             }
-                            catch (Exception e)
+                            catch (Exception ignore)
                             {
                             }
                         }
@@ -713,7 +703,7 @@ public class WorldRendererSchematic
 
                         matrices.pop();
                     }
-                    catch (Exception e)
+                    catch (Exception ignore)
                     {
                     }
                 }
