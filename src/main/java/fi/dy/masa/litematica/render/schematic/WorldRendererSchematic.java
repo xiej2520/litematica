@@ -9,6 +9,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nullable;
+
+import fi.dy.masa.litematica.config.Configs;
 import org.lwjgl.opengl.GL11;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.block.BlockRenderType;
@@ -756,6 +758,10 @@ public class WorldRendererSchematic
 
     public void scheduleChunkRenders(int chunkX, int chunkY, int chunkZ)
     {
-        this.chunkRendererDispatcher.scheduleChunkRender(chunkX, chunkY, chunkZ, false);
+        if (Configs.Visuals.ENABLE_RENDERING.getBooleanValue() &&
+            Configs.Visuals.ENABLE_SCHEMATIC_RENDERING.getBooleanValue())
+        {
+            this.chunkRendererDispatcher.scheduleChunkRender(chunkX, chunkY, chunkZ, false);
+        }
     }
 }
