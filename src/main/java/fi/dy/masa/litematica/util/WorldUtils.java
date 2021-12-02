@@ -32,6 +32,7 @@ import net.minecraft.item.ItemUsageContext;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.state.property.DirectionProperty;
+import net.minecraft.state.property.Properties;
 import net.minecraft.state.property.Property;
 import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructurePlacementData;
@@ -596,6 +597,12 @@ public class WorldUtils
         {
             protocolValue = facing.getId();
             hasData = true; // without this down rotation would not be detected >_>
+        }
+        else if (state.contains(Properties.AXIS))
+        {
+            Direction.Axis axis = state.get(Properties.AXIS);
+            protocolValue = axis.ordinal();
+            hasData = true; // without this id 0 would not be detected >_>
         }
 
         if (block instanceof RepeaterBlock)
