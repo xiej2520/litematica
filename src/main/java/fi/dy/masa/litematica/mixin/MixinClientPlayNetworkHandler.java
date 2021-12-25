@@ -1,5 +1,6 @@
 package fi.dy.masa.litematica.mixin;
 
+import net.minecraft.network.packet.s2c.play.ChatMessageS2CPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -30,5 +31,11 @@ public abstract class MixinClientPlayNetworkHandler
         {
             DataManager.getSchematicPlacementManager().onClientChunkUnload(packet.getX(), packet.getZ());
         }
+    }
+
+    @Inject(method = "onChatMessage", at = @At("RETURN"))
+    private void onGameMessage(ChatMessageS2CPacket packet, CallbackInfo ci)
+    {
+        DataManager.onChatMessage(packet.getMessage());
     }
 }
