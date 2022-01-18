@@ -2,12 +2,8 @@ package fi.dy.masa.litematica.scheduler.tasks;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -23,7 +19,6 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -51,33 +46,7 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
 {
     protected final PasteNbtBehavior nbtBehavior;
     protected final String setBlockCommand;
-    protected final Consumer<Text> gameRuleListener;
-    protected final boolean ignoreBlocks;
-    protected final boolean ignoreEntities;
-
-    protected TaskPhase phase = TaskPhase.INIT;
-    @Nullable protected ChunkPos currentChunk;
-    @Nullable protected IntBoundingBox currentBox;
-    @Nullable protected Iterator<Entity> entityIterator;
-    @Nullable protected Iterator<BlockPos> positionIterator;
-    protected int maxCommandsPerTick;
-    protected int processedChunksThisTick;
-    protected int sentCommandsThisTick;
-    protected int sentCommandsTotal;
     protected int sentSetblockCommands;
-    protected long gameRuleProbeTimeout;
-    protected long maxGameRuleProbeTime = 2000000000L; // 2 second timeout
-    protected boolean shouldEnableFeedback;
-
-    public enum TaskPhase
-    {
-        INIT,
-        GAMERULE_PROBE,
-        WAIT_FOR_CHUNKS,
-        PROCESS_BOX_BLOCKS,
-        PROCESS_BOX_ENTITIES,
-        FINISHED
-    }
 
     public TaskPasteSchematicPerChunkCommand(Collection<SchematicPlacement> placements,
                                              LayerRange range,
@@ -85,12 +54,12 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
     {
         super(placements, range, changedBlocksOnly);
 
-        this.maxCommandsPerTick = Configs.Generic.PASTE_COMMAND_LIMIT.getIntegerValue();
-        this.ignoreBlocks = false;
-        this.ignoreEntities = Configs.Generic.PASTE_IGNORE_ENTITIES.getBooleanValue();
-        this.setBlockCommand = Configs.Generic.PASTE_COMMAND_SETBLOCK.getStringValue();
+        this.maxCommandsPerTick = Configs.Generic.COMMAND_LIMIT.getIntegerValue();
+        this.setBlockCommand = Configs.Generic.COMMAND_NAME_SETBLOCK.getStringValue();
         this.nbtBehavior = (PasteNbtBehavior) Configs.Generic.PASTE_NBT_BEHAVIOR.getOptionListValue();
-        this.gameRuleListener = this::checkGameRuleState;
+
+        this.processBoxBlocksTask = this::processBlocksInCurrentBox;
+        this.processBoxEntitiesTask = this::processEntitiesInCurrentBox;
     }
 
     @Override
@@ -102,164 +71,25 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
             return true;
         }
 
-        if (this.phase == TaskPhase.INIT)
-        {
-            if (Configs.Generic.PASTE_DISABLE_FEEDBACK.getBooleanValue())
-            {
-                DataManager.addChatListener(this.gameRuleListener);
-                this.mc.player.sendChatMessage("/gamerule sendCommandFeedback");
-                this.gameRuleProbeTimeout = Util.getMeasuringTimeNano() + this.maxGameRuleProbeTime;
-                this.phase = TaskPhase.GAMERULE_PROBE;
-            }
-            else
-            {
-                this.shouldEnableFeedback = false;
-                this.phase = TaskPhase.WAIT_FOR_CHUNKS;
-            }
-        }
-
-        if (this.phase == TaskPhase.GAMERULE_PROBE)
-        {
-            if (Util.getMeasuringTimeNano() > this.gameRuleProbeTimeout)
-            {
-                InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, 8000, "litematica.message.error.schematic_paste_failed.game_rule_probe_timeout");
-                this.finished = false;
-                return true;
-            }
-
-            return false;
-        }
-
-        this.sentCommandsThisTick = 0;
-        this.processedChunksThisTick = 0;
-
-        if (this.currentChunk != null &&
-            this.canProcessChunk(this.currentChunk, this.schematicWorld, this.mc.world) == false)
-        {
-            return false;
-        }
-
-        int commandsLast = -1;
-        ChunkPos lastChunk = this.currentChunk;
-
-        while (this.sentCommandsThisTick < this.maxCommandsPerTick &&
-               (this.sentCommandsThisTick > commandsLast || Objects.equals(lastChunk, this.currentChunk) == false))
-        {
-            commandsLast = this.sentCommandsThisTick;
-            lastChunk = this.currentChunk;
-
-            if (this.phase == TaskPhase.WAIT_FOR_CHUNKS)
-            {
-                this.fetchNextChunk();
-            }
-
-            if (this.phase == TaskPhase.PROCESS_BOX_BLOCKS)
-            {
-                this.processBlocksInBox(this.currentChunk, this.currentBox);
-            }
-
-            if (this.phase == TaskPhase.PROCESS_BOX_ENTITIES)
-            {
-                this.processEntitiesInBox(this.currentBox);
-            }
-
-            if (this.phase == TaskPhase.FINISHED)
-            {
-                this.finished = true;
-                return true;
-            }
-        }
-
-        if (this.processedChunksThisTick > 0)
-        {
-            this.updateInfoHudLines();
-        }
-
-        return false;
+        return this.executeMultiPhase();
     }
 
-    public void checkGameRuleState(Text message)
+    @Override
+    protected void onNextChunkFetched(ChunkPos pos)
     {
-        if (message instanceof TranslatableText)
-        {
-            TranslatableText translatableText = (TranslatableText) message;
-            if ("commands.gamerule.query".equals(translatableText.getKey()))
-            {
-                this.shouldEnableFeedback = translatableText.getString().contains("true");
-                this.phase = TaskPhase.WAIT_FOR_CHUNKS;
-
-                if (this.shouldEnableFeedback)
-                {
-                    this.mc.player.sendChatMessage("/gamerule sendCommandFeedback false");
-                }
-            }
-        }
+        this.startNextBox(pos);
     }
 
-    protected void fetchNextChunk()
+    @Override
+    protected void onStartNextBox(IntBoundingBox box)
     {
-        if (this.pendingChunks.isEmpty() == false)
+        if (this.ignoreBlocks == false)
         {
-            this.sortChunkList();
-
-            ChunkPos pos = this.pendingChunks.get(0);
-
-            if (this.canProcessChunk(pos, this.schematicWorld, this.mc.world))
-            {
-                this.currentChunk = pos;
-                this.startNextBox(pos);
-            }
+            this.startSettingBlocks(box);
         }
         else
         {
-            this.phase = TaskPhase.FINISHED;
-            this.finished = true;
-        }
-    }
-
-    protected void fetchNextBoxForChunk(ChunkPos pos)
-    {
-        List<IntBoundingBox> list = this.boxesInChunks.get(pos);
-
-        if (list.isEmpty() == false)
-        {
-            this.currentBox = list.get(0);
-
-            if (this.ignoreBlocks == false)
-            {
-                IntBoundingBox box = this.currentBox;
-                this.positionIterator = BlockPos.iterate(box.minX, box.minY, box.minZ,
-                                                         box.maxX, box.maxY, box.maxZ).iterator();
-            }
-        }
-        else
-        {
-            this.currentBox = null;
-            this.phase = TaskPhase.WAIT_FOR_CHUNKS;
-        }
-    }
-
-    protected void startNextBox(ChunkPos chunkPos)
-    {
-        List<IntBoundingBox> list = this.boxesInChunks.get(chunkPos);
-
-        if (list.isEmpty() == false)
-        {
-            this.currentBox = list.get(0);
-
-            if (this.ignoreBlocks == false)
-            {
-                this.startSettingBlocks(this.currentBox);
-            }
-            else
-            {
-                this.startSummoningEntities(this.currentBox);
-            }
-        }
-        else
-        {
-            this.currentBox = null;
-            this.phase = TaskPhase.WAIT_FOR_CHUNKS;
+            this.startSummoningEntities(box);
         }
     }
 
@@ -277,29 +107,9 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
         this.phase = TaskPhase.PROCESS_BOX_ENTITIES;
     }
 
-    protected void onFinishedProcessingBox(ChunkPos chunkPos, IntBoundingBox box)
+    protected void processBlocksInCurrentBox()
     {
-        this.boxesInChunks.remove(chunkPos, box);
-        this.currentBox = null;
-        this.entityIterator = null;
-        this.positionIterator = null;
-
-        if (this.boxesInChunks.get(chunkPos).isEmpty())
-        {
-            this.pendingChunks.remove(chunkPos);
-            this.currentChunk = null;
-            ++this.processedChunksThisTick;
-            this.phase = TaskPhase.WAIT_FOR_CHUNKS;
-            this.fetchNextChunk();
-        }
-        else
-        {
-            this.startNextBox(chunkPos);
-        }
-    }
-
-    protected void processBlocksInBox(ChunkPos chunkPos, IntBoundingBox box)
-    {
+        ChunkPos chunkPos = this.currentChunkPos;
         ChunkSchematic schematicChunk = this.schematicWorld.getChunkProvider().getChunk(chunkPos.x, chunkPos.z);
         Chunk clientChunk = this.mc.world.getChunk(chunkPos.x, chunkPos.z);
 
@@ -314,16 +124,16 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
         {
             if (this.ignoreEntities)
             {
-                this.onFinishedProcessingBox(this.currentChunk, box);
+                this.onFinishedProcessingBox(this.currentChunkPos, this.currentBox);
             }
             else
             {
-                this.startSummoningEntities(box);
+                this.startSummoningEntities(this.currentBox);
             }
         }
     }
 
-    protected void processEntitiesInBox(IntBoundingBox box)
+    protected void processEntitiesInCurrentBox()
     {
         while (this.sentCommandsThisTick < this.maxCommandsPerTick &&
                this.entityIterator.hasNext())
@@ -333,7 +143,7 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
 
         if (this.entityIterator.hasNext() == false)
         {
-            this.onFinishedProcessingBox(this.currentChunk, box);
+            this.onFinishedProcessingBox(this.currentChunkPos, this.currentBox);
         }
     }
 
@@ -525,25 +335,6 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
         }
     }
 
-    protected void sendCommand(String command, ClientPlayerEntity player)
-    {
-        this.sendCommandToServer(command, player);
-        ++this.sentCommandsThisTick;
-        ++this.sentCommandsTotal;
-    }
-
-    protected void sendCommandToServer(String command, ClientPlayerEntity player)
-    {
-        if (command.length() > 0 && command.charAt(0) != '/')
-        {
-            player.sendChatMessage("/" + command);
-        }
-        else
-        {
-            player.sendChatMessage(command);
-        }
-    }
-
     @Nullable
     public static BlockPos findEmptyNearbyPosition(World world, BlockPos centerPos, int radius)
     {
@@ -619,7 +410,7 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
     }
 
     @Override
-    public void stop()
+    protected void onStop()
     {
         if (this.finished)
         {
@@ -641,6 +432,6 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
         DataManager.removeChatListener(this.gameRuleListener);
         InfoHud.getInstance().removeInfoHudRenderer(this, false);
 
-        super.stop();
+        super.onStop();
     }
 }
