@@ -33,9 +33,13 @@ public abstract class MixinClientPlayNetworkHandler
         }
     }
 
-    @Inject(method = "onChatMessage", at = @At("RETURN"))
+    @Inject(method = "onChatMessage", cancellable = true, at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/hud/InGameHud;addChatMessage(Lnet/minecraft/network/MessageType;Lnet/minecraft/text/Text;)V"))
     private void onGameMessage(ChatMessageS2CPacket packet, CallbackInfo ci)
     {
-        DataManager.onChatMessage(packet.getMessage());
+        if (DataManager.onChatMessage(packet.getMessage()))
+        {
+            ci.cancel();
+        }
     }
 }
