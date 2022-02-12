@@ -21,6 +21,8 @@ public abstract class MixinClientPlayNetworkHandler
         {
             SchematicWorldRefresher.INSTANCE.markSchematicChunksForRenderUpdate(packetIn.getX(), packetIn.getZ());
         }
+
+        DataManager.getSchematicPlacementManager().onClientChunkLoad(packetIn.getX(), packetIn.getZ());
     }
 
     @Inject(method = "onUnloadChunk", at = @At("RETURN"))

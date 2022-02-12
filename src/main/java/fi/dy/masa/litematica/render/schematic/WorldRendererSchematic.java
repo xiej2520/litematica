@@ -298,10 +298,9 @@ public class WorldRendererSchematic
 
             Entity.setRenderDistanceMultiplier(MathHelper.clamp((double) renderDistance / 8.0D, 1.0D, 2.5D));
 
-            Set<SubChunkPos> set = DataManager.getSchematicPlacementManager().getAllTouchedSubChunks();
-            List<SubChunkPos> positions = new ArrayList<>(set.size());
-            positions.addAll(set);
-            positions.sort(new SubChunkPos.DistanceComparator(viewSubChunk));
+            this.world.getProfiler().swap("sort");
+            List<SubChunkPos> positions = DataManager.getSchematicPlacementManager().getAndUpdateVisibleSubChunks(viewSubChunk);
+            //positions.sort(new SubChunkPos.DistanceComparator(viewSubChunk));
 
             //Queue<SubChunkPos> queuePositions = new PriorityQueue<>(new SubChunkPos.DistanceComparator(viewSubChunk));
             //queuePositions.addAll(set);
@@ -339,7 +338,7 @@ public class WorldRendererSchematic
                 }
             }
 
-            this.world.getProfiler().pop();
+            this.world.getProfiler().pop(); // fetch
         }
 
         this.world.getProfiler().swap("rebuild_near");
