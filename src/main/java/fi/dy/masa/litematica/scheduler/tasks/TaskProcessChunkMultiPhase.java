@@ -23,6 +23,9 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
     @Nullable protected IntBoundingBox currentBox;
     @Nullable protected Iterator<Entity> entityIterator;
     @Nullable protected Iterator<BlockPos> positionIterator;
+
+    protected final boolean useWorldEdit;
+
     protected int maxCommandsPerTick = 16;
     protected int processedChunksThisTick;
     protected int sentCommandsThisTick;
@@ -51,6 +54,8 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
     protected TaskProcessChunkMultiPhase(String nameOnHud)
     {
         super(nameOnHud);
+
+        this.useWorldEdit = Configs.Generic.COMMAND_USE_WORLDEDIT.getBooleanValue();
     }
 
     protected boolean executeMultiPhase()
@@ -123,10 +128,10 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
 
     protected void initPhaseStartProbe()
     {
-        if (Configs.Generic.COMMAND_DISABLE_FEEDBACK.getBooleanValue())
+        if (Configs.Generic.COMMAND_DISABLE_FEEDBACK.getBooleanValue() && this.isInWorld())
         {
             DataManager.addChatListener(this.gameRuleListener);
-            this.mc.player.sendChatMessage("/gamerule sendCommandFeedback");
+            this.sendCommand("gamerule sendCommandFeedback");
             this.gameRuleProbeTimeout = Util.getMeasuringTimeNano() + this.maxGameRuleProbeTime;
             this.phase = TaskPhase.GAME_RULE_PROBE;
         }
@@ -148,7 +153,7 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
 
     protected boolean checkCommandFeedbackGameRuleState(Text message)
     {
-        if (message instanceof TranslatableText)
+        if (this.isInWorld() && message instanceof TranslatableText)
         {
             TranslatableText translatableText = (TranslatableText) message;
 
@@ -159,7 +164,7 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
 
                 if (this.shouldEnableFeedback)
                 {
-                    this.mc.player.sendChatMessage("/gamerule sendCommandFeedback false");
+                    this.sendCommand("gamerule sendCommandFeedback false");
                 }
 
                 return true;
@@ -245,13 +250,12 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
     {
     }
 
-    protected void sendCommand(String command, ClientPlayerEntity player)
+    protected void sendCommand(String cmd)
     {
-        this.sendCommandToServer(command, player);
-        ++this.sentCommandsThisTick;
+        this.sendCommand(cmd, this.mc.player);
     }
 
-    protected void sendCommandToServer(String command, ClientPlayerEntity player)
+    protected void sendCommand(String command, ClientPlayerEntity player)
     {
         if (command.length() > 0 && command.charAt(0) != '/')
         {
@@ -260,6 +264,24 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
         else
         {
             player.sendChatMessage(command);
+        }
+
+        ++this.sentCommandsThisTick;
+    }
+
+    protected void sendTaskEndCommands()
+    {
+        if (this.isInWorld())
+        {
+            if (this.useWorldEdit)
+            {
+                this.sendCommand("//perf neighbors on");
+            }
+
+            if (this.shouldEnableFeedback)
+            {
+                this.sendCommand("gamerule sendCommandFeedback true");
+            }
         }
     }
 }

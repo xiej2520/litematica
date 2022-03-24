@@ -37,6 +37,7 @@ public class Configs implements IConfigHandler
         public static final ConfigBoolean       CLONE_AT_ORIGINAL_POS   = new ConfigBoolean(    "cloneAtOriginalPosition", false, "If enabled, then using the Clone Selection hotkey will create\nthe placement at the original area selection position,\ninstead of at the player's current position");
         public static final ConfigBoolean       COMMAND_DISABLE_FEEDBACK = new ConfigBoolean(   "commandDisableFeedback", true, "If enabled, then command feedback is automatically disabled\nand then re-enabled for multiplayer Paste, Fill and Delete operations\n(which are using /setblock and /fill commands) by disabling and then\nre-enabling the sendCommandFeedback game rule when the task is finished");
         public static final ConfigInteger       COMMAND_FILL_MAX_VOLUME = new ConfigInteger(    "commandFillMaxVolume", 32768, 256, 60000000, "The maximum size/volume of each individual box\nthat can be filled via the command-based Fill/Delete\noperations. Bigger areas/volumes will get split to multiple commands.\nAll areas are also split to per-chunk boxes at first anyway.");
+        public static final ConfigBoolean       COMMAND_FILL_NO_CHUNK_CLAMP = new ConfigBoolean("commandFillNoChunkClamp", false, "Disables dividing the fill volumes (in the Fill, Replace and Delete modes)\nto per-chunk boxes");
         public static final ConfigInteger       COMMAND_LIMIT           = new ConfigInteger(    "commandLimitPerTick", 64, 1, 1000000, "Maximum number of commands sent per game tick,\nwhen using the Paste, Fill and Delete features on a server,\nwhere they will use setblock and fill commands.\nNote that he Paste feature can overshoot this by a couple of commands\nwhen using the NBT restore functionality, which needs two additional commands for each block.");
         public static final ConfigString        COMMAND_NAME_CLONE      = new ConfigString(     "commandNameClone", "clone", "The clone command name to use when using the\ncommand-based creative mode functionality on servers.\nThis is currently only used by the Paste function if the NBT restore\nbehavior is set to 'Place & Clone'.");
         public static final ConfigString        COMMAND_NAME_FILL       = new ConfigString(     "commandNameFill", "fill", "The fill command name to use when using the\ncommand-based creative mode functionality on servers");
@@ -60,6 +61,7 @@ public class Configs implements IConfigHandler
         public static final ConfigBoolean       HIGHLIGHT_BLOCK_IN_INV  = new ConfigBoolean(    "highlightBlockInInventory", false, "When enabled, highlights the item (including Shulker Boxes containing it)\nof the looked at block in the schematic");
         public static final ConfigBoolean       LAYER_MODE_DYNAMIC      = new ConfigBoolean(    "layerModeFollowsPlayer", false, "If true, then the render layer follows the player.\nNote: This currently collapses Layer Range type ranges unfortunately");
         public static final ConfigBoolean       LOAD_ENTIRE_SCHEMATICS  = new ConfigBoolean(    "loadEntireSchematics", false, "If true, then the entire schematic is always loaded at once.\nIf false, then only the part that is within the client's view distance is loaded.");
+        public static final ConfigBoolean       PASTE_ALWAYS_USE_FILL    = new ConfigBoolean(   "pasteAlwaysUseFill", false, "This forces using the fill command (instead of setblock) even for single blocks");
         public static final ConfigBoolean       PASTE_IGNORE_BE_ENTIRELY = new ConfigBoolean(   "pasteIgnoreBlockEntitiesEntirely", false, "If enabled, then block entities ae not pasted at all\nvia the command-based pasting in multiplayer.\nThis allows you to easier paste in two passes if you\nwant to use the NBT-restore option for inventories etc. in the second pass,\nwhich usually requires a lot slower pasting speed/command rate.");
         public static final ConfigBoolean       PASTE_IGNORE_BE_IN_FILL = new ConfigBoolean(    "pasteIgnoreBlockEntitiesFromFill", true, "If enabled, then all block entities are ignored from the fill\ncommands when pasting. This allows them to get pasted individually,\nwhich is required if the NBT restore option is being used.");
         public static final ConfigBoolean       PASTE_IGNORE_CMD_LIMIT  = new ConfigBoolean(    "pasteIgnoreCommandLimitWithNbtRestore", true, "If enabled, then the command limit is ignored when pasting\nblocks with a block entity with the NBT restore option enabled.\nThis seems to somehow fix an issue where the NBT restore\nwould otherwise fail for many blocks with a low command rate.");
@@ -69,6 +71,7 @@ public class Configs implements IConfigHandler
         public static final ConfigOptionList    PASTE_REPLACE_BEHAVIOR  = new ConfigOptionList( "pasteReplaceBehavior", ReplaceBehavior.NONE, "The behavior of replacing existing blocks\nin the Paste schematic tool mode");
         public static final ConfigBoolean       PASTE_TO_MCFUNCTION     = new ConfigBoolean(    "pasteToMcFunctionFiles", false, "If enabled, then instead of actually pasting schematics to the world,\nthey are written as setblock commands into text files.");
         public static final ConfigBoolean       PASTE_USE_FILL_COMMAND  = new ConfigBoolean(    "pasteUseFillCommand", true, "If enabled, then instead of only using individual /setblock commands,\nthe command-based Paste operation (which is used on servers)\nwill also try to use /fill commands for any continuous areas of the same block.\nThis has no effect in single player, since the mod sets the blocks directly\nin the integrated server's world in and doesn't use commands at all.");
+        public static final ConfigBoolean       PASTE_USING_COMMANDS_IN_SP = new ConfigBoolean(  "pasteUsingCommandsInSp", false, "This is a temporary hack workaround to use the command-based pasting\nalso in single player, which allows using the render layer limited\npasting in single player, which currently doesn't work with\nthe direct world access pasting that single player normally uses.\n\nNote that this will have all the same NBT data restoration\nlimitations that multiplayer pasting has normally.");
         public static final ConfigBoolean       PICK_BLOCK_ENABLED      = new ConfigBoolean(    "pickBlockEnabled", true, "Enables the schematic world pick block hotkeys.\nThere is also a hotkey for toggling this option to toggle those hotkeys... o.o", "Pick Block Hotkeys");
         public static final ConfigBoolean       PICK_BLOCK_SHULKERS     = new ConfigBoolean(    "pickBlockShulkers", false, "If enabled, then if the required item for the pick bloc\nis not found directly in the player's inventory, but there\nis a Shulker box that contains it, the Shulker Box\nwill be switched to the player's hand instead");
         public static final ConfigString        PICK_BLOCKABLE_SLOTS    = new ConfigString(     "pickBlockableSlots", "1,2,3,4,5", "The hotbar slots that are allowed to be\nused for the schematic pick block");
@@ -86,6 +89,7 @@ public class Configs implements IConfigHandler
                 CHANGE_SELECTED_CORNER,
                 CLONE_AT_ORIGINAL_POS,
                 COMMAND_DISABLE_FEEDBACK,
+                COMMAND_FILL_NO_CHUNK_CLAMP,
                 COMMAND_USE_WORLDEDIT,
                 CUSTOM_SCHEMATIC_BASE_DIRECTORY_ENABLED,
                 DEBUG_LOGGING,
@@ -101,6 +105,7 @@ public class Configs implements IConfigHandler
                 HIGHLIGHT_BLOCK_IN_INV,
                 LAYER_MODE_DYNAMIC,
                 //LOAD_ENTIRE_SCHEMATICS,
+                PASTE_ALWAYS_USE_FILL,
                 PASTE_IGNORE_BE_ENTIRELY,
                 PASTE_IGNORE_BE_IN_FILL,
                 PASTE_IGNORE_CMD_LIMIT,
@@ -109,6 +114,7 @@ public class Configs implements IConfigHandler
                 PASTE_NBT_BEHAVIOR,
                 PASTE_TO_MCFUNCTION,
                 PASTE_USE_FILL_COMMAND,
+                PASTE_USING_COMMANDS_IN_SP,
                 PICK_BLOCK_ENABLED,
                 PICK_BLOCK_SHULKERS,
                 PLACEMENT_RESTRICTION,

@@ -1,7 +1,9 @@
 package fi.dy.masa.litematica.scheduler.tasks;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Queue;
+import java.util.function.BiConsumer;
 import javax.annotation.Nullable;
 import com.google.common.collect.Queues;
 import net.minecraft.block.BlockState;
@@ -13,26 +15,28 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import fi.dy.masa.malilib.gui.Message.MessageType;
+import fi.dy.masa.malilib.util.InfoUtils;
+import fi.dy.masa.malilib.util.IntBoundingBox;
+import fi.dy.masa.malilib.util.LayerMode;
+import fi.dy.masa.malilib.util.LayerRange;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.render.infohud.InfoHud;
 import fi.dy.masa.litematica.selection.Box;
 import fi.dy.masa.litematica.util.EntityUtils;
 import fi.dy.masa.litematica.util.WorldUtils;
-import fi.dy.masa.malilib.gui.Message.MessageType;
-import fi.dy.masa.malilib.util.InfoUtils;
-import fi.dy.masa.malilib.util.IntBoundingBox;
 
 public class TaskFillArea extends TaskProcessChunkMultiPhase
 {
     protected final Queue<String> queuedCommands = Queues.newArrayDeque();
-    protected final BlockState fillState;
-    @Nullable protected final BlockState replaceState;
     protected final String fillCommand;
+    protected final BlockState fillState;
     protected final String blockString;
+    @Nullable protected final BlockState replaceState;
+    @Nullable protected final String replaceBlockString;
     protected final int maxBoxVolume;
     protected final boolean removeEntities;
-    protected final boolean useWorldEdit;
 
     public TaskFillArea(List<Box> boxes, BlockState fillState, @Nullable BlockState replaceState, boolean removeEntities)
     {
@@ -49,19 +53,27 @@ public class TaskFillArea extends TaskProcessChunkMultiPhase
         this.maxBoxVolume = Configs.Generic.COMMAND_FILL_MAX_VOLUME.getIntegerValue();
         this.maxCommandsPerTick = Configs.Generic.COMMAND_LIMIT.getIntegerValue();
         this.fillCommand = Configs.Generic.COMMAND_NAME_FILL.getStringValue();
-        this.useWorldEdit = Configs.Generic.COMMAND_USE_WORLDEDIT.getBooleanValue();
-
-        String blockString = BlockArgumentParser.stringifyBlockState(fillState);
+        this.blockString = BlockArgumentParser.stringifyBlockState(fillState);
 
         if (replaceState != null)
         {
-            blockString += " replace " + BlockArgumentParser.stringifyBlockState(replaceState);
+            this.replaceBlockString = BlockArgumentParser.stringifyBlockState(replaceState);
+        }
+        else
+        {
+            this.replaceBlockString = null;
         }
 
-        this.blockString = blockString;
         this.processBoxBlocksTask = this::sendQueuedCommands;
 
-        this.addPerChunkBoxes(boxes);
+        if (Configs.Generic.COMMAND_FILL_NO_CHUNK_CLAMP.getBooleanValue())
+        {
+            this.addNonChunkClampedBoxes(boxes);
+        }
+        else
+        {
+            this.addPerChunkBoxes(boxes);
+        }
     }
 
     @Override
@@ -81,9 +93,9 @@ public class TaskFillArea extends TaskProcessChunkMultiPhase
     {
         super.init();
 
-        if (this.useWorldEdit && this.mc.player != null)
+        if (this.useWorldEdit && this.isInWorld())
         {
-            this.mc.player.sendChatMessage("//perf neighbors off");
+            this.sendCommand("//perf neighbors off");
         }
     }
 
@@ -103,6 +115,83 @@ public class TaskFillArea extends TaskProcessChunkMultiPhase
         else
         {
             this.directFillBoxesInChunk(pos);
+        }
+    }
+
+    protected void addNonChunkClampedBoxes(Collection<Box> allBoxes)
+    {
+        this.addNonChunkClampedBoxes(allBoxes, new LayerRange(null));
+    }
+
+    protected void addNonChunkClampedBoxes(Collection<Box> allBoxes, LayerRange range)
+    {
+        this.boxesInChunks.clear();
+        this.pendingChunks.clear();
+
+        if (range.getLayerMode() == LayerMode.ALL)
+        {
+            addBoxes(allBoxes, this::clampToWorldHeightAndAddBox);
+        }
+        else
+        {
+            getLayerRangeClampedBoxes(allBoxes, range, this::clampToWorldHeightAndAddBox);
+        }
+
+        this.pendingChunks.addAll(this.boxesInChunks.keySet());
+
+        this.sortChunkList();
+    }
+
+    protected static void addBoxes(Collection<Box> boxes, BiConsumer<ChunkPos, IntBoundingBox> consumer)
+    {
+        for (Box box : boxes)
+        {
+            int boxMinX = Math.min(box.getPos1().getX(), box.getPos2().getX());
+            int boxMinY = Math.min(box.getPos1().getY(), box.getPos2().getY());
+            int boxMinZ = Math.min(box.getPos1().getZ(), box.getPos2().getZ());
+            int boxMaxX = Math.max(box.getPos1().getX(), box.getPos2().getX());
+            int boxMaxY = Math.max(box.getPos1().getY(), box.getPos2().getY());
+            int boxMaxZ = Math.max(box.getPos1().getZ(), box.getPos2().getZ());
+
+            consumer.accept(new ChunkPos(boxMinX >> 4, boxMinZ >> 4), new IntBoundingBox(boxMinX, boxMinY, boxMinZ, boxMaxX, boxMaxY, boxMaxZ));
+        }
+    }
+
+    protected static void getLayerRangeClampedBoxes(Collection<Box> boxes,
+                                                    LayerRange range,
+                                                    BiConsumer<ChunkPos, IntBoundingBox> consumer)
+    {
+        for (Box box : boxes)
+        {
+            final int rangeMin = range.getLayerMin();
+            final int rangeMax = range.getLayerMax();
+            int boxMinX = Math.min(box.getPos1().getX(), box.getPos2().getX());
+            int boxMinY = Math.min(box.getPos1().getY(), box.getPos2().getY());
+            int boxMinZ = Math.min(box.getPos1().getZ(), box.getPos2().getZ());
+            int boxMaxX = Math.max(box.getPos1().getX(), box.getPos2().getX());
+            int boxMaxY = Math.max(box.getPos1().getY(), box.getPos2().getY());
+            int boxMaxZ = Math.max(box.getPos1().getZ(), box.getPos2().getZ());
+
+            switch (range.getAxis())
+            {
+                case X:
+                    if (rangeMax < boxMinX || rangeMin > boxMaxX) { continue; }
+                    boxMinX = Math.max(boxMinX, rangeMin);
+                    boxMaxX = Math.min(boxMaxX, rangeMax);
+                    break;
+                case Y:
+                    if (rangeMax < boxMinY || rangeMin > boxMaxY) { continue; }
+                    boxMinY = Math.max(boxMinY, rangeMin);
+                    boxMaxY = Math.min(boxMaxY, rangeMax);
+                    break;
+                case Z:
+                    if (rangeMax < boxMinZ || rangeMin > boxMaxZ) { continue; }
+                    boxMinZ = Math.max(boxMinZ, rangeMin);
+                    boxMaxZ = Math.min(boxMaxZ, rangeMax);
+                    break;
+            }
+
+            consumer.accept(new ChunkPos(boxMinX >> 4, boxMinZ >> 4), new IntBoundingBox(boxMinX, boxMinY, boxMinZ, boxMaxX, boxMaxY, boxMaxZ));
         }
     }
 
@@ -132,7 +221,7 @@ public class TaskFillArea extends TaskProcessChunkMultiPhase
         while (this.sentCommandsThisTick < this.maxCommandsPerTick &&
                this.queuedCommands.isEmpty() == false)
         {
-            this.sendCommand(this.queuedCommands.poll(), this.mc.player);
+            this.sendCommand(this.queuedCommands.poll());
         }
 
         if (this.queuedCommands.isEmpty())
@@ -198,7 +287,7 @@ public class TaskFillArea extends TaskProcessChunkMultiPhase
 
             if (this.world.getEntities(this.mc.player, aabb, EntityUtils.NOT_PLAYER).size() > 0)
             {
-                String killCmd = String.format("/kill @e[type=!player,x=%d,y=%d,z=%d,dx=%d,dy=%d,dz=%d]",
+                String killCmd = String.format("kill @e[type=!player,x=%d,y=%d,z=%d,dx=%d,dy=%d,dz=%d]",
                         box.minX               , box.minY               , box.minZ,
                         box.maxX - box.minX + 1, box.maxY - box.minY + 1, box.maxZ - box.minZ + 1);
 
@@ -237,12 +326,32 @@ public class TaskFillArea extends TaskProcessChunkMultiPhase
         {
             this.queuedCommands.offer(String.format("//pos1 %d,%d,%d", minX, minY, minZ));
             this.queuedCommands.offer(String.format("//pos2 %d,%d,%d", maxX, maxY, maxZ));
-            this.queuedCommands.offer("//set " + this.blockString);
+
+            if (this.replaceState != null)
+            {
+                this.queuedCommands.offer(String.format("//replace %s %s", this.replaceBlockString, this.blockString));
+            }
+            else
+            {
+                this.queuedCommands.offer("//set " + this.blockString);
+            }
         }
         else
         {
-            String fillCmd = String.format("%s %d %d %d %d %d %d %s", this.fillCommand,
-                                           minX, minY, minZ, maxX, maxY, maxZ, this.blockString);
+            String fillCmd;
+
+            if (this.replaceState != null)
+            {
+                fillCmd = String.format("%s %d %d %d %d %d %d %s replace %s", this.fillCommand,
+                                        minX, minY, minZ, maxX, maxY, maxZ,
+                                        this.blockString, this.replaceBlockString);
+            }
+            else
+            {
+                fillCmd = String.format("%s %d %d %d %d %d %d %s", this.fillCommand,
+                                        minX, minY, minZ, maxX, maxY, maxZ, this.blockString);
+            }
+
             this.queuedCommands.offer(fillCmd);
         }
     }
@@ -251,16 +360,7 @@ public class TaskFillArea extends TaskProcessChunkMultiPhase
     protected void onStop()
     {
         this.printCompletionMessage();
-
-        if (this.useWorldEdit)
-        {
-            this.mc.player.sendChatMessage("//perf neighbors on");
-        }
-
-        if (this.mc.player != null && this.shouldEnableFeedback)
-        {
-            this.mc.player.sendChatMessage("/gamerule sendCommandFeedback true");
-        }
+        this.sendTaskEndCommands();
 
         DataManager.removeChatListener(this.gameRuleListener);
         InfoHud.getInstance().removeInfoHudRenderer(this, false);
