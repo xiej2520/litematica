@@ -24,8 +24,14 @@ public class SchematicWorldHandler
         return world;
     }
 
+    @Nullable
     public static WorldSchematic createSchematicWorld()
     {
+        if (MinecraftClient.getInstance().world == null)
+        {
+            return null;
+        }
+
         LevelInfo info = new LevelInfo(0, GameMode.CREATIVE, false, false, LevelGeneratorType.FLAT);
         return new WorldSchematic(new LevelProperties(info, "SchematicWorld"), DIMENSIONTYPE, MinecraftClient.getInstance().getProfiler());
     }

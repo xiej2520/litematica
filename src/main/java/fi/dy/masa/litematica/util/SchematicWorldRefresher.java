@@ -22,7 +22,7 @@ public class SchematicWorldRefresher implements IRangeChangeListener
     {
         WorldSchematic world = SchematicWorldHandler.getSchematicWorld();
 
-        if (world != null)
+        if (world != null && this.mc.world != null)
         {
             DataManager.getSchematicPlacementManager().setVisibleSubChunksNeedsUpdate();
             final int minY = PositionUtils.WORLD_VERTICAL_SIZE_MIN_INCLUSIVE;
