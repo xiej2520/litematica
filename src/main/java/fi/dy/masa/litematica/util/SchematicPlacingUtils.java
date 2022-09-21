@@ -10,6 +10,7 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.Material;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.nbt.CompoundTag;
@@ -387,6 +388,13 @@ public class SchematicPlacingUtils
                 {
                     rotateEntity(entity, x, y, z, rotationCombined, mirrorMain, mirrorSub);
                     //System.out.printf("post: %.1f - rot: %s, mm: %s, ms: %s\n", rotationYaw, rotationCombined, mirrorMain, mirrorSub);
+
+                    // Update the sleeping position to the current position
+                    if (entity instanceof LivingEntity && ((LivingEntity) entity).isSleeping())
+                    {
+                        ((LivingEntity) entity).setSleepingPosition(new BlockPos(x, y, z));
+                    }
+
                     EntityUtils.spawnEntityAndPassengersInWorld(entity, world);
                 }
             }
