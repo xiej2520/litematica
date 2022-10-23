@@ -65,7 +65,7 @@ public class SchematicConversionFixers
     public static final IStateFixer FIXER_BANNER = (reader, state, pos) -> {
         CompoundTag tag = reader.getBlockEntityData(pos);
 
-        if (tag != null)
+        if (tag != null && tag.contains("Base", Constants.NBT.TAG_INT))
         {
             DyeColor colorOrig = ((AbstractBannerBlock) state.getBlock()).getColor();
             DyeColor colorFromData = DyeColor.byId(15 - tag.getInt("Base"));
@@ -104,7 +104,7 @@ public class SchematicConversionFixers
     public static final IStateFixer FIXER_BANNER_WALL = (reader, state, pos) -> {
         CompoundTag tag = reader.getBlockEntityData(pos);
 
-        if (tag != null)
+        if (tag != null && tag.contains("Base", Constants.NBT.TAG_INT))
         {
             DyeColor colorOrig = ((AbstractBannerBlock) state.getBlock()).getColor();
             DyeColor colorFromData = DyeColor.byId(15 - tag.getInt("Base"));
@@ -361,15 +361,23 @@ public class SchematicConversionFixers
     public static final IStateFixer FIXER_SKULL = (reader, state, pos) -> {
         CompoundTag tag = reader.getBlockEntityData(pos);
 
-        if (tag != null)
+        if (tag != null && tag.contains("SkullType", Constants.NBT.TAG_BYTE))
         {
             int id = MathHelper.clamp(tag.getByte("SkullType"), 0, 5);
 
-            // ;_; >_> <_<
-            if (id == 2) { id = 3; } else if (id == 3) { id = 2; }
-
             SkullBlock.SkullType typeOrig = ((AbstractSkullBlock) state.getBlock()).getSkullType();
-            SkullBlock.SkullType typeFromData = SkullBlock.Type.values()[id];
+            // SkullBlock.Type enum has a different order now ;_; >_> <_< these are 1.12.2 ids
+            SkullBlock.SkullType typeFromData;
+
+            switch (id)
+            {
+                case 1:  typeFromData = SkullBlock.Type.WITHER_SKELETON; break;
+                case 2:  typeFromData = SkullBlock.Type.ZOMBIE;          break;
+                case 3:  typeFromData = SkullBlock.Type.PLAYER;          break;
+                case 4:  typeFromData = SkullBlock.Type.CREEPER;         break;
+                case 5:  typeFromData = SkullBlock.Type.DRAGON;          break;
+                default: typeFromData = SkullBlock.Type.SKELETON;        break;
+            }
 
             if (typeOrig != typeFromData)
             {
@@ -408,15 +416,23 @@ public class SchematicConversionFixers
     public static final IStateFixer FIXER_SKULL_WALL = (reader, state, pos) -> {
         CompoundTag tag = reader.getBlockEntityData(pos);
 
-        if (tag != null)
+        if (tag != null && tag.contains("SkullType", Constants.NBT.TAG_BYTE))
         {
             int id = MathHelper.clamp(tag.getByte("SkullType"), 0, 5);
 
-            // ;_; >_> <_<
-            if (id == 2) { id = 3; } else if (id == 3) { id = 2; }
-
             SkullBlock.SkullType typeOrig = ((AbstractSkullBlock) state.getBlock()).getSkullType();
-            SkullBlock.SkullType typeFromData = SkullBlock.Type.values()[id];
+            // SkullBlock.Type enum has a different order now ;_; >_> <_< these are 1.12.2 ids
+            SkullBlock.SkullType typeFromData;
+
+            switch (id)
+            {
+                case 1:  typeFromData = SkullBlock.Type.WITHER_SKELETON; break;
+                case 2:  typeFromData = SkullBlock.Type.ZOMBIE;          break;
+                case 3:  typeFromData = SkullBlock.Type.PLAYER;          break;
+                case 4:  typeFromData = SkullBlock.Type.CREEPER;         break;
+                case 5:  typeFromData = SkullBlock.Type.DRAGON;          break;
+                default: typeFromData = SkullBlock.Type.SKELETON;        break;
+            }
 
             if (typeOrig != typeFromData)
             {
