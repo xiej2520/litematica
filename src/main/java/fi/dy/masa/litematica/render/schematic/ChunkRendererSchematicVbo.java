@@ -2,8 +2,8 @@ package fi.dy.masa.litematica.render.schematic;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +34,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.chunk.WorldChunk;
+
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.render.RenderUtils;
@@ -59,7 +60,7 @@ public class ChunkRendererSchematicVbo
     protected final BlockPos.Mutable chunkRelativePos;
 
     protected final Map<RenderLayer, VertexBuffer> vertexBufferBlocks;
-    protected final VertexBuffer[] vertexBufferOverlay;
+    protected final Map<OverlayRenderType, VertexBuffer> vertexBufferOverlay;
     protected final List<IntBoundingBox> boxes = new ArrayList<>();
     protected final EnumSet<OverlayRenderType> existingOverlays = EnumSet.noneOf(OverlayRenderType.class);
 
@@ -84,20 +85,10 @@ public class ChunkRendererSchematicVbo
         this.chunkRenderData = ChunkRenderDataSchematic.EMPTY;
         this.chunkRenderLock = new ReentrantLock();
         this.chunkRenderDataLock = new ReentrantLock();
-        this.vertexBufferBlocks = new HashMap<>();
-        this.vertexBufferOverlay = new VertexBuffer[OverlayRenderType.values().length];
+        this.vertexBufferBlocks = new IdentityHashMap<>();
+        this.vertexBufferOverlay = new IdentityHashMap<>();
         this.position = new BlockPos.Mutable();
         this.chunkRelativePos = new BlockPos.Mutable();
-
-        for (RenderLayer layer : RenderLayer.getBlockLayers())
-        {
-            this.vertexBufferBlocks.put(layer, new VertexBuffer(layer.getVertexFormat()));
-        }
-
-        for (int i = 0; i < OverlayRenderType.values().length; ++i)
-        {
-            this.vertexBufferOverlay[i] = new VertexBuffer(VertexFormats.POSITION_COLOR);
-        }
     }
 
     public boolean hasOverlay()
@@ -112,13 +103,13 @@ public class ChunkRendererSchematicVbo
 
     public VertexBuffer getBlocksVertexBufferByLayer(RenderLayer layer)
     {
-        return this.vertexBufferBlocks.get(layer);
+        return this.vertexBufferBlocks.computeIfAbsent(layer, l -> new VertexBuffer(l.getVertexFormat()));
     }
 
     public VertexBuffer getOverlayVertexBuffer(OverlayRenderType type)
     {
         //if (GuiBase.isCtrlDown()) System.out.printf("getOverlayVertexBuffer: type: %s, buf: %s\n", type, this.vertexBufferOverlay[type.ordinal()]);
-        return this.vertexBufferOverlay[type.ordinal()];
+        return this.vertexBufferOverlay.computeIfAbsent(type, l -> new VertexBuffer(VertexFormats.POSITION_COLOR));
     }
 
     public ChunkRenderDataSchematic getChunkRenderData()
@@ -184,15 +175,8 @@ public class ChunkRendererSchematicVbo
         this.clear();
         this.world = null;
 
-        this.vertexBufferBlocks.values().forEach((buf) -> buf.close());
-
-        for (int i = 0; i < this.vertexBufferOverlay.length; ++i)
-        {
-            if (this.vertexBufferOverlay[i] != null)
-            {
-                this.vertexBufferOverlay[i].close();
-            }
-        }
+        this.vertexBufferBlocks.values().forEach(VertexBuffer::close);
+        this.vertexBufferOverlay.values().forEach(VertexBuffer::close);
     }
 
     public void resortTransparency(ChunkRenderTaskSchematic task)
