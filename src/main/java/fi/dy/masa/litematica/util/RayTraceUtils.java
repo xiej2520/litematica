@@ -10,7 +10,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Material;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityContext;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
@@ -46,6 +48,13 @@ public class RayTraceUtils
     private static double closestCornerDistance;
     private static double closestOriginDistance;
     private static HitType originType;
+
+    // 1.15.2: EntityContext.of(null) throws, unlike the newer ShapeContext.of(null)
+    private static EntityContext getPlayerEntityContext()
+    {
+        Entity player = MinecraftClient.getInstance().player;
+        return player != null ? EntityContext.of(player) : EntityContext.absent();
+    }
 
     @Nullable
     public static BlockPos getTargetedPosition(World world, Entity player, double maxDistance, boolean sneakToOffset)
@@ -666,7 +675,7 @@ public class RayTraceUtils
         if ((respectLayerRange == false || data.range.isPositionWithinRange(data.x, data.y, data.z)) &&
             (ignoreBlockWithoutBoundingBox == false || blockState.getCollisionShape(world, data.blockPos).isEmpty() == false))
         {
-            VoxelShape blockShape = blockState.getOutlineShape(world, data.blockPos);
+            VoxelShape blockShape = blockState.getOutlineShape(world, data.blockPos, getPlayerEntityContext());
             boolean blockCollidable = ! blockShape.isEmpty();
             boolean fluidCollidable = data.fluidMode.handled(fluidState);
 
@@ -694,7 +703,6 @@ public class RayTraceUtils
         return null;
     }
 
-    @Nullable
     private static boolean traceLoopSteps(RayTraceCalcsData data,
             World world, BlockState blockState, FluidState fluidState,
             boolean ignoreBlockWithoutBoundingBox,
@@ -704,7 +712,7 @@ public class RayTraceUtils
             (ignoreBlockWithoutBoundingBox == false || blockState.getMaterial() == Material.PORTAL ||
              blockState.getCollisionShape(world, data.blockPos).isEmpty() == false))
         {
-            VoxelShape blockShape = blockState.getOutlineShape(world, data.blockPos);
+            VoxelShape blockShape = blockState.getOutlineShape(world, data.blockPos, getPlayerEntityContext());
             boolean blockCollidable = ! blockShape.isEmpty();
             boolean fluidCollidable = data.fluidMode.handled(fluidState);
 
