@@ -2,8 +2,10 @@ package fi.dy.masa.litematica.scheduler.tasks;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
+import java.util.Queue;
 import javax.annotation.Nullable;
+import com.google.common.collect.Queues;
+
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.text.Text;
@@ -11,6 +13,7 @@ import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.util.ToBooleanFunction;
@@ -34,6 +37,7 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
     protected long taskStartTimeForCurrentTick;
     protected boolean shouldEnableFeedback;
 
+    protected final Queue<String> queuedCommands = Queues.newArrayDeque();
     protected ToBooleanFunction<Text> gameRuleListener = this::checkCommandFeedbackGameRuleState;
     protected Runnable initTask = this::initPhaseStartProbe;
     protected Runnable probeTask = this::probePhase;
@@ -81,10 +85,10 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
         }
 
         int commandsLast = -1;
-        ChunkPos lastChunk = this.currentChunkPos;
+        int processedChunksLast = -1;
 
         while (this.sentCommandsThisTick < this.maxCommandsPerTick &&
-               (this.sentCommandsThisTick > commandsLast || Objects.equals(lastChunk, this.currentChunkPos) == false))
+               (this.sentCommandsThisTick > commandsLast || this.processedChunksThisTick != processedChunksLast))
         {
             long currentTime = Util.getMeasuringTimeNano();
             long elapsedTickTime = (currentTime - this.taskStartTimeForCurrentTick);
@@ -95,19 +99,19 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
             }
 
             commandsLast = this.sentCommandsThisTick;
-            lastChunk = this.currentChunkPos;
+            processedChunksLast = this.processedChunksThisTick;
 
             if (this.phase == TaskPhase.WAIT_FOR_CHUNKS)
             {
                 this.waitForChunkTask.run();
             }
 
-            if (this.phase == TaskPhase.PROCESS_BOX_BLOCKS)
+            if (this.phase == TaskPhase.PROCESS_BOX_BLOCKS && this.processBoxBlocksTask != null)
             {
                 this.processBoxBlocksTask.run();
             }
 
-            if (this.phase == TaskPhase.PROCESS_BOX_ENTITIES)
+            if (this.phase == TaskPhase.PROCESS_BOX_ENTITIES && this.processBoxEntitiesTask != null)
             {
                 this.processBoxEntitiesTask.run();
             }
@@ -267,6 +271,20 @@ public abstract class TaskProcessChunkMultiPhase extends TaskProcessChunkBase
         }
 
         ++this.sentCommandsThisTick;
+    }
+
+    protected void sendQueuedCommands()
+    {
+        while (this.sentCommandsThisTick < this.maxCommandsPerTick &&
+               this.queuedCommands.isEmpty() == false)
+        {
+            this.sendCommand(this.queuedCommands.poll());
+        }
+
+        if (this.queuedCommands.isEmpty())
+        {
+            this.finishProcessingChunk(this.currentChunkPos);
+        }
     }
 
     protected void sendTaskEndCommands()
