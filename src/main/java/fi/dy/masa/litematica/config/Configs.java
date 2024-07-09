@@ -54,6 +54,7 @@ public class Configs implements IConfigHandler
         public static final ConfigBoolean       EASY_PLACE_HOLD_ENABLED = new ConfigBoolean(    "easyPlaceHoldEnabled", true, "When enabled, then you can hold down the use key\nand look at different schematic blocks to place them,\nwithout having to click on every block individually.");
         public static final ConfigBoolean       EASY_PLACE_MODE         = new ConfigBoolean(    "easyPlaceMode", false, "When enabled, then simply trying to use an item/place a block\non schematic blocks will place that block in that position");
         public static final ConfigBoolean       EASY_PLACE_SP_HANDLING  = new ConfigBoolean(    "easyPlaceSinglePlayerHandling", true, "If enabled, then Litematica handles the so called\n\"Carpet mod Accurate Block Placement Protocol\" itself in single player.\nThis is recommended to be kept enabled if you\nare going to use Easy Place in single player.");
+        public static final ConfigBoolean       EASY_PLACE_SWING_HAND   = new ConfigBoolean(    "easyPlaceSwingHand", true, "Swing the Player's hand when using Easy Place.");
         public static final ConfigOptionList    EASY_PLACE_PROTOCOL     = new ConfigOptionList( "easyPlaceProtocolVersion", EasyPlaceProtocol.AUTO, "The type of \"accurate placement protocol\" to use.\n- Auto: Uses v3 in single player, and by default Slabs-only in multiplayer,\n  unless the server has Carpet mod that sends a 'carpet:hello'\n  packet, in which case v2 is used on that server.\n- Version 3: Only supported by Litematica itself (in single player) for now.\n- Version 2: Compatible with servers with the Carpet mod\n  (either QuickCarpet by skyrising and DeadlyMC,\n  or CarpetExtra in addition to FabricCarpet.\n  And in both cases the 'accurateBlockPlacement' Carpet rule needs\n  to be enabled on the server).\n- Slabs only: Only fixes top slabs. Compatible with Paper servers.\n- None: Does not modify coordinates.");
         public static final ConfigInteger       EASY_PLACE_SWAP_INTERVAL = new ConfigInteger(   "easyPlaceSwapInterval", 0, 0, 10000, "The interval in milliseconds the Easy Place mode waits\nafter swapping inventory slots and placing a block.\nUseful to avoid placing wrong blocks when having high ping.");
         public static final ConfigBoolean       EASY_PLACE_VANILLA_REACH = new ConfigBoolean(   "easyPlaceVanillaReach", false, "If enabled, reduces reach distance from 6 to 4.5\nso servers don't reject placement of far blocks.");
@@ -107,6 +108,7 @@ public class Configs implements IConfigHandler
                 EASY_PLACE_HOLD_ENABLED,
                 EASY_PLACE_MODE,
                 EASY_PLACE_SP_HANDLING,
+                EASY_PLACE_SWING_HAND,
                 EASY_PLACE_PROTOCOL,
                 EASY_PLACE_VANILLA_REACH,
                 EXECUTE_REQUIRE_TOOL,

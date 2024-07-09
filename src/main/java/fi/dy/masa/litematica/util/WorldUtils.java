@@ -566,7 +566,13 @@ public class WorldUtils
 
                 //System.out.printf("pos: %s side: %s, hit: %s\n", pos, side, hitPos);
                 // pos, side, hitPos
-                mc.interactionManager.interactBlock(mc.player, mc.world, hand, hitResult);
+                ActionResult result = mc.interactionManager.interactBlock(mc.player, mc.world, hand, hitResult);
+
+                // swing hand fix, see MinecraftClient#doItemUse
+                if (result.shouldSwingHand() && Configs.Generic.EASY_PLACE_SWING_HAND.getBooleanValue())
+                {
+                    mc.player.swingHand(hand);
+                }
 
                 if (stateSchematic.getBlock() instanceof SlabBlock && stateSchematic.get(SlabBlock.TYPE) == SlabType.DOUBLE)
                 {
