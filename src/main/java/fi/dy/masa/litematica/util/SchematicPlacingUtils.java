@@ -12,10 +12,13 @@ import net.minecraft.block.Material;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.decoration.AbstractDecorationEntity;
+import net.minecraft.entity.decoration.ItemFrameEntity;
 import net.minecraft.entity.decoration.painting.PaintingEntity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.server.world.ServerTickScheduler;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.BlockMirror;
@@ -35,6 +38,7 @@ import fi.dy.masa.litematica.schematic.LitematicaSchematic.EntityInfo;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.schematic.placement.SubRegionPlacement;
+import fi.dy.masa.malilib.util.Constants;
 import fi.dy.masa.malilib.util.IntBoundingBox;
 import fi.dy.masa.malilib.util.NBTUtils;
 
@@ -384,6 +388,7 @@ public class SchematicPlacingUtils
             double x = pos.x + offX;
             double y = pos.y + offY;
             double z = pos.z + offZ;
+            float[] origRot = new float[2];
 
             if (x >= minX && x < maxX && z >= minZ && z < maxZ)
             {
@@ -410,6 +415,10 @@ public class SchematicPlacingUtils
                     tag.putInt("TileY", (int) p.y);
                     tag.putInt("TileZ", (int) p.z);
                 }
+
+                ListTag rotation = tag.getList("Rotation", Constants.NBT.TAG_FLOAT);
+                origRot[0] = rotation.getFloat(0);
+                origRot[1] = rotation.getFloat(1);
 
                 Entity entity = EntityUtils.createEntityAndPassengersFromNBT(tag, world);
 
@@ -447,6 +456,16 @@ public class SchematicPlacingUtils
                         }
 
                         entity.updatePosition(x, y, z);
+                    }
+                    if (entity instanceof ItemFrameEntity)
+                    {
+                        ItemFrameEntity frameEntity = (ItemFrameEntity) entity;
+
+                        if (frameEntity.yaw != origRot[0] && (frameEntity.pitch == 90.0F || frameEntity.pitch == -90.0F))
+                        {
+                            // Fix Yaw only if Pitch is +/- 90.0F (Floor, Ceiling mounted)
+                            frameEntity.yaw = origRot[0];
+                        }
                     }
 
                     EntityUtils.spawnEntityAndPassengersInWorld(entity, world);
