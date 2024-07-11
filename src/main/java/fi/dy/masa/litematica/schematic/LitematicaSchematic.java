@@ -18,6 +18,8 @@ import net.minecraft.SharedConstants;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.CarpetBlock;
+import net.minecraft.block.FallingBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.AbstractDecorationEntity;
@@ -31,6 +33,7 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.LongArrayTag;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.tag.BlockTags;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
@@ -662,6 +665,7 @@ public class LitematicaSchematic
             final int startY = minCorner.getY();
             final int startZ = minCorner.getZ();
             final boolean visibleOnly = info.visibleOnly;
+            final boolean includeSupport = info.includeSupportBlocks;
 
             for (int y = 0; y < sizeY; ++y)
             {
@@ -671,7 +675,9 @@ public class LitematicaSchematic
                     {
                         posMutable.set(x + startX, y + startY, z + startZ);
 
-                        if (visibleOnly && isExposed(world, posMutable) == false)
+                        if (visibleOnly &&
+                            isExposed(world, posMutable) == false &&
+                            (includeSupport == false || isSupport(world, posMutable) == false))
                         {
                             continue;
                         }
@@ -769,6 +775,83 @@ public class LitematicaSchematic
         return false;
     }
 
+    public static boolean isGravityBlock(BlockState state)
+    {
+        return state.matches(BlockTags.SAND) ||
+               state.getBlock() instanceof FallingBlock ||
+               state.getBlock() == Blocks.GRAVEL;
+    }
+
+    public static boolean isGravityBlock(World world, BlockPos pos)
+    {
+        return isGravityBlock(world.getBlockState(pos));
+    }
+
+    public static boolean supportsExposedBlocks(World world, BlockPos pos)
+    {
+        BlockPos posUp = pos.offset(Direction.UP);
+        BlockState stateUp = world.getBlockState(posUp);
+
+        while (true)
+        {
+            if (needsSupportNonGravity(stateUp))
+            {
+                return true;
+            }
+            else if (isGravityBlock(stateUp))
+            {
+                if (isExposed(world, posUp))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                break;
+            }
+
+            posUp = posUp.offset(Direction.UP);
+
+            if (posUp.getY() >= PositionUtils.WORLD_VERTICAL_SIZE_MAX_EXCLUSIVE)
+            {
+                break;
+            }
+
+            stateUp = world.getBlockState(posUp);
+        }
+
+        return false;
+    }
+
+    public static boolean needsSupportNonGravity(BlockState state)
+    {
+        Block block = state.getBlock();
+
+        return block == Blocks.REPEATER ||
+               block == Blocks.COMPARATOR ||
+               block == Blocks.SNOW ||
+               block instanceof CarpetBlock; // Moss Carpet is not in the WOOL_CARPETS tag
+    }
+
+    public static boolean isSupport(World world, BlockPos pos)
+    {
+        // This only needs to return true for blocks that are needed support for another block,
+        // and that other block would possibly block visibility to this block, i.e. its side
+        // facing this block position is a full opaque square.
+        // Apparently there is no method that indicates blocks that need support...
+        // so hard coding a bunch of stuff here it is then :<
+        BlockPos posUp = pos.offset(Direction.UP);
+        BlockState stateUp = world.getBlockState(posUp);
+
+        if (needsSupportNonGravity(stateUp))
+        {
+            return true;
+        }
+
+        return isGravityBlock(stateUp) &&
+               (isExposed(world, posUp) || supportsExposedBlocks(world, posUp));
+    }
+
     public void takeBlocksFromWorldWithinChunk(World world, ImmutableMap<String, IntBoundingBox> volumes,
                                                ImmutableMap<String, Box> boxes, SchematicSaveInfo info)
     {
@@ -812,6 +895,7 @@ public class LitematicaSchematic
             final int endY = startY + (bb.maxY - bb.minY);
             final int endZ = startZ + (bb.maxZ - bb.minZ);
             final boolean visibleOnly = info.visibleOnly;
+            final boolean includeSupport = info.includeSupportBlocks;
 
             for (int y = startY; y <= endY; ++y)
             {
@@ -821,7 +905,9 @@ public class LitematicaSchematic
                     {
                         posMutable.set(x + offsetX, y + offsetY, z + offsetZ);
 
-                        if (visibleOnly && isExposed(world, posMutable) == false)
+                        if (visibleOnly &&
+                            isExposed(world, posMutable) == false &&
+                            (includeSupport == false || isSupport(world, posMutable) == false))
                         {
                             continue;
                         }
@@ -2065,17 +2151,23 @@ public class LitematicaSchematic
     public static class SchematicSaveInfo
     {
         public final boolean visibleOnly;
+        public final boolean includeSupportBlocks;
         public final boolean ignoreEntities;
         public final boolean fromSchematicWorld;
 
-        public SchematicSaveInfo(boolean visibleOnly, boolean ignoreEntities)
+        public SchematicSaveInfo(boolean visibleOnly,
+                                 boolean ignoreEntities)
         {
-            this (visibleOnly, ignoreEntities, false);
+            this (visibleOnly, false, ignoreEntities, false);
         }
 
-        public SchematicSaveInfo(boolean visibleOnly, boolean ignoreEntities, boolean fromSchematicWorld)
+        public SchematicSaveInfo(boolean visibleOnly,
+                                 boolean includeSupportBlocks,
+                                 boolean ignoreEntities,
+                                 boolean fromSchematicWorld)
         {
             this.visibleOnly = visibleOnly;
+            this.includeSupportBlocks = includeSupportBlocks;
             this.ignoreEntities = ignoreEntities;
             this.fromSchematicWorld = fromSchematicWorld;
         }
