@@ -561,22 +561,20 @@ public class WorldUtils
                     side = placementData.side;
                     hitPos = placementData.hitVec;
                 }
-                else
+
+                if (protocol == EasyPlaceProtocol.V3)
                 {
-                    if (protocol == EasyPlaceProtocol.V3)
-                    {
-                        hitPos = applyPlacementProtocolV3(pos, stateSchematic, hitPos);
-                    }
-                    else if (protocol == EasyPlaceProtocol.V2)
-                    {
-                        // Carpet Accurate Block Placement protocol support, plus slab support
-                        hitPos = applyCarpetProtocolHitVec(pos, stateSchematic, hitPos);
-                    }
-                    else if (protocol == EasyPlaceProtocol.SLAB_ONLY)
-                    {
-                        // Slab support only
-                        hitPos = applyBlockSlabProtocol(pos, stateSchematic, hitPos);
-                    }
+                    hitPos = applyPlacementProtocolV3(pos, stateSchematic, hitPos);
+                }
+                else if (protocol == EasyPlaceProtocol.V2)
+                {
+                    // Carpet Accurate Block Placement protocol support, plus slab support
+                    hitPos = applyCarpetProtocolHitVec(pos, stateSchematic, hitPos);
+                }
+                else if (protocol == EasyPlaceProtocol.SLAB_ONLY)
+                {
+                    // Slab support only
+                    hitPos = applyBlockSlabProtocol(pos, stateSchematic, hitPos);
                 }
 
                 // Mark that this position has been handled (use the non-offset position that is checked above)
