@@ -10,6 +10,9 @@ import java.util.Comparator;
 import java.util.List;
 import javax.annotation.Nullable;
 import com.mojang.datafixers.DataFixer;
+import net.minecraft.block.AbstractBannerBlock;
+import net.minecraft.block.AbstractSignBlock;
+import net.minecraft.block.AbstractSkullBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -17,7 +20,11 @@ import net.minecraft.block.ComparatorBlock;
 import net.minecraft.block.RepeaterBlock;
 import net.minecraft.block.SlabBlock;
 import net.minecraft.block.TorchBlock;
+import net.minecraft.block.WallBannerBlock;
+import net.minecraft.block.WallMountedBlock;
 import net.minecraft.block.WallRedstoneTorchBlock;
+import net.minecraft.block.WallSignBlock;
+import net.minecraft.block.WallSkullBlock;
 import net.minecraft.block.WallTorchBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
@@ -660,14 +667,22 @@ public class WorldUtils
         PlacementProtocolData placementData = new PlacementProtocolData();
 
         Block stateBlock = stateSchematic.getBlock();
+        final World world = MinecraftClient.getInstance().world;
 
-        //For now, only handles torches outside V2 / V3
-        if (stateBlock instanceof TorchBlock)
+        //Wall-mountable blocks
+        if (stateBlock instanceof TorchBlock ||
+            stateBlock instanceof AbstractBannerBlock ||
+            stateBlock instanceof AbstractSignBlock ||
+            stateBlock instanceof AbstractSkullBlock)
         {
             placementData.handled = true;
             placementData.hitVec = hitVecIn;
 
-            if (stateBlock instanceof WallTorchBlock || stateBlock instanceof WallRedstoneTorchBlock)
+            if (stateBlock instanceof WallTorchBlock ||
+                stateBlock instanceof WallRedstoneTorchBlock ||
+                stateBlock instanceof WallBannerBlock ||
+                stateBlock instanceof WallSignBlock ||
+                stateBlock instanceof WallSkullBlock)
             {
                 placementData.side = stateSchematic.get(Properties.HORIZONTAL_FACING);
                 placementData.pos = pos.offset(placementData.side.getOpposite());
@@ -678,11 +693,31 @@ public class WorldUtils
                 placementData.pos = pos.down();
             }
 
-            BlockState stateFacing = MinecraftClient.getInstance().world.getBlockState(placementData.pos);
+            //If the supporting block doesn't exist, fail
+            BlockState stateFacing = world.getBlockState(placementData.pos);
             if (stateFacing == null || stateFacing.isAir())
             {
                 placementData.mustFail = true;
             }
+        }
+        else if (stateBlock instanceof WallMountedBlock)
+        {
+            //If the supporting block doesn't exist, fail
+            Direction direction;
+            switch (stateSchematic.get(Properties.WALL_MOUNT_LOCATION))
+            {
+                case CEILING:
+                    direction = Direction.UP;
+                    break;
+                case FLOOR:
+                    direction = Direction.DOWN;
+                    break;
+                default:
+                    direction = stateSchematic.get(Properties.HORIZONTAL_FACING).getOpposite();
+            }
+
+            if (!WallMountedBlock.canPlaceAt(world, pos, direction))
+                placementData.mustFail = true;
         }
 
         return placementData;
