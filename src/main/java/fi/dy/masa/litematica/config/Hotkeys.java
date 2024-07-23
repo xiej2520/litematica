@@ -48,6 +48,8 @@ public class Hotkeys
     public static final ConfigHotkey SCHEMATIC_EDIT_REPLACE_ALL         = new ConfigHotkey("schematicEditReplaceAll",           "", KeybindSettings.MODIFIER_INGAME, "Modifier key to activate the \"replace all identical\"\nreplace mode/function in the Schematic Edit tool mode");
     public static final ConfigHotkey SCHEMATIC_EDIT_REPLACE_BLOCK       = new ConfigHotkey("schematicEditReplaceBlock",         "", KeybindSettings.MODIFIER_INGAME, "Modifier key to activate the \"replace block type\"\nreplace mode/function in the Schematic Edit tool mode");
     public static final ConfigHotkey SCHEMATIC_EDIT_REPLACE_DIRECTION   = new ConfigHotkey("schematicEditReplaceDirection",     "", KeybindSettings.MODIFIER_INGAME, "Modifier key to activate the directional/continuous\nreplace mode/function in the Schematic Edit tool mode");
+    public static final ConfigHotkey SCHEMATIC_PLACEMENT_ROTATION       = new ConfigHotkey("schematicPlacementRotation",        "",     KeybindSettings.MODIFIER_INGAME, "The schematic is rotated 90 degrees clockwise when pressed");
+    public static final ConfigHotkey SCHEMATIC_PLACEMENT_MIRROR         = new ConfigHotkey("schematicPlacementMirror",          "",     KeybindSettings.MODIFIER_INGAME, "The Schematic is mirror flipped when pressed");
     public static final ConfigHotkey SCHEMATIC_VCS_DELETE_BY_PLACEMENT  = new ConfigHotkey("schematicVCSDeleteBlockByPlacement","",     "A key to delete blocks from the world based on the currently\nselected version's placement.\nSe Generic -> 'schematicVcsDeleteMode' for the delete mode/behavior");
     public static final ConfigHotkey SCHEMATIC_VERSION_CYCLE_MODIFIER   = new ConfigHotkey("schematicVersionCycleModifier",     "",     KeybindSettings.MODIFIER_INGAME, "The modifier key to hold to be able to use the mouse wheel\nto cycle through the schematic versions in the Version Control tool mode");
     public static final ConfigHotkey SCHEMATIC_VERSION_CYCLE_NEXT       = new ConfigHotkey("schematicVersionCycleNext",         "",     "A hotkey to cycle to the next schematic version in the Version Control tool mode");
@@ -124,6 +126,8 @@ public class Hotkeys
             SCHEMATIC_EDIT_REPLACE_ALL,
             SCHEMATIC_EDIT_REPLACE_BLOCK,
             SCHEMATIC_EDIT_REPLACE_DIRECTION,
+            SCHEMATIC_PLACEMENT_ROTATION,
+            SCHEMATIC_PLACEMENT_MIRROR,
             SCHEMATIC_VCS_DELETE_BY_PLACEMENT,
             SCHEMATIC_VERSION_CYCLE_MODIFIER,
             SCHEMATIC_VERSION_CYCLE_NEXT,
