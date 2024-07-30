@@ -703,20 +703,7 @@ public class WorldUtils
         else if (stateBlock instanceof WallMountedBlock)
         {
             //If the supporting block doesn't exist, fail
-            Direction direction;
-            switch (stateSchematic.get(Properties.WALL_MOUNT_LOCATION))
-            {
-                case CEILING:
-                    direction = Direction.UP;
-                    break;
-                case FLOOR:
-                    direction = Direction.DOWN;
-                    break;
-                default:
-                    direction = stateSchematic.get(Properties.HORIZONTAL_FACING).getOpposite();
-            }
-
-            if (!WallMountedBlock.canPlaceAt(world, pos, direction))
+            if (!stateSchematic.canPlaceAt(world, pos))
                 placementData.mustFail = true;
         }
 
@@ -1045,7 +1032,7 @@ public class WorldUtils
                 Properties.SLAB_TYPE,
                 Properties.ROTATION, //banners
                 Properties.HANGING, //lanterns
-                Properties.WALL_MOUNT_LOCATION, //lever
+                Properties.WALL_MOUNT_LOCATION, //lever, button, grindstone
                 Properties.ATTACHMENT, //bell (double-check for single-wall / double-wall)
                 //Properties.HORIZONTAL_AXIS, //Nether portals, though they aren't directly placeable
                 //Properties.ORIENTATION, //jigsaw blocks
