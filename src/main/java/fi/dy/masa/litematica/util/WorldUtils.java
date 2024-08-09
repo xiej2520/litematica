@@ -93,6 +93,11 @@ public class WorldUtils
     private static final List<PositionCache> EASY_PLACE_POSITIONS = new ArrayList<>();
     private static long easyPlaceLastPickBlockTime = System.nanoTime();
 
+    public static double getValidBlockRange(MinecraftClient mc)
+    {
+        return Configs.Generic.EASY_PLACE_VANILLA_REACH.getBooleanValue() ? mc.interactionManager.getReachDistance() : mc.interactionManager.getReachDistance() + 1.0;
+    }
+
     public static boolean shouldPreventBlockUpdates(World world)
     {
         return ((IWorldUpdateSuppressor) world).litematica_getShouldPreventBlockUpdates();
@@ -334,7 +339,7 @@ public class WorldUtils
     {
         BlockState state = Blocks.AIR.getDefaultState();
         Entity entity = fi.dy.masa.malilib.util.EntityUtils.getCameraEntity();
-        RayTraceWrapper wrapper = RayTraceUtils.getGenericTrace(mc.world, entity, 6);
+        RayTraceWrapper wrapper = RayTraceUtils.getGenericTrace(mc.world, entity, getValidBlockRange(mc));
 
         if (wrapper != null)
         {
@@ -377,11 +382,11 @@ public class WorldUtils
 
         if (closest)
         {
-            pos = RayTraceUtils.getSchematicWorldTraceIfClosestNoFluids(mc.world, mc.player, 6);
+            pos = RayTraceUtils.getSchematicWorldTraceIfClosestNoFluids(mc.world, mc.player, getValidBlockRange(mc));
         }
         else
         {
-            pos = RayTraceUtils.getFurthestSchematicWorldBlockBeforeVanilla(mc.world, mc.player, 6, true);
+            pos = RayTraceUtils.getFurthestSchematicWorldBlockBeforeVanilla(mc.world, mc.player, getValidBlockRange(mc), true);
         }
 
         if (pos != null)
@@ -464,7 +469,7 @@ public class WorldUtils
     private static ActionResult doEasyPlaceAction(MinecraftClient mc)
     {
         RayTraceWrapper traceWrapper;
-        double traceMaxRange = Configs.Generic.EASY_PLACE_VANILLA_REACH.getBooleanValue() ? 4.5 : 6;
+        double traceMaxRange = getValidBlockRange(mc);
 
         if (Configs.Generic.EASY_PLACE_FIRST.getBooleanValue())
         {
