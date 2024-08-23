@@ -170,6 +170,7 @@ public class Configs implements IConfigHandler
         public static final ConfigBoolean       ENABLE_PLACEMENT_BOXES_RENDERING    = new ConfigBoolean("enablePlacementBoxesRendering", true, "Enable Schematic Placement boxes rendering", "Schematic Placement Boxes Rendering");
         public static final ConfigBoolean       ENABLE_RENDERING                    = new ConfigBoolean("enableRendering", true, "Main rendering toggle option. Enables/disables ALL mod rendering.", "All Rendering");
         public static final ConfigBoolean       ENABLE_SCHEMATIC_BLOCKS             = new ConfigBoolean("enableSchematicBlocksRendering",  true, "Enables schematic block rendering.\nDisabling this allows you to only see the color overlay", "Schematic Blocks Rendering");
+        public static final ConfigBoolean       ENABLE_SCHEMATIC_FLUIDS             = new ConfigBoolean("enableSchematicFluidRendering", true, "Enables schematic fluid rendering.\nDisabling this hides the fluids in the schematic (including the overlay where the fluid was),\nwhich makes it easier to see the blocks and the overlays", "Schematic Fluid Rendering");
         public static final ConfigBoolean       ENABLE_SCHEMATIC_OVERLAY            = new ConfigBoolean("enableSchematicOverlay",  true, "The main toggle option for the schematic\nblock overlay rendering", "Schematic Overlay Rendering");
         public static final ConfigBoolean       ENABLE_SCHEMATIC_RENDERING          = new ConfigBoolean("enableSchematicRendering", true, "Enable rendering the schematic and overlay", "Schematic Rendering");
         public static final ConfigDouble        GHOST_BLOCK_ALPHA                   = new ConfigDouble( "ghostBlockAlpha", 0.5, 0, 1, "The alpha value of the ghost blocks,\nwhen rendering them as translucent.\n§6Note: §7You also need to enable the translucent rendering separately,\nusing the 'renderBlocksAsTranslucent' option!");
@@ -205,6 +206,7 @@ public class Configs implements IConfigHandler
                 ENABLE_AREA_SELECTION_RENDERING,
                 ENABLE_PLACEMENT_BOXES_RENDERING,
                 ENABLE_SCHEMATIC_BLOCKS,
+                ENABLE_SCHEMATIC_FLUIDS,
                 ENABLE_SCHEMATIC_OVERLAY,
                 IGNORE_EXISTING_FLUIDS,
                 OVERLAY_REDUCED_INNER_SIDES,

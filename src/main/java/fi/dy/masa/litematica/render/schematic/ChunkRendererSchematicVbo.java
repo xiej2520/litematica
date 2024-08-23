@@ -363,7 +363,7 @@ public class ChunkRendererSchematicVbo
             // TODO change when the fluids become separate
             FluidState fluidState = stateSchematic.getFluidState();
 
-            if (fluidState.isEmpty() == false)
+            if (fluidState.isEmpty() == false && Configs.Visuals.ENABLE_SCHEMATIC_FLUIDS.getBooleanValue())
             {
                 RenderLayer layer = RenderLayers.getFluidLayer(fluidState);
                 BufferBuilder bufferSchematic = buffers.getBlockBufferByLayer(layer);
@@ -411,6 +411,12 @@ public class ChunkRendererSchematicVbo
 
             if (this.overlayColor != null)
             {
+                if (stateSchematic.getFluidState().isEmpty() == false &&
+                    Configs.Visuals.ENABLE_SCHEMATIC_FLUIDS.getBooleanValue() == false)
+                {
+                    return;
+                }
+
                 this.renderOverlay(type, pos, stateSchematic, missing, data, buffers);
             }
         }
