@@ -160,6 +160,13 @@ public class WorldUtils
         return litematicaSchematic != null && litematicaSchematic.writeToFile(outputDir, outputFileName, override);
     }
 
+    public static boolean convertSpongeSchematicToLitematicaSchematic(
+            File inputDir, String inputFileName, File outputDir, String outputFileName, boolean ignoreEntities, boolean override, IStringConsumer feedback)
+    {
+        LitematicaSchematic litematicaSchematic = convertSpongeSchematicToLitematicaSchematic(inputDir, inputFileName);
+        return litematicaSchematic != null && litematicaSchematic.writeToFile(outputDir, outputFileName, override);
+    }
+
     @Nullable
     public static LitematicaSchematic convertSpongeSchematicToLitematicaSchematic(File dir, String fileName)
     {

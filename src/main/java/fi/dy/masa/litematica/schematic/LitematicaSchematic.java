@@ -2050,7 +2050,7 @@ public class LitematicaSchematic
             {
                 if (schematicType == FileType.SPONGE_SCHEMATIC)
                 {
-                    String name = FileUtils.getNameWithoutExtension(this.schematicFile.getName()) + " (Converted Structure)";
+                    String name = FileUtils.getNameWithoutExtension(this.schematicFile.getName()) + " (Converted Sponge)";
                     return this.readFromSpongeSchematic(name, nbt);
                 }
                 if (schematicType == FileType.VANILLA_STRUCTURE)
