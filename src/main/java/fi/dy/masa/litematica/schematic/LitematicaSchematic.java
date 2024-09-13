@@ -67,6 +67,7 @@ import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.litematica.util.ReplaceBehavior;
 import fi.dy.masa.litematica.util.SchematicPlacingUtils;
 import fi.dy.masa.litematica.util.WorldUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import fi.dy.masa.malilib.gui.Message.MessageType;
 import fi.dy.masa.malilib.interfaces.IStringConsumer;
 import fi.dy.masa.malilib.util.Constants;
@@ -2135,6 +2136,54 @@ public class LitematicaSchematic
                 {
                     metadata.readFromNBT(nbt.getCompound("Metadata"));
                     return metadata;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static Pair<SchematicSchema, SchematicMetadata> readMetadataAndVersionFromFile(File dir, String fileName)
+    {
+        CompoundTag nbt = readNbtFromFile(fileFromDirAndName(dir, fileName, FileType.LITEMATICA_SCHEMATIC));
+
+        if (nbt != null)
+        {
+            SchematicMetadata metadata = new SchematicMetadata();
+
+            if (nbt.contains("Version", Constants.NBT.TAG_INT))
+            {
+                final int version = nbt.getInt("Version");
+                final int dataVersion = nbt.contains("MinecraftDataVersion") ? nbt.getInt("MinecraftDataVersion") : MINECRAFT_DATA_VERSION_1_12;
+
+                if (version >= 1)
+                {
+                    metadata.readFromNBT(nbt.getCompound("Metadata"));
+
+                    return Pair.of(new SchematicSchema(version, dataVersion), metadata);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static SchematicSchema readDataVersionFromFile(File dir, String fileName)
+    {
+        CompoundTag nbt = readNbtFromFile(fileFromDirAndName(dir, fileName, FileType.LITEMATICA_SCHEMATIC));
+
+        if (nbt != null)
+        {
+            if (nbt.contains("Version", Constants.NBT.TAG_INT))
+            {
+                final int version = nbt.getInt("Version");
+                final int dataVersion = nbt.contains("MinecraftDataVersion") ? nbt.getInt("MinecraftDataVersion") : MINECRAFT_DATA_VERSION_1_12;
+
+                if (version >= 1)
+                {
+                    return new SchematicSchema(version, dataVersion);
                 }
             }
         }
