@@ -25,6 +25,7 @@
         "MixinRailBlocks",
         "MixinSignBlockEntity",
         "MixinSignEditScreen",
+        "MixinStairsBlock",
         "MixinWorld",
         "MixinWorldChunk",
         "MixinWorldRenderer"

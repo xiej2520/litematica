@@ -61,6 +61,7 @@ public class Configs implements IConfigHandler
         public static final ConfigBoolean       EXECUTE_REQUIRE_TOOL    = new ConfigBoolean(    "executeRequireHoldingTool", true, "Require holding an enabled tool item\nfor the executeOperation hotkey to work");
         public static final ConfigBoolean       FIX_CHEST_MIRROR        = new ConfigBoolean(    "fixChestMirror", true, "Enable a fix to the broken chest mirror code in vanilla");
         public static final ConfigBoolean       FIX_RAIL_ROTATION       = new ConfigBoolean(    "fixRailRotation", true, "If true, then a fix is applied for the vanilla bug in rails,\nwhere the 180 degree rotations of straight north-south and\neast-west rails rotate 90 degrees counterclockwise instead >_>");
+        public static final ConfigBoolean       FIX_STAIRS_MIRROR       = new ConfigBoolean(    "fixStairsMirror", true, "If true, then a fix is applied for the vanilla bug in stairs,\nwhere the Stair Shapes are not handled correctly depending\non which Block Facing Axis they are oriented upon.");
         public static final ConfigBoolean       GENERATE_LOWERCASE_NAMES = new ConfigBoolean(   "generateLowercaseNames", false, "If enabled, then by default the suggested schematic names\nwill be lowercase and using underscores instead of spaces");
         public static final ConfigBoolean       HIGHLIGHT_BLOCK_IN_INV  = new ConfigBoolean(    "highlightBlockInInventory", false, "When enabled, highlights the item (including Shulker Boxes containing it)\nof the looked at block in the schematic");
         public static final ConfigBoolean       LAYER_MODE_DYNAMIC      = new ConfigBoolean(    "layerModeFollowsPlayer", false, "If true, then the render layer follows the player.\nNote: This currently collapses Layer Range type ranges unfortunately");
@@ -115,6 +116,7 @@ public class Configs implements IConfigHandler
                 EXECUTE_REQUIRE_TOOL,
                 FIX_CHEST_MIRROR,
                 FIX_RAIL_ROTATION,
+                FIX_STAIRS_MIRROR,
                 GENERATE_LOWERCASE_NAMES,
                 HIGHLIGHT_BLOCK_IN_INV,
                 LAYER_MODE_DYNAMIC,
