@@ -14,14 +14,14 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.level.ColorResolver;
-import fi.dy.masa.litematica.world.FakeLightingProvider;
 
 public class ChunkCacheSchematic implements BlockRenderView
 {
     private static final BlockState AIR = Blocks.AIR.getDefaultState();
 
+    protected final World world;
     protected final ClientWorld worldClient;
-    protected final FakeLightingProvider lightingProvider;
+    //protected final FakeLightingProvider lightingProvider;
     protected int chunkStartX;
     protected int chunkStartZ;
     protected WorldChunk[][] chunkArray;
@@ -29,7 +29,8 @@ public class ChunkCacheSchematic implements BlockRenderView
 
     public ChunkCacheSchematic(World worldIn, ClientWorld clientWorld, BlockPos pos, int expand)
     {
-        this.lightingProvider = new FakeLightingProvider();
+        this.world = worldIn;
+        //this.lightingProvider = new FakeLightingProvider();
 
         this.worldClient = clientWorld;
         this.chunkStartX = (pos.getX() - expand) >> 4;
@@ -106,11 +107,13 @@ public class ChunkCacheSchematic implements BlockRenderView
         return this.chunkArray[i][j].getBlockEntity(pos, type);
     }
 
+    /*
     @Override
     public int getLightLevel(LightType var1, BlockPos var2)
     {
         return 15;
     }
+     */
 
     @Override
     public FluidState getFluidState(BlockPos pos)
@@ -122,7 +125,8 @@ public class ChunkCacheSchematic implements BlockRenderView
     @Override
     public LightingProvider getLightingProvider()
     {
-        return this.lightingProvider;
+        //return this.lightingProvider;
+        return this.world.getLightingProvider();
     }
 
     @Override

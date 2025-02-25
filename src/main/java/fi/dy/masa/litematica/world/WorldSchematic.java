@@ -33,6 +33,7 @@ import net.minecraft.world.biome.Biomes;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.dimension.DimensionType;
 import fi.dy.masa.litematica.render.LitematicaRenderer;
 import fi.dy.masa.litematica.render.schematic.WorldRendererSchematic;
@@ -273,6 +274,15 @@ public class WorldSchematic extends World
     }
 
     @Override
+    public LightingProvider getLightingProvider()
+    {
+        // Returns the Fake Lighting Provider, if configured to do so
+        return this.getChunkManager().getLightingProvider();
+    }
+
+    // todo --> moved to Fake Lighting Provider
+    /*
+    @Override
     public int getLightLevel(LightType type, BlockPos pos)
     {
         return 15;
@@ -283,6 +293,7 @@ public class WorldSchematic extends World
     {
         return 15;
     }
+     */
 
     @Override
     public void updateListeners(BlockPos blockPos_1, BlockState blockState_1, BlockState blockState_2, int flags)
