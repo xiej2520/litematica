@@ -251,6 +251,8 @@
     "litematica.gui.label.origin.auto": "Auto",
     "litematica.gui.label.origin.manual": "Manual",
 
+    "litematica.gui.label.paste_layer_behavior.all": "All Layers",
+    "litematica.gui.label.paste_layer_behavior.rendered_only": "Rendered Layers Only",
     "litematica.gui.label.paste_nbt_behavior.none": "None",
     "litematica.gui.label.paste_nbt_behavior.place_data_modify": "Place & Data Modify",
     "litematica.gui.label.paste_nbt_behavior.place_clone": "Place & Clone",
@@ -396,6 +398,7 @@
     "litematica.hud.misc.render_layer_mode_all": "Layer Mode: %s",
     "litematica.hud.misc.renderer_status": "Renderers: A: %s S: %s B: %s O: %s SEL: %s",
     "litematica.hud.misc.schematic_paste.data_restore_mode": "Data Restore Mode: §b%s",
+    "litematica.hud.misc.schematic_paste.layer_mode": "Layers: %s",
     "litematica.hud.misc.schematic_paste.replace_mode": "Replace blocks: %s",
 
     "litematica.hud.schematic_placement.hover_info.lock_coordinate": "Lock this coordinate\nThis allows changing the other coordinates\nwithout affecting the locked ones",

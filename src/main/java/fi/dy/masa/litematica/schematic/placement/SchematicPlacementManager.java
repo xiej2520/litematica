@@ -38,6 +38,7 @@ import fi.dy.masa.litematica.scheduler.tasks.TaskPasteSchematicSetblockToMcfunct
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import fi.dy.masa.litematica.schematic.placement.SubRegionPlacement.RequiredEnabled;
 import fi.dy.masa.litematica.util.EntityUtils;
+import fi.dy.masa.litematica.util.PasteLayerBehavior;
 import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.litematica.util.RayTraceUtils;
 import fi.dy.masa.litematica.util.RayTraceUtils.RayTraceWrapper;
@@ -166,7 +167,7 @@ public class SchematicPlacementManager
                         {
                             if (placement.isEnabled())
                             {
-                                SchematicPlacingUtils.placeToWorldWithinChunk(worldSchematic, pos, placement, behavior, false);
+                                SchematicPlacingUtils.placeToWorldWithinChunk(worldSchematic, pos, placement, behavior, PasteLayerBehavior.ALL, false);
                             }
                         }
 

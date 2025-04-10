@@ -10,6 +10,7 @@ import fi.dy.masa.litematica.selection.CornerSelectionMode;
 import fi.dy.masa.litematica.util.BlockInfoAlignment;
 import fi.dy.masa.litematica.util.EasyPlaceProtocol;
 import fi.dy.masa.litematica.util.InventoryUtils;
+import fi.dy.masa.litematica.util.PasteLayerBehavior;
 import fi.dy.masa.litematica.util.PasteNbtBehavior;
 import fi.dy.masa.litematica.util.PlacementDeletionMode;
 import fi.dy.masa.litematica.util.ReplaceBehavior;
@@ -75,6 +76,7 @@ public class Configs implements IConfigHandler
         public static final ConfigBoolean       PASTE_IGNORE_INVENTORY  = new ConfigBoolean(    "pasteIgnoreInventories", false, "Don't paste inventory contents when pasting a schematic");
         public static final ConfigOptionList    PASTE_NBT_BEHAVIOR      = new ConfigOptionList( "pasteNbtRestoreBehavior", PasteNbtBehavior.NONE, "Whether or not the NBT data of blocks is attempted to be restored,\nand which method is used for that.\n- Place & Data Modify will try to place the \"NBT-picked\" block\n  near the player, and then use the data modify\n  command to transfer the NBT data to the setblock'ed block\n- Place & Clone will try to place the \"NBT-picked\" block\n  near the player, and then clone it to the final location.\n- Teleport & Place will try to teleport the player nearby and then\n  directly place the NBT-picked item in the correct position.\nNote that the teleport & place method doesn't currently work correctly/at all.\nThe recommended method is §ePlace & Data Modify§r, however for that to work\nyou will probably need to lower the pasteCommandLimit to 1 per tick and increase\nthe pasteCommandInterval to 1-4 ticks or something.\nThus you should only use this for pasting important blocks that need the data,\nfor example by making a schematic of just the inventories,\nand then paste that with replace behavior set to None.");
         public static final ConfigOptionList    PASTE_REPLACE_BEHAVIOR  = new ConfigOptionList( "pasteReplaceBehavior", ReplaceBehavior.NONE, "The behavior of replacing existing blocks\nin the Paste schematic tool mode");
+        public static final ConfigOptionList    PASTE_LAYER_BEHAVIOR    = new ConfigOptionList( "pasteLayerBehavior", PasteLayerBehavior.ALL, "The behavior of pasting rendered layers\nin the Paste schematic tool mode.\nAll Layers pastes the whole placement,\nRendered Layers Only pastes only the blocks and entities\nwithin the currently rendered layer range.");
         public static final ConfigBoolean       PASTE_TO_MCFUNCTION     = new ConfigBoolean(    "pasteToMcFunctionFiles", false, "If enabled, then instead of actually pasting schematics to the world,\nthey are written as setblock commands into text files.");
         public static final ConfigBoolean       PASTE_USE_FILL_COMMAND  = new ConfigBoolean(    "pasteUseFillCommand", true, "If enabled, then instead of only using individual /setblock commands,\nthe command-based Paste operation (which is used on servers)\nwill also try to use /fill commands for any continuous areas of the same block.\nThis has no effect in single player, since the mod sets the blocks directly\nin the integrated server's world in and doesn't use commands at all.");
         public static final ConfigBoolean       PASTE_USING_COMMANDS_IN_SP = new ConfigBoolean(  "pasteUsingCommandsInSp", false, "This is a temporary hack workaround to use the command-based pasting\nalso in single player, which allows using the render layer limited\npasting in single player, which currently doesn't work with\nthe direct world access pasting that single player normally uses.\n\nNote that this will have all the same NBT data restoration\nlimitations that multiplayer pasting has normally.");
@@ -147,6 +149,7 @@ public class Configs implements IConfigHandler
                 UNHIDE_SCHEMATIC_PROJECTS,
 
                 PASTE_REPLACE_BEHAVIOR,
+                PASTE_LAYER_BEHAVIOR,
                 SCHEMATIC_VCS_DELETE_MODE,
                 SELECTION_CORNERS_MODE,
 

@@ -22,6 +22,7 @@ import fi.dy.masa.litematica.tool.ToolMode;
 import fi.dy.masa.litematica.tool.ToolModeData;
 import fi.dy.masa.litematica.util.EntityUtils;
 import fi.dy.masa.litematica.util.PositionUtils;
+import fi.dy.masa.litematica.util.PasteLayerBehavior;
 import fi.dy.masa.litematica.util.ReplaceBehavior;
 import fi.dy.masa.malilib.config.HudAlignment;
 import fi.dy.masa.malilib.gui.GuiBase;
@@ -294,6 +295,11 @@ public class ToolHud extends InfoHud
                     }
 
                     lines.add(StringUtils.translate("litematica.hud.misc.schematic_paste.replace_mode", str));
+
+                    PasteLayerBehavior layers = (PasteLayerBehavior) Configs.Generic.PASTE_LAYER_BEHAVIOR.getOptionListValue();
+                    str = layers == PasteLayerBehavior.ALL ? green + layers.getDisplayName() + rst : GuiBase.TXT_AQUA + layers.getDisplayName() + rst;
+
+                    lines.add(StringUtils.translate("litematica.hud.misc.schematic_paste.layer_mode", str));
 
                     str = Configs.Generic.PASTE_NBT_BEHAVIOR.getOptionListValue().getDisplayName();
                     lines.add(StringUtils.translate("litematica.hud.misc.schematic_paste.data_restore_mode", str));
