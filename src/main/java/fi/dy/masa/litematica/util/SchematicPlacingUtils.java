@@ -8,8 +8,10 @@ import javax.annotation.Nullable;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.ChestBlock;
 import net.minecraft.block.Material;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.enums.ChestType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.decoration.AbstractDecorationEntity;
@@ -201,6 +203,7 @@ public class SchematicPlacingUtils
 
                     posMutable.set(x, y, z);
                     CompoundTag teNBT = blockEntityMap.get(posMutable);
+                    BlockPos origPos = posMutable.toImmutable();
 
                     posMutable.set(posMinRelMinusRegX + x,
                                    posMinRelMinusRegY + y,
@@ -215,6 +218,25 @@ public class SchematicPlacingUtils
                         (replace == ReplaceBehavior.WITH_NON_AIR && state.getMaterial() == Material.AIR))
                     {
                         continue;
+                    }
+
+                    // Fix inventory of adjacent chest sides when mirrored
+                    if (state.getBlock().hasBlockEntity() && state.getBlock() == Blocks.CHEST &&
+                        !ignoreInventories && mirrorMain != BlockMirror.NONE &&
+                        !(state.get(ChestBlock.CHEST_TYPE) == ChestType.SINGLE) &&
+                        Configs.Generic.FIX_CHEST_MIRROR.getBooleanValue())
+                    {
+                        Direction facing = state.get(ChestBlock.FACING);
+                        Direction.Axis axis = facing.getAxis();
+                        ChestType type = state.get(ChestBlock.CHEST_TYPE).getOpposite();
+
+                        if (mirrorMain != BlockMirror.NONE && axis != Direction.Axis.Y)
+                        {
+                            Direction facingAdj = type == ChestType.LEFT ? facing.rotateYCounterclockwise() : facing.rotateYClockwise();
+                            BlockPos posAdj = origPos.offset(facingAdj);
+                            CompoundTag nbtAdj = blockEntityMap.get(posAdj);
+                            teNBT = nbtAdj != null ? nbtAdj.copy() : teNBT;
+                        }
                     }
 
                     if (mirrorMain != BlockMirror.NONE) { state = state.mirror(mirrorMain); }
