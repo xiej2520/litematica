@@ -1,61 +1,30 @@
-buildscript {
-    repositories {
-        jcenter()    
-        maven {
-            name = "Fabric"
-            url = "https://maven.fabricmc.net/"
-        }
-    }
-    dependencies {
-        classpath 'net.fabricmc:fabric-loom:0.2.6-SNAPSHOT'
-    }
-}
-
-apply plugin: "fabric-loom"
-
-/*
 plugins {
-    id 'fabric-loom' version '0.2.6-SNAPSHOT'
+    id 'fabric-loom' version '1.10-SNAPSHOT'
     id 'maven-publish'
 }
-*/
 
 repositories {
-    maven {
-        url 'https://masa.dy.fi/maven'
-    }
-}
-
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
-
-ext.configFile = file "build.properties"
-
-configFile.withReader {
-    def prop = new Properties()
-    prop.load(it)
-    project.ext.config = new ConfigSlurper().parse prop
+    maven { url 'https://masa.dy.fi/maven' }
+    maven { url "https://maven.terraformersmc.com/releases/" }
+    //mavenLocal()
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${config.minecraft_version}"
-    mappings "net.fabricmc:yarn:${config.mappings_version}:v2"
-    modCompile "net.fabricmc:fabric-loader:${config.fabric_loader_version}"
-    compile "com.google.code.findbugs:jsr305:3.0.2"
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.mappings_version}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
+    implementation "com.google.code.findbugs:jsr305:3.0.2"
 
-    modCompile "fi.dy.masa.malilib:malilib-fabric-${config.minecraft_version_out}:${config.malilib_version}"
-    modCompile "io.github.prospector:modmenu:${config.mod_menu_version}"
+    modImplementation "fi.dy.masa.malilib:malilib-fabric-${project.minecraft_version_out}:${project.malilib_version}"
 
     // Fabric API. This is technically optional, but you probably want it anyway.
-    //modCompile "net.fabricmc:fabric:" + config.fabric_version
+    //modCompile "net.fabricmc.fabric-api:fabric-api:" + project.fabric_version
+
+    modCompileOnly "com.terraformersmc:modmenu:${project.mod_menu_version}"
 }
 
-minecraft {
-    ext.mod_version = config.mod_version
+loom {
 
-    if (mod_version.endsWith('-dev')) {
-        mod_version = mod_version + "." + new Date().format('yyyyMMdd.HHmmss')
-    }
 }
 
 compileJava {
@@ -64,35 +33,60 @@ compileJava {
     options.encoding = 'UTF-8'
 }
 
-group = config.group + "." + config.mod_id
-archivesBaseName = config.mod_file_name + '-' + config.minecraft_version_out
-version = project.minecraft.mod_version
+base {
+    group = project.group + "." + project.mod_id
+    archivesName = project.mod_file_name + '-' + project.minecraft_version_out
+    version = project.mod_version
 
-processResources
-{
-    // Exclude the GIMP image files
-    exclude '**/*.xcf'
-    exclude '**/xcf'
-
-    // this will ensure that this task is redone when the versions change.
-    //inputs.property "mod_version", project.minecraft.mod_version
-    //inputs.property "minecraft_version", project.config.minecraft_version
-
-    inputs.property "mod_version", project.minecraft.mod_version
-
-    from(sourceSets.main.resources.srcDirs) {
-        include "fabric.mod.json"
-        expand "mod_version": project.minecraft.mod_version
-    }
-
-    from(sourceSets.main.resources.srcDirs) {
-        exclude "fabric.mod.json"
+    if (version.endsWith('-dev')) {
+        version += "." + new Date().format('yyyyMMdd.HHmmss')
     }
 }
+
+processResources
+        {
+            // Exclude the GIMP image files
+            exclude '**/*.xcf'
+            exclude '**/xcf'
+
+            // this will ensure that this task is redone when the versions change.
+            //inputs.property "mod_version", project.minecraft.mod_version
+            //inputs.property "minecraft_version", project.config.minecraft_version
+
+            inputs.property "mod_version", project.mod_version
+
+            filesMatching("fabric.mod.json") {
+                expand "mod_version": project.mod_version
+            }
+        }
 
 // ensure that the encoding is set to UTF-8, no matter what the system default is
 // this fixes some edge cases with special characters not displaying correctly
 // see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
+    options.release = 8
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = true
+    //reproducibleFileOrder = true
+}
+
+tasks.publish.dependsOn build
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            // add all the jars that should be included when publishing to maven
+            //artifact(jar)             { builtBy remapJar }
+            artifactId = base.archivesName.get()
+            from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            url = "$projectDir/../../CommonMaven"
+        }
+    }
 }
