@@ -541,12 +541,12 @@ public class SchematicUtils
                 continue;
             }
 
-            int minX = range.getClampedValue(LayerRange.getWorldMinValueForAxis(Direction.Axis.X), Direction.Axis.X);
-            int minY = range.getClampedValue(LayerRange.getWorldMinValueForAxis(Direction.Axis.Y), Direction.Axis.Y);
-            int minZ = range.getClampedValue(LayerRange.getWorldMinValueForAxis(Direction.Axis.Z), Direction.Axis.Z);
-            int maxX = range.getClampedValue(LayerRange.getWorldMaxValueForAxis(Direction.Axis.X), Direction.Axis.X);
-            int maxY = range.getClampedValue(LayerRange.getWorldMaxValueForAxis(Direction.Axis.Y), Direction.Axis.Y);
-            int maxZ = range.getClampedValue(LayerRange.getWorldMaxValueForAxis(Direction.Axis.Z), Direction.Axis.Z);
+            int minX = range.getClampedValue(PositionUtils.WORLD_HORIZONTAL_SIZE_MIN, Direction.Axis.X);
+            int minY = range.getClampedValue(PositionUtils.WORLD_VERTICAL_SIZE_MIN, Direction.Axis.Y);
+            int minZ = range.getClampedValue(PositionUtils.WORLD_HORIZONTAL_SIZE_MIN, Direction.Axis.Z);
+            int maxX = range.getClampedValue(PositionUtils.WORLD_HORIZONTAL_SIZE_MAX, Direction.Axis.X);
+            int maxY = range.getClampedValue(PositionUtils.WORLD_VERTICAL_SIZE_MAX, Direction.Axis.Y);
+            int maxZ = range.getClampedValue(PositionUtils.WORLD_HORIZONTAL_SIZE_MAX, Direction.Axis.Z);
 
             BlockPos posStart = new BlockPos(minX, minY, minZ);
             BlockPos posEnd = new BlockPos(maxX, maxY, maxZ);

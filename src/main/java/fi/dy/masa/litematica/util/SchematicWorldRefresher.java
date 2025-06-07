@@ -19,7 +19,7 @@ public class SchematicWorldRefresher implements IRangeChangeListener
     @Override
     public void updateAll()
     {
-        this.updateBetweenY(LayerRange.WORLD_VERTICAL_SIZE_MIN, LayerRange.WORLD_VERTICAL_SIZE_MAX);
+        this.updateBetweenY(PositionUtils.WORLD_VERTICAL_SIZE_MIN, PositionUtils.WORLD_VERTICAL_SIZE_MAX);
     }
 
     @Override
