@@ -44,9 +44,12 @@ public class SelectionManager
     @Nullable
     private GrabbedElement grabbedElement;
     private SelectionMode mode = SelectionMode.SIMPLE;
+    private boolean modeDirty = true;
 
     public SelectionMode getSelectionMode()
     {
+        this.checkSelectionModeConfig();
+
         if (DataManager.getSchematicProjectsManager().hasProjectOpen())
         {
             SchematicProject project = DataManager.getSchematicProjectsManager().getCurrentProject();
@@ -54,6 +57,18 @@ public class SelectionManager
         }
 
         return this.mode;
+    }
+
+    /**
+     * Applies the defaultSelectionMode config value, unless a mode was already loaded from the saved data
+     */
+    public void checkSelectionModeConfig()
+    {
+        if (this.modeDirty)
+        {
+            this.mode = (SelectionMode) Configs.InfoOverlays.DEFAULT_SELECTION_MODE.getOptionListValue();
+            this.modeDirty = false;
+        }
     }
 
     public void switchSelectionMode()
@@ -753,7 +768,13 @@ public class SelectionManager
 
         if (JsonUtils.hasString(obj, "mode"))
         {
-            this.mode = SelectionMode.fromString(obj.get("mode").getAsString());
+            this.mode = SelectionMode.fromStringStatic(obj.get("mode").getAsString());
+            this.modeDirty = false;
+        }
+        else
+        {
+            this.mode = (SelectionMode) Configs.InfoOverlays.DEFAULT_SELECTION_MODE.getOptionListValue();
+            this.modeDirty = false;
         }
     }
 

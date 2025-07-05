@@ -45,7 +45,7 @@ public class SchematicProject
     private AreaSelection selection = new AreaSelection();
     private AreaSelection lastSeenArea = new AreaSelection();
     private AreaSelectionSimple selectionSimple = new AreaSelectionSimple(true);
-    private SelectionMode selectionMode = SelectionMode.SIMPLE;
+    private SelectionMode selectionMode = (SelectionMode) Configs.InfoOverlays.DEFAULT_SELECTION_MODE.getOptionListValue();
     private int currentVersionId = -1;
     private int lastCheckedOutVersion = -1;
     private int lastPastedVersion = -1;
@@ -523,7 +523,7 @@ public class SchematicProject
 
             if (JsonUtils.hasString(obj, "selection_mode"))
             {
-                project.selectionMode = SelectionMode.fromString(JsonUtils.getString(obj, "selection_mode"));
+                project.selectionMode = SelectionMode.fromStringStatic(JsonUtils.getString(obj, "selection_mode"));
             }
 
             if (JsonUtils.hasArray(obj, "versions"))
