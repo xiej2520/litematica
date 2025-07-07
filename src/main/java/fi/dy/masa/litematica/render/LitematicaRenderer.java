@@ -1,16 +1,21 @@
 package fi.dy.masa.litematica.render;
 
 import javax.annotation.Nullable;
+
+import com.mojang.blaze3d.platform.GlStateManager;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL20;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.Frustum;
 import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.math.Matrix4f;
+import net.minecraft.util.math.Vec3d;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.config.Hotkeys;
 import fi.dy.masa.litematica.render.schematic.WorldRendererSchematic;
@@ -236,7 +241,7 @@ public class LitematicaRenderer
             boolean renderThrough = Configs.Visuals.SCHEMATIC_OVERLAY_RENDER_THROUGH.getBooleanValue() || Hotkeys.RENDER_OVERLAY_THROUGH_BLOCKS.getKeybind().isKeybindHeld();
             float lineWidth = (float) (renderThrough ? Configs.Visuals.SCHEMATIC_OVERLAY_OUTLINE_WIDTH_THROUGH.getDoubleValue() : Configs.Visuals.SCHEMATIC_OVERLAY_OUTLINE_WIDTH.getDoubleValue());
 
-            RenderSystem.pushMatrix();
+            //RenderSystem.pushMatrix();
             RenderSystem.disableTexture();
             RenderSystem.disableCull();
             RenderSystem.alphaFunc(GL11.GL_GREATER, 0.001F);
@@ -261,8 +266,9 @@ public class LitematicaRenderer
             RenderSystem.enableDepthTest();
             RenderSystem.polygonOffset(0f, 0f);
             RenderSystem.disablePolygonOffset();
+            RenderSystem.enableCull();
             RenderSystem.enableTexture();
-            RenderSystem.popMatrix();
+            //RenderSystem.popMatrix();
         }
     }
 
@@ -328,7 +334,7 @@ public class LitematicaRenderer
         }
     }
 
-    public void piecewiseRenderSolid(MatrixStack matrices, float partialTicks)
+    public void piecewiseRenderSolid(MatrixStack matrices)
     {
         if (this.renderPiecewiseBlocks)
         {
@@ -357,7 +363,7 @@ public class LitematicaRenderer
         }
     }
 
-    public void piecewiseRenderCutoutMipped(MatrixStack matrices, float partialTicks)
+    public void piecewiseRenderCutoutMipped(MatrixStack matrices)
     {
         if (this.renderPiecewiseBlocks)
         {
@@ -385,7 +391,7 @@ public class LitematicaRenderer
         }
     }
 
-    public void piecewiseRenderCutout(MatrixStack matrices, float partialTicks)
+    public void piecewiseRenderCutout(MatrixStack matrices)
     {
         if (this.renderPiecewiseBlocks)
         {
@@ -413,46 +419,57 @@ public class LitematicaRenderer
         }
     }
 
-    public void piecewiseRenderTranslucent(MatrixStack matrices, float partialTicks)
+    public void piecewiseRenderTranslucent(MatrixStack matrices)
     {
-        if (this.renderPiecewisePrepared)
+        if (this.renderPiecewiseBlocks)
         {
-            if (this.renderPiecewiseBlocks)
+            this.mc.getProfiler().push("litematica_translucent");
+
+            if (this.renderCollidingSchematicBlocks)
             {
-                this.mc.getProfiler().push("litematica_translucent");
-
-                if (this.renderCollidingSchematicBlocks)
-                {
-                    RenderSystem.enablePolygonOffset();
-                    RenderSystem.polygonOffset(-0.3f, -0.6f);
-                }
-
-                this.enableAlphaShader();
-
-                this.getWorldRenderer().renderBlockLayer(RenderLayer.getTranslucent(), matrices, this.getCamera());
-
-                this.disableAlphaShader();
-
-                if (this.renderCollidingSchematicBlocks)
-                {
-                    RenderSystem.polygonOffset(0f, 0f);
-                    RenderSystem.disablePolygonOffset();
-                }
-
-                this.mc.getProfiler().pop();
+                RenderSystem.enablePolygonOffset();
+                RenderSystem.polygonOffset(-0.3f, -0.6f);
             }
 
-            if (this.renderPiecewiseSchematic)
+            this.enableAlphaShader();
+
+            this.getWorldRenderer().renderBlockLayer(RenderLayer.getTranslucent(), matrices, this.getCamera());
+
+            this.disableAlphaShader();
+
+            if (this.renderCollidingSchematicBlocks)
             {
-                this.mc.getProfiler().push("litematica_overlay");
-
-                this.renderSchematicOverlay(matrices);
-
-                this.mc.getProfiler().pop();
+                RenderSystem.polygonOffset(0f, 0f);
+                RenderSystem.disablePolygonOffset();
             }
 
-            this.cleanup();
+            this.mc.getProfiler().pop();
         }
+    }
+
+    public void piecewiseRenderOverlay(MatrixStack matrices)
+    {
+        if (this.renderPiecewiseSchematic)
+        {
+            this.mc.getProfiler().push("litematica_overlay");
+
+            //Framebuffer fb = MinecraftClient.isFabulousGraphicsOrBetter() ? this.mc.worldRenderer.getTranslucentFramebuffer() : null;
+            //if (fb != null)
+            //{
+            //    fb.beginWrite(false);
+            //}
+
+            this.renderSchematicOverlay(matrices);
+
+            //if (fb != null)
+            //{
+            //    mc.getFramebuffer().beginWrite(false);
+            //}
+
+            this.mc.getProfiler().pop();
+        }
+
+        this.cleanup();
     }
 
     public void piecewiseRenderEntities(MatrixStack matrices, float partialTicks)
