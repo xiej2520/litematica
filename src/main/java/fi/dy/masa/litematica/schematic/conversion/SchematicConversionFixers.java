@@ -33,6 +33,7 @@ import net.minecraft.block.WallSkullBlock;
 import net.minecraft.block.enums.BedPart;
 import net.minecraft.block.enums.DoubleBlockHalf;
 import net.minecraft.block.enums.Instrument;
+import net.minecraft.block.enums.WireConnection;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.tag.BlockTags;
@@ -49,7 +50,17 @@ import fi.dy.masa.malilib.util.Constants;
 
 public class SchematicConversionFixers
 {
-    private static final BooleanProperty[] FENCE_WALL_PROP_MAP = new BooleanProperty[] { null, null, HorizontalConnectingBlock.NORTH, HorizontalConnectingBlock.SOUTH, HorizontalConnectingBlock.WEST, HorizontalConnectingBlock.EAST };
+    private static final BooleanProperty[] HORIZONTAL_CONNECTING_BLOCK_PROPS = new BooleanProperty[] { null, null, HorizontalConnectingBlock.NORTH, HorizontalConnectingBlock.SOUTH, HorizontalConnectingBlock.WEST, HorizontalConnectingBlock.EAST };
+    private static final BlockState REDSTONE_WIRE_DOT = Blocks.REDSTONE_WIRE.getDefaultState()
+            .with(RedstoneWireBlock.WIRE_CONNECTION_NORTH, WireConnection.NONE)
+            .with(RedstoneWireBlock.WIRE_CONNECTION_EAST, WireConnection.NONE)
+            .with(RedstoneWireBlock.WIRE_CONNECTION_SOUTH, WireConnection.NONE)
+            .with(RedstoneWireBlock.WIRE_CONNECTION_WEST, WireConnection.NONE);
+    private static final BlockState REDSTONE_WIRE_CROSS = Blocks.REDSTONE_WIRE.getDefaultState()
+                          .with(RedstoneWireBlock.WIRE_CONNECTION_NORTH, WireConnection.SIDE)
+                          .with(RedstoneWireBlock.WIRE_CONNECTION_EAST, WireConnection.SIDE)
+                          .with(RedstoneWireBlock.WIRE_CONNECTION_SOUTH, WireConnection.SIDE)
+                          .with(RedstoneWireBlock.WIRE_CONNECTION_WEST, WireConnection.SIDE);
 
     public static final IStateFixer FIXER_BANNER = (reader, state, pos) -> {
         CompoundTag tag = reader.getBlockEntityData(pos);
@@ -225,7 +236,7 @@ public class SchematicConversionFixers
             BlockState stateAdj = reader.getBlockState(posAdj);
             Direction sideOpposite = side.getOpposite();
             boolean flag = stateAdj.isSideSolidFullSquare(reader, posAdj, sideOpposite);
-            state = state.with(FENCE_WALL_PROP_MAP[side.getId()], fence.canConnect(stateAdj, flag, sideOpposite));
+            state = state.with(HORIZONTAL_CONNECTING_BLOCK_PROPS[side.getId()], fence.canConnect(stateAdj, flag, sideOpposite));
         }
 
         return state;
@@ -327,7 +338,7 @@ public class SchematicConversionFixers
             BlockState stateAdj = reader.getBlockState(posAdj);
             Direction sideOpposite = side.getOpposite();
             boolean flag = stateAdj.isSideSolidFullSquare(reader, posAdj, sideOpposite);
-            state = state.with(FENCE_WALL_PROP_MAP[side.getId()], pane.connectsTo(stateAdj, flag));
+            state = state.with(HORIZONTAL_CONNECTING_BLOCK_PROPS[side.getId()], pane.connectsTo(stateAdj, flag));
         }
 
         return state;
@@ -341,10 +352,10 @@ public class SchematicConversionFixers
         RedstoneWireBlock wire = (RedstoneWireBlock) state.getBlock();
 
         return state
-            .with(RedstoneWireBlock.WIRE_CONNECTION_WEST, ((IMixinRedstoneWireBlock) wire).invokeGetSide(reader, pos, Direction.WEST))
-            .with(RedstoneWireBlock.WIRE_CONNECTION_EAST, ((IMixinRedstoneWireBlock) wire).invokeGetSide(reader, pos, Direction.EAST))
-            .with(RedstoneWireBlock.WIRE_CONNECTION_NORTH, ((IMixinRedstoneWireBlock) wire).invokeGetSide(reader, pos, Direction.NORTH))
-            .with(RedstoneWireBlock.WIRE_CONNECTION_SOUTH, ((IMixinRedstoneWireBlock) wire).invokeGetSide(reader, pos, Direction.SOUTH));
+                .with(RedstoneWireBlock.WIRE_CONNECTION_WEST, ((IMixinRedstoneWireBlock) wire).invokeGetSide(reader, pos, Direction.WEST))
+                .with(RedstoneWireBlock.WIRE_CONNECTION_EAST, ((IMixinRedstoneWireBlock) wire).invokeGetSide(reader, pos, Direction.EAST))
+                .with(RedstoneWireBlock.WIRE_CONNECTION_NORTH, ((IMixinRedstoneWireBlock) wire).invokeGetSide(reader, pos, Direction.NORTH))
+                .with(RedstoneWireBlock.WIRE_CONNECTION_SOUTH, ((IMixinRedstoneWireBlock) wire).invokeGetSide(reader, pos, Direction.SOUTH));
     };
 
     public static final IStateFixer FIXER_SKULL = (reader, state, pos) -> {
@@ -490,7 +501,7 @@ public class SchematicConversionFixers
             BlockState stateAdj = reader.getBlockState(posAdj);
 
             boolean val = wallAttachesTo(stateAdj, side.getOpposite(), reader, posAdj);
-            state = state.with(FENCE_WALL_PROP_MAP[side.getId()], val);
+            state = state.with(HORIZONTAL_CONNECTING_BLOCK_PROPS[side.getId()], val);
             sides[side.getId()] = val;
         }
 
