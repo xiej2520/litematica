@@ -5,6 +5,7 @@
     "minVersion": "0.7",
     "client": [
         "IMixinFenceGateBlock",
+        "IMixinContainerScreen",
         "IMixinRedstoneWireBlock",
         "IMixinStairsBlock",
         "IMixinVineBlock",
@@ -12,6 +13,7 @@
         "MixinClientPlayNetworkHandler",
         "MixinClientWorld",
         "MixinDebugHud",
+        "MixinHandledScreen",
         "MixinIntegratedServer",
         "MixinMinecraftClient",
         "MixinModelItemOverride",
