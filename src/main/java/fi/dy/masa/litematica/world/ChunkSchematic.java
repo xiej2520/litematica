@@ -1,26 +1,38 @@
 package fi.dy.masa.litematica.world;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import fi.dy.masa.litematica.util.PositionUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.entity.Entity;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.Biomes;
 import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.WorldChunk;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class ChunkSchematic extends WorldChunk
 {
     private static final BlockState AIR = Blocks.AIR.getDefaultState();
 
+    private final Int2ObjectOpenHashMap<List<Entity>> entityLists = new Int2ObjectOpenHashMap<>();
     private final long timeCreated;
+    private final int bottomY;
+    private final int topY;
     private boolean isEmpty = true;
 
     public ChunkSchematic(World worldIn, ChunkPos pos)
@@ -28,6 +40,9 @@ public class ChunkSchematic extends WorldChunk
         super(worldIn, pos, new BiomeArray(Util.make(new Biome[BiomeArray.DEFAULT_LENGTH], (biomes) -> { Arrays.fill(biomes, Biomes.PLAINS); })));
 
         this.timeCreated = worldIn.getTime();
+        // TODO 1.17
+        this.bottomY = PositionUtils.WORLD_VERTICAL_SIZE_MIN;
+        this.topY = PositionUtils.WORLD_VERTICAL_SIZE_MAX + 1;
     }
 
     @Override
@@ -36,7 +51,8 @@ public class ChunkSchematic extends WorldChunk
         int x = pos.getX() & 0xF;
         int y = pos.getY();
         int z = pos.getZ() & 0xF;
-        int cy = y >> 4;
+        int cy = this.getSectionIndex(y);
+        y &= 0xF;
 
         ChunkSection[] sections = this.getSectionArray();
 
@@ -46,7 +62,7 @@ public class ChunkSchematic extends WorldChunk
 
             if (ChunkSection.isEmpty(chunkSection) == false)
             {
-                return chunkSection.getBlockState(x, y & 0xF, z);
+                return chunkSection.getBlockState(x, y, z);
             }
          }
 
@@ -57,20 +73,21 @@ public class ChunkSchematic extends WorldChunk
     public BlockState setBlockState(BlockPos pos, BlockState state, boolean isMoving)
     {
         BlockState stateOld = this.getBlockState(pos);
+        int y = pos.getY();
 
-        if (stateOld == state)
+        if (stateOld == state || y >= this.topY || y < this.bottomY)
         {
             return null;
         }
         else
         {
             int x = pos.getX() & 15;
-            int y = pos.getY();
             int z = pos.getZ() & 15;
+            int cy = this.getSectionIndex(y);
 
             Block blockNew = state.getBlock();
             Block blockOld = stateOld.getBlock();
-            ChunkSection section = this.getSectionArray()[y >> 4];
+            ChunkSection section = this.getSectionArray()[cy];
 
             if (section == EMPTY_SECTION)
             {
@@ -79,23 +96,25 @@ public class ChunkSchematic extends WorldChunk
                     return null;
                 }
 
-                section = new ChunkSection(y & 0xF0);
-                this.getSectionArray()[y >> 4] = section;
+                section = new ChunkSection(ChunkSectionPos.getSectionCoord(y));
+                this.getSectionArray()[cy] = section;
             }
+
+            y &= 0xF;
 
             if (state.isAir() == false)
             {
                 this.isEmpty = false;
             }
 
-            section.setBlockState(x, y & 0xF, z, state);
+            section.setBlockState(x, y, z, state);
 
             if (blockOld != blockNew)
             {
                 this.getWorld().removeBlockEntity(pos);
             }
 
-            if (section.getBlockState(x, y & 0xF, z).getBlock() != blockNew)
+            if (section.getBlockState(x, y, z).getBlock() != blockNew)
             {
                 return null;
             }
@@ -119,11 +138,11 @@ public class ChunkSchematic extends WorldChunk
                     {
                         te = ((BlockEntityProvider) blockNew).createBlockEntity(this.getWorld());
                         this.getWorld().setBlockEntity(pos, te);
-                    }
 
-                    if (te != null)
-                    {
-                        te.resetBlock();
+                        if (te != null)
+                        {
+                            this.getWorld().setBlockEntity(pos, te);
+                        }
                     }
                 }
 
@@ -143,5 +162,17 @@ public class ChunkSchematic extends WorldChunk
     public boolean isEmpty()
     {
         return this.isEmpty;
+    }
+
+    // TODO 1.17
+    private int getSectionIndex(int y) {
+        return this.sectionCoordToIndex(ChunkSectionPos.getSectionCoord(y));
+    }
+
+    private int sectionCoordToIndex(int coord) {
+        return coord - getBottomSectionCoord();
+    }
+    private int getBottomSectionCoord() {
+        return ChunkSectionPos.getSectionCoord(this.bottomY);
     }
 }
