@@ -1052,6 +1052,9 @@ public class LitematicaSchematic
             // It's still fine to load in 1.17 though... for the most part at least.
             if (version >= 1 && version <= 6)
             {
+                if (version == 6) {
+                    InfoUtils.showGuiOrInGameMessage(MessageType.WARNING, "litematica.error.schematic_load.schematic_version_6_warning");
+                }
                 this.metadata.readFromNBT(nbt.getCompound("Metadata"));
                 this.readSubRegionsFromNBT(nbt.getCompound("Regions"), version, minecraftDataVersion);
 
@@ -1864,7 +1867,7 @@ public class LitematicaSchematic
             {
                 final int version = nbt.getInt("Version");
 
-                if (version >= 1 && version <= SCHEMATIC_VERSION)
+                if (version >= 1 && version <= 6)
                 {
                     metadata.readFromNBT(nbt.getCompound("Metadata"));
                     return metadata;
