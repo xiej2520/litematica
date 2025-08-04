@@ -3,27 +3,27 @@ package fi.dy.masa.litematica.materials;
 import java.util.Collections;
 import java.util.List;
 import com.mojang.blaze3d.systems.RenderSystem;
-import fi.dy.masa.litematica.mixin.IMixinContainerScreen;
-import fi.dy.masa.litematica.util.InventoryUtils;
-import fi.dy.masa.litematica.util.RayTraceUtils;
-import fi.dy.masa.litematica.world.SchematicWorldHandler;
-import fi.dy.masa.malilib.util.Color4f;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.screen.ingame.ContainerScreen;
+import net.minecraft.item.ItemStack;
+import net.minecraft.container.Slot;
+import net.minecraft.util.math.BlockPos;
 import fi.dy.masa.litematica.config.Configs;
+import fi.dy.masa.litematica.mixin.IMixinContainerScreen;
 import fi.dy.masa.litematica.render.infohud.IInfoHudRenderer;
 import fi.dy.masa.litematica.render.infohud.RenderPhase;
+import fi.dy.masa.litematica.util.InventoryUtils;
+import fi.dy.masa.litematica.util.RayTraceUtils;
+import fi.dy.masa.litematica.world.SchematicWorldHandler;
 import fi.dy.masa.malilib.config.HudAlignment;
 import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.malilib.render.RenderUtils;
+import fi.dy.masa.malilib.util.Color4f;
 import fi.dy.masa.malilib.util.GuiUtils;
 import fi.dy.masa.malilib.util.StringUtils;
-import net.minecraft.container.Slot;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
 
 public class MaterialListHudRenderer implements IInfoHudRenderer
 {

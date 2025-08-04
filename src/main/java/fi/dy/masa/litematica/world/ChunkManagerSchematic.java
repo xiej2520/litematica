@@ -1,7 +1,7 @@
 package fi.dy.masa.litematica.world;
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import java.util.function.BooleanSupplier;
+import javax.annotation.Nullable;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.TypeFilterableList;
 import net.minecraft.util.math.ChunkPos;
@@ -9,8 +9,8 @@ import net.minecraft.world.chunk.ChunkManager;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.light.LightingProvider;
-
-import java.util.function.BooleanSupplier;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 public class ChunkManagerSchematic extends ChunkManager
 {
@@ -67,15 +67,16 @@ public class ChunkManagerSchematic extends ChunkManager
     }
 
     @Override
-    public void tick(BooleanSupplier shouldKeepTicking) {
-        // NO-OP
-    }
-
-    @Override
     public ChunkSchematic getChunk(int chunkX, int chunkZ)
     {
         ChunkSchematic chunk = this.loadedChunks.get(ChunkPos.toLong(chunkX, chunkZ));
         return chunk == null ? this.blankChunk : chunk;
+    }
+
+    @Nullable
+    public ChunkSchematic getChunkIfExists(int chunkX, int chunkZ)
+    {
+        return this.loadedChunks.get(ChunkPos.toLong(chunkX, chunkZ));
     }
 
     public void unloadChunk(int chunkX, int chunkZ)
@@ -100,5 +101,11 @@ public class ChunkManagerSchematic extends ChunkManager
     public LightingProvider getLightingProvider()
     {
         return this.lightingProvider;
+    }
+
+    @Override
+    public void tick(BooleanSupplier booleanSupplier)
+    {
+        // NO-OP
     }
 }

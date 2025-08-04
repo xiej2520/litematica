@@ -1,7 +1,6 @@
 package fi.dy.masa.litematica.schematic;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,7 +17,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtIo;
 import net.minecraft.structure.Structure;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.util.BlockMirror;
@@ -145,8 +143,6 @@ public class SchematicaSchematic
                                 try
                                 {
                                     te.fromTag(teNBT);
-                                    te.applyMirror(mirror);
-                                    te.applyRotation(rotation);
                                 }
                                 catch (Exception e)
                                 {
@@ -208,8 +204,6 @@ public class SchematicaSchematic
         {
             final BlockPos posMin = PositionUtils.getMinCorner(posStart, posEnd);
             final BlockPos posMax = PositionUtils.getMaxCorner(posStart, posEnd);
-            final BlockRotation rotation = placement.getRotation();
-            final BlockMirror mirror = placement.getMirror();
             final int cxStart = posMin.getX() >> 4;
             final int czStart = posMin.getZ() >> 4;
             final int cxEnd = posMax.getX() >> 4;
@@ -282,8 +276,6 @@ public class SchematicaSchematic
                                         try
                                         {
                                             te.fromTag(teNBT);
-                                            te.applyMirror(mirror);
-                                            te.applyRotation(rotation);
                                         }
                                         catch (Exception e)
                                         {
@@ -402,7 +394,7 @@ public class SchematicaSchematic
     private void readEntitiesFromWorld(World world, BlockPos posStart, BlockPos size)
     {
         this.entities.clear();
-        List<Entity> entities = world.getEntities((Entity) null, new net.minecraft.util.math.Box(posStart, posStart.add(size)));
+        List<Entity> entities = world.getEntities((Entity) null, new net.minecraft.util.math.Box(posStart, posStart.add(size)), EntityUtils.NOT_PLAYER);
 
         for (Entity entity : entities)
         {

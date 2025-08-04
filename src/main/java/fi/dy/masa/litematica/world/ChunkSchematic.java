@@ -1,8 +1,6 @@
 package fi.dy.masa.litematica.world;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import fi.dy.masa.litematica.util.PositionUtils;
@@ -16,7 +14,6 @@ import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.Biomes;
@@ -41,8 +38,8 @@ public class ChunkSchematic extends WorldChunk
 
         this.timeCreated = worldIn.getTime();
         // TODO 1.17
-        this.bottomY = PositionUtils.WORLD_VERTICAL_SIZE_MIN;
-        this.topY = PositionUtils.WORLD_VERTICAL_SIZE_MAX + 1;
+        this.bottomY = PositionUtils.WORLD_VERTICAL_SIZE_MIN_INCLUSIVE;
+        this.topY = PositionUtils.WORLD_VERTICAL_SIZE_MAX_EXCLUSIVE;
     }
 
     @Override

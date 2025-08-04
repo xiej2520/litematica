@@ -1,11 +1,11 @@
 package fi.dy.masa.litematica.tool;
 
 import javax.annotation.Nullable;
+import net.minecraft.block.BlockState;
+import net.minecraft.entity.player.PlayerEntity;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.util.EntityUtils;
 import fi.dy.masa.malilib.util.StringUtils;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
 
 public enum ToolMode
 {

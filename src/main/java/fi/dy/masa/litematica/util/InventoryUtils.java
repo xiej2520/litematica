@@ -2,22 +2,20 @@ package fi.dy.masa.litematica.util;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import fi.dy.masa.litematica.config.Configs;
-import fi.dy.masa.malilib.gui.GuiBase;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.DefaultedList;
 import net.minecraft.container.PlayerContainer;
 import net.minecraft.container.Container;
 import net.minecraft.container.Slot;
-import net.minecraft.util.DefaultedList;
 import net.minecraft.util.Hand;
+import net.minecraft.util.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import fi.dy.masa.litematica.config.Configs;
+import fi.dy.masa.malilib.gui.GuiBase;
 
 public class InventoryUtils
 {
@@ -55,10 +53,11 @@ public class InventoryUtils
     public static void setPickedItemToHand(int sourceSlot, ItemStack stack, MinecraftClient mc)
     {
         PlayerEntity player = mc.player;
+        PlayerInventory inventory = player.inventory;
 
         if (PlayerInventory.isValidHotbarIndex(sourceSlot))
         {
-            player.inventory.selectedSlot = sourceSlot;
+            inventory.selectedSlot = sourceSlot;
         }
         else
         {
@@ -71,7 +70,7 @@ public class InventoryUtils
 
             if (sourceSlot == -1 || PlayerInventory.isValidHotbarIndex(sourceSlot) == false)
             {
-                hotbarSlot = getEmptyPickBlockableHotbarSlot(player.inventory);
+                hotbarSlot = getEmptyPickBlockableHotbarSlot(inventory);
             }
 
             if (hotbarSlot == -1)
@@ -81,7 +80,6 @@ public class InventoryUtils
 
             if (hotbarSlot != -1)
             {
-                PlayerInventory inventory = player.inventory;
                 inventory.selectedSlot = hotbarSlot;
 
                 if (EntityUtils.isCreativeMode(player))
@@ -106,7 +104,7 @@ public class InventoryUtils
             PlayerInventory inv = mc.player.inventory;
             stack = stack.copy();
 
-            if (mc.player.abilities.creativeMode)
+            if (EntityUtils.isCreativeMode(mc.player))
             {
                 BlockEntity te = schematicWorld.getBlockEntity(pos);
 

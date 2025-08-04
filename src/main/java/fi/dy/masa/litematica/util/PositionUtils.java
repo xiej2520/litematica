@@ -40,8 +40,9 @@ public class PositionUtils
 
     public static final int WORLD_HORIZONTAL_SIZE_MAX =  30000000;
     public static final int WORLD_HORIZONTAL_SIZE_MIN = -30000000;
-    public static final int WORLD_VERTICAL_SIZE_MAX = 255; // TODO 1.17
-    public static final int WORLD_VERTICAL_SIZE_MIN = 0;
+    // TODO 1.17
+    public static final int WORLD_VERTICAL_SIZE_MAX_EXCLUSIVE = 256; // world.getTopY()
+    public static final int WORLD_VERTICAL_SIZE_MIN_INCLUSIVE = 0; // world.getBottomY()
 
     public static final BlockPosComparator BLOCK_POS_COMPARATOR = new BlockPosComparator();
     public static final ChunkPosComparator CHUNK_POS_COMPARATOR = new ChunkPosComparator();
@@ -108,8 +109,8 @@ public class PositionUtils
 
     public static boolean arePositionsWithinWorld(World world, BlockPos pos1, BlockPos pos2)
     {
-        if (pos1.getY() >= WORLD_VERTICAL_SIZE_MIN && pos1.getY() <= WORLD_VERTICAL_SIZE_MAX &&
-            pos2.getY() >= WORLD_VERTICAL_SIZE_MIN && pos2.getY() <= WORLD_VERTICAL_SIZE_MAX)
+        if (pos1.getY() >= WORLD_VERTICAL_SIZE_MIN_INCLUSIVE && pos1.getY() < WORLD_VERTICAL_SIZE_MAX_EXCLUSIVE &&
+            pos2.getY() >= WORLD_VERTICAL_SIZE_MIN_INCLUSIVE && pos2.getY() < WORLD_VERTICAL_SIZE_MAX_EXCLUSIVE)
         {
             WorldBorder border = world.getWorldBorder();
             return border.contains(pos1) && border.contains(pos2);

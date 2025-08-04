@@ -34,8 +34,6 @@ public class WidgetListMaterialList extends WidgetListBase<MaterialListEntry, Wi
         this.widgetSearchBar.setZLevel(1);
         this.sorter = new MaterialListSorter(parent.getMaterialList());
         this.shouldSortList = true;
-
-        this.setParent(parent);
     }
 
     @Override

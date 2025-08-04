@@ -350,7 +350,7 @@ public class WorldUtils
      */
     public static boolean doSchematicWorldPickBlock(boolean closest, MinecraftClient mc)
     {
-        BlockPos pos = null;
+        BlockPos pos;
 
         if (closest)
         {
@@ -764,8 +764,6 @@ public class WorldUtils
      * in the schematic, or the player is holding the wrong item in hand, then true is returned
      * to indicate that the use action should be cancelled.
      * @param mc
-     * @param doEasyPlace
-     * @param restrictPlacement
      * @return
      */
     public static boolean handlePlacementRestriction(MinecraftClient mc)
@@ -786,8 +784,6 @@ public class WorldUtils
      * in the schematic, or the player is holding the wrong item in hand, then true is returned
      * to indicate that the use action should be cancelled.
      * @param mc
-     * @param doEasyPlace
-     * @param restrictPlacement
      * @return true if the use action should be cancelled
      */
     private static boolean placementRestrictionInEffect(MinecraftClient mc)

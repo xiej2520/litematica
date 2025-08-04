@@ -1,7 +1,5 @@
 package fi.dy.masa.litematica.materials;
 
-import fi.dy.masa.litematica.config.Configs;
-import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.scheduler.TaskScheduler;
 import fi.dy.masa.litematica.scheduler.tasks.TaskCountBlocksPlacement;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
@@ -49,7 +47,8 @@ public class MaterialListPlacement extends MaterialListBase
     }
 
     @Override
-    public void reCreateMaterialList() {
+    public void reCreateMaterialList()
+    {
         TaskCountBlocksPlacement task = new TaskCountBlocksPlacement(this.placement, this);
         TaskScheduler.getInstanceClient().scheduleTask(task, 20);
         InfoUtils.showGuiOrInGameMessage(MessageType.INFO, "litematica.message.scheduled_task_added");
