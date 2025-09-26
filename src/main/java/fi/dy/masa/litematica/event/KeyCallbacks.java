@@ -102,6 +102,7 @@ public class KeyCallbacks
         Hotkeys.EASY_PLACE_TOGGLE.getKeybind().setCallback(new KeyCallbackToggleBooleanConfigWithMessage(Configs.Generic.EASY_PLACE_MODE));
         Hotkeys.MOVE_ENTIRE_SELECTION.getKeybind().setCallback(callbackMessage);
         Hotkeys.SELECTION_MODE_CYCLE.getKeybind().setCallback(callbackMessage);
+        Hotkeys.SCHEMATIC_EDIT_REPLACE_SELECTION.getKeybind().setCallback(callbackMessage);
         Hotkeys.SET_AREA_ORIGIN.getKeybind().setCallback(callbackMessage);
         Hotkeys.SCHEMATIC_PLACEMENT_ROTATION.getKeybind().setCallback(callbackMessage);
         Hotkeys.SCHEMATIC_PLACEMENT_MIRROR.getKeybind().setCallback(callbackMessage);
@@ -711,6 +712,19 @@ public class KeyCallbacks
                         InfoUtils.printActionbarMessage("litematica.message.set_selection_box_point", corner.ordinal(), posStr);
                         return true;
                     }
+                }
+            }
+            else if (key == Hotkeys.SCHEMATIC_EDIT_REPLACE_SELECTION.getKeybind())
+            {
+                AreaSelection selection = DataManager.getSelectionManager().getCurrentSelection();
+
+                if (SchematicUtils.saveAreaSelectionToSchematic(selection, this.mc.world))
+                {
+                    BlockPos pos = selection.getEffectiveOrigin();
+
+                    String posStr = String.format("x: %d, y: %d, z: %d", pos.getX(), pos.getY(), pos.getZ());
+                    InfoUtils.showInGameMessage(MessageType.SUCCESS, "litematica.message.schematic_edit_replace_selection", posStr);
+                    return true;
                 }
             }
 
