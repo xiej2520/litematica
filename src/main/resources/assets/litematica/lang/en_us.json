@@ -193,6 +193,7 @@
     "litematica.gui.button.remove": "Remove",
     "litematica.gui.button.remove_placement": "Remove placement",
     "litematica.gui.button.rename": "Rename",
+    "litematica.gui.button.rename_file": "Rename File",
     "litematica.gui.button.rotation_value": "Rotation: %s",
     "litematica.gui.button.save_new_schematic_version": "Save Version",
     "litematica.gui.button.save_schematic": "Save Schematic",
@@ -331,6 +332,7 @@
     "litematica.gui.label.task_name.verifier": "Verifier",
 
     "litematica.gui.message.confirm_file_deletion": "Do you want to delete the file '%s'?",
+    "litematica.message.delete_confirm": "Okay to delete file/directory '%s'?",
     "litematica.gui.message.schematic_projects.confirm_delete_area": "Do you want to delete the \"last affected\" area?\nThis will delete whatever blocks and entities are within the area that the project manager last placed to the world, or last saved as a version. (Basically the \"last seen affected area\", such that if you were to cycle versions, it would not leave blocks behind from the previous version.)",
     "litematica.gui.message.schematic_projects.confirm_place_to_world": "Do you want to place this version to the world?\nIt will delete whatever blocks are within the area that the project manager last placed to the world, or last saved as a version. (Basically the \"last seen affected area\", such that if you were to cycle versions, it would not leave blocks behind from the previous version.)",
 
@@ -344,6 +346,9 @@
     "litematica.gui.title.configure_schematic_sub_region": "Configure Placement Sub-Region",
     "litematica.gui.title.configs": "Litematica Configs",
     "litematica.gui.title.confirm_file_deletion": "Confirm file deletion",
+    "litematica.gui.title.copy_file": "Copy File",
+    "litematica.gui.title.delete_confirm": "Confirm File Deletion",
+    "litematica.gui.title.rename_file_or_directory": "Rename File or Directory",
     "litematica.gui.title.copy_area_selection": "Copy Area Selection '%s'",
     "litematica.gui.title.create_area_selection": "Create a new Area Selection",
     "litematica.gui.title.create_area_selection_from_placement": "Create a new Area Selection from a Schematic Placement",

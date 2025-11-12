@@ -3,6 +3,7 @@ package fi.dy.masa.litematica.gui;
 import java.io.File;
 import java.util.Collection;
 import net.minecraft.util.math.BlockPos;
+import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.data.SchematicHolder;
 import fi.dy.masa.litematica.gui.GuiMainMenu.ButtonListenerChangeMenu;
@@ -13,7 +14,9 @@ import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
 import fi.dy.masa.litematica.util.FileType;
 import fi.dy.masa.litematica.util.WorldUtils;
 import fi.dy.masa.malilib.gui.GuiBase;
+import fi.dy.masa.malilib.gui.GuiConfirmAction;
 import fi.dy.masa.malilib.gui.GuiStringListSelection;
+import fi.dy.masa.malilib.gui.GuiTextInputFeedback;
 import fi.dy.masa.malilib.gui.Message.MessageType;
 import fi.dy.masa.malilib.gui.button.ButtonBase;
 import fi.dy.masa.malilib.gui.button.ButtonGeneric;
@@ -22,6 +25,9 @@ import fi.dy.masa.malilib.gui.interfaces.ISelectionListener;
 import fi.dy.masa.malilib.gui.interfaces.IStringListConsumer;
 import fi.dy.masa.malilib.gui.widgets.WidgetCheckBox;
 import fi.dy.masa.malilib.gui.widgets.WidgetFileBrowserBase.DirectoryEntry;
+import fi.dy.masa.malilib.util.FileCopier;
+import fi.dy.masa.malilib.util.FileDeleter;
+import fi.dy.masa.malilib.util.FileRenamer;
 import fi.dy.masa.malilib.util.GuiUtils;
 import fi.dy.masa.malilib.util.InfoUtils;
 import fi.dy.masa.malilib.util.StringUtils;
@@ -74,6 +80,9 @@ public class GuiSchematicLoad extends GuiSchematicBrowserBase
         y = this.height - 26;
         x += this.createButton(x, y, -1, ButtonListener.Type.LOAD_SCHEMATIC) + 4;
         x += this.createButton(x, y, -1, ButtonListener.Type.MATERIAL_LIST) + 4;
+        x += this.createButton(x, y, -1, ButtonListener.Type.COPY) + 4;
+        x += this.createButton(x, y, -1, ButtonListener.Type.RENAME) + 4;
+        x += this.createButton(x, y, -1, ButtonListener.Type.DELETE) + 4;
 
         ButtonListenerChangeMenu.ButtonType type = ButtonListenerChangeMenu.ButtonType.LOADED_SCHEMATICS;
         label = StringUtils.translate(type.getLabelKey());
@@ -126,14 +135,51 @@ public class GuiSchematicLoad extends GuiSchematicBrowserBase
         public void actionPerformedWithButton(ButtonBase button, int mouseButton)
         {
             DirectoryEntry entry = this.gui.getListWidget().getLastSelectedEntry();
+            final boolean feedback = Configs.Generic.DISPLAY_FILE_OPS_FEEDBACK.getBooleanValue();
 
             if (entry == null)
             {
-                this.gui.addMessage(MessageType.ERROR, "litematica.error.schematic_load.no_schematic_selected");
+                // Used to delete an empty folder that is selected
+                if (this.type == Type.DELETE)
+                {
+                    File target = this.gui.getListWidget().getCurrentDirectory();
+                    FileDeleter deleter = new FileDeleter(target.toPath(), this.gui.getListWidget(), feedback);
+                    GuiBase.openGui(new GuiConfirmAction(180, "litematica.gui.title.delete_confirm", deleter, this.gui, "litematica.message.delete_confirm", target.getName()));
+                }
+                else
+                {
+                    this.gui.addMessage(MessageType.ERROR, "litematica.error.schematic_load.no_schematic_selected");
+                }
+
                 return;
             }
 
             File file = entry.getFullPath();
+
+            if (this.type == Type.COPY || this.type == Type.RENAME || this.type == Type.DELETE)
+            {
+                if (file.exists() == false || file.canRead() == false)
+                {
+                    this.gui.addMessage(MessageType.ERROR, "litematica.error.schematic_load.cant_read_file", file.getName());
+                }
+                else if (this.type == Type.COPY)
+                {
+                    FileCopier copier = new FileCopier(file.toPath(), this.gui.getListWidget(), feedback);
+                    GuiBase.openGui(new GuiTextInputFeedback(256, "litematica.gui.title.copy_file", entry.getName(), this.gui, copier));
+                }
+                else if (this.type == Type.RENAME)
+                {
+                    FileRenamer renamer = new FileRenamer(file.toPath(), this.gui.getListWidget(), feedback);
+                    GuiBase.openGui(new GuiTextInputFeedback(256, "litematica.gui.title.rename_file_or_directory", entry.getName(), this.gui, renamer));
+                }
+                else
+                {
+                    FileDeleter deleter = new FileDeleter(file.toPath(), this.gui.getListWidget(), feedback);
+                    GuiBase.openGui(new GuiConfirmAction(180, "litematica.gui.title.delete_confirm", deleter, this.gui, "litematica.message.delete_confirm", file.getName()));
+                }
+
+                return;
+            }
 
             if (file.exists() == false || file.isFile() == false || file.canRead() == false)
             {
@@ -217,7 +263,10 @@ public class GuiSchematicLoad extends GuiSchematicBrowserBase
         public enum Type
         {
             LOAD_SCHEMATIC  ("litematica.gui.button.load_schematic_to_memory"),
-            MATERIAL_LIST   ("litematica.gui.button.material_list");
+            MATERIAL_LIST   ("litematica.gui.button.material_list"),
+            COPY            ("litematica.gui.button.copy"),
+            RENAME          ("litematica.gui.button.rename"),
+            DELETE          ("litematica.gui.button.delete");
 
             private final String translationKey;
 
