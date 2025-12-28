@@ -24,6 +24,7 @@ import malilib.util.data.EnabledCondition;
 import malilib.util.data.json.JsonUtils;
 import malilib.util.position.BlockPos;
 import malilib.util.position.IntBoundingBox;
+import malilib.util.position.Vec3i;
 import litematica.Litematica;
 import litematica.schematic.LoadedSchematic;
 import litematica.data.SchematicHolder;
@@ -326,16 +327,32 @@ public class SchematicPlacement extends BasePlacement
         return list;
     }
 
+    public static void getRelativeEndPositionFromAreaSize(Vec3i size, BlockPos.MutBlockPos posMut)
+    {
+        int x = size.getX();
+        int y = size.getY();
+        int z = size.getZ();
+
+        x = x >= 0 ? x - 1 : x + 1;
+        y = y >= 0 ? y - 1 : y + 1;
+        z = z >= 0 ? z - 1 : z + 1;
+
+        posMut.set(x, y, z);
+    }
+
     protected SelectionBox getSelectionBoxForRegion(SubRegionPlacement regionPlacement,
                                                     SchematicRegion schematicRegion)
     {
-        BlockPos boxOriginRelative = regionPlacement.getPosition();
-        BlockPos boxOriginAbsolute = PositionUtils.getTransformedBlockPos(boxOriginRelative, this.mirror, this.rotation).add(this.position);
-        BlockPos pos2 = new BlockPos(PositionUtils.getRelativeEndPositionFromAreaSize(schematicRegion.getSize()));
-        pos2 = PositionUtils.getTransformedBlockPos(pos2, this.mirror, this.rotation);
-        pos2 = PositionUtils.getTransformedBlockPos(pos2, regionPlacement.getMirror(), regionPlacement.getRotation()).add(boxOriginAbsolute);
+        BlockPos.MutBlockPos posMut = new BlockPos.MutBlockPos(regionPlacement.getPosition());
+        BlockPos boxOrigin = this.transform.apply(posMut).add(this.position);
 
-        return new SelectionBox(boxOriginAbsolute, pos2, regionPlacement.getName());
+        getRelativeEndPositionFromAreaSize(schematicRegion.getSize(), posMut);
+        BlockPos boxEnd = this.transform.apply(posMut).add(boxOrigin);
+
+        //boxEnd = PositionUtils.getTransformedBlockPos(boxEnd, this.mirror, this.rotation);
+        //boxEnd = PositionUtils.getTransformedBlockPos(boxEnd, regionPlacement.getMirror(), regionPlacement.getRotation()).add(boxOrigin);
+
+        return new SelectionBox(boxOrigin, boxEnd, regionPlacement.getName());
     }
 
     public ImmutableMap<String, SelectionBox> getSubRegionBoxes(EnabledCondition condition)

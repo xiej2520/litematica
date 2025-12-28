@@ -51,6 +51,7 @@ import litematica.util.PositionUtils;
 import litematica.util.RayTraceUtils;
 import litematica.util.RayTraceUtils.RayTraceWrapper;
 import litematica.util.RayTraceUtils.RayTraceWrapper.HitType;
+import litematica.util.value.PosTransform;
 import litematica.util.value.ReplaceBehavior;
 import litematica.world.WorldSchematic;
 
@@ -744,6 +745,19 @@ public class SchematicPlacementManager
         {
             MessageDispatcher.error(2000).translate("litematica.error.schematic_placements.coordinate_locked");
         }
+    }
+
+    public void setTransform(SchematicPlacement placement, PosTransform transform)
+    {
+        if (placement.isLocked())
+        {
+            this.printLockedErrorMessage();
+            return;
+        }
+
+        this.onPrePlacementChange(placement);
+        placement.setTransform(transform);
+        this.onPlacementModified(placement);
     }
 
     public void setRotation(SchematicPlacement placement, BlockRotation rotation)

@@ -52,6 +52,7 @@ import litematica.selection.CornerDefinedBox;
 import litematica.selection.SelectionBox;
 import litematica.util.PositionUtils;
 import litematica.util.WorldUtils;
+import litematica.util.value.PosTransform;
 import litematica.util.value.ReplaceBehavior;
 
 public class SchematicPlacingUtils
@@ -419,7 +420,7 @@ public class SchematicPlacingUtils
 
             for (String regionName : regionsTouchingChunk)
             {
-                SubRegionPlacement placement = schematicPlacement.getSubRegion(regionName);
+                SubRegionPlacement regionPlacement = schematicPlacement.getSubRegion(regionName);
                 SchematicRegion region = schematic.getRegions().get(regionName);
 
                 if (region == null)
@@ -428,17 +429,31 @@ public class SchematicPlacingUtils
                     continue;
                 }
 
-                if (placement.isEnabled())
+                if (regionPlacement.isEnabled())
                 {
-                    if (placeBlocksWithinChunk(world, chunkPos, regionName, region, origin, schematicPlacement, placement, replace, notifyNeighbors) == false)
+                    CornerDefinedBox box = schematicPlacement.getSubRegionBox(regionName, EnabledCondition.ENABLED);
+
+                    if (box == null)
+                    {
+                        continue;
+                    }
+
+                    IntBoundingBox bounds = PositionUtils.getBoundsWithinChunkForBox(box, chunkPos.x, chunkPos.z);
+
+                    if (bounds == null)
+                    {
+                        continue;
+                    }
+
+                    if (placeBlocksWithinChunk(world, bounds, region, origin, schematicPlacement, regionPlacement, replace, notifyNeighbors) == false)
                     {
                         allSuccess = false;
                         Litematica.LOGGER.warn("Invalid/missing schematic data in schematic '{}' for sub-region '{}'", schematic.getMetadata().getSchematicName(), regionName);
                     }
 
-                    if (schematicPlacement.ignoreEntities() == false && placement.ignoreEntities() == false)
+                    if (schematicPlacement.ignoreEntities() == false && regionPlacement.ignoreEntities() == false)
                     {
-                        placeEntitiesToWorldWithinChunk(world, chunkPos, region, origin, schematicPlacement, placement);
+                        placeEntitiesToWorldWithinChunk(world, chunkPos, region, origin, schematicPlacement, regionPlacement);
                     }
                 }
             }
@@ -451,12 +466,28 @@ public class SchematicPlacingUtils
         return allSuccess;
     }
 
-    public static boolean placeBlocksWithinChunk(World world, ChunkPos chunkPos, String regionName, SchematicRegion region,
-                                                 BlockPos origin, SchematicPlacement schematicPlacement,
-                                                 SubRegionPlacement placement, ReplaceBehavior replace, boolean notifyNeighbors)
+    public static void getRelativeEndPositionFromAreaSize(Vec3i size, BlockPos.MutBlockPos posMutable)
     {
-        CornerDefinedBox box = schematicPlacement.getSubRegionBox(regionName, EnabledCondition.ENABLED);
-        IntBoundingBox bounds = box != null ? PositionUtils.getBoundsWithinChunkForBox(box, chunkPos.x, chunkPos.z) : null;
+        int x = size.getX();
+        int y = size.getY();
+        int z = size.getZ();
+
+        x = x >= 0 ? x - 1 : x + 1;
+        y = y >= 0 ? y - 1 : y + 1;
+        z = z >= 0 ? z - 1 : z + 1;
+
+        posMutable.set(x, y, z);
+    }
+
+    public static boolean placeBlocksWithinChunk(World world,
+                                                 IntBoundingBox bounds,
+                                                 SchematicRegion region,
+                                                 BlockPos origin,
+                                                 SchematicPlacement schematicPlacement,
+                                                 SubRegionPlacement subRegionPlacement,
+                                                 ReplaceBehavior replace,
+                                                 boolean notifyNeighbors)
+    {
         BlockContainer container = region.getBlockContainer();
         Map<BlockPos, CompoundData> blockEntityMap = region.getBlockEntityMap();
 
@@ -465,56 +496,78 @@ public class SchematicPlacingUtils
             return false;
         }
 
-        BlockPos regionPos = placement.getPosition();
-        Vec3i regionSize = region.getSize();
-
-        // These are the untransformed relative positions
-        BlockPos posEndRel = (new BlockPos(PositionUtils.getRelativeEndPositionFromAreaSize(regionSize))).add(regionPos);
-        BlockPos posMinRel = malilib.util.position.PositionUtils.getMinCorner(regionPos, posEndRel);
-
-        // The transformed sub-region origin position
-        BlockPos regionPosTransformed = PositionUtils.getTransformedBlockPos(regionPos, schematicPlacement.getMirror(), schematicPlacement.getRotation());
-
-        // The relative offset of the affected region's corners, to the sub-region's origin corner
-        BlockPos boxMinRel = new BlockPos(bounds.minX - origin.getX() - regionPosTransformed.getX(), 0, bounds.minZ - origin.getZ() - regionPosTransformed.getZ());
-        BlockPos boxMaxRel = new BlockPos(bounds.maxX - origin.getX() - regionPosTransformed.getX(), 0, bounds.maxZ - origin.getZ() - regionPosTransformed.getZ());
-
-        // Reverse transform that relative offset, to get the untransformed orientation's offsets
-        boxMinRel = PositionUtils.getReverseTransformedBlockPos(boxMinRel, placement.getMirror(), placement.getRotation());
-        boxMaxRel = PositionUtils.getReverseTransformedBlockPos(boxMaxRel, placement.getMirror(), placement.getRotation());
-
-        boxMinRel = PositionUtils.getReverseTransformedBlockPos(boxMinRel, schematicPlacement.getMirror(), schematicPlacement.getRotation());
-        boxMaxRel = PositionUtils.getReverseTransformedBlockPos(boxMaxRel, schematicPlacement.getMirror(), schematicPlacement.getRotation());
-
-        // Get the offset relative to the sub-region's minimum corner, instead of the origin corner (which can be at any corner)
-        boxMinRel = boxMinRel.subtract(posMinRel.subtract(regionPos));
-        boxMaxRel = boxMaxRel.subtract(posMinRel.subtract(regionPos));
-
-        BlockPos posMin = malilib.util.position.PositionUtils.getMinCorner(boxMinRel, boxMaxRel);
-        BlockPos posMax = malilib.util.position.PositionUtils.getMaxCorner(boxMinRel, boxMaxRel);
-
-        final int startX = posMin.getX();
-        final int startZ = posMin.getZ();
-        final int endX = posMax.getX();
-        final int endZ = posMax.getZ();
-
-        final int startY = 0;
-        final int endY = Math.abs(regionSize.getY()) - 1;
         BlockPos.MutBlockPos posMutable = new BlockPos.MutBlockPos();
 
-        //System.out.printf("sx: %d, sy: %d, sz: %d => ex: %d, ey: %d, ez: %d\n", startX, startY, startZ, endX, endY, endZ);
+        BlockPos regionOriginRelative = subRegionPlacement.getPosition();
+        Vec3i regionSize = region.getSize();
+        int rx = regionOriginRelative.getX();
+        int ry = regionOriginRelative.getY();
+        int rz = regionOriginRelative.getZ();
 
-        if (startX < 0 || startZ < 0 || endX >= container.getSize().getX() || endZ >= container.getSize().getZ())
-        {
-            System.out.printf("DEBUG ============= OUT OF BOUNDS - region: %s, sx: %d, sz: %d, ex: %d, ez: %d - size x: %d z: %d =============\n",
-                    regionName, startX, startZ, endX, endZ, container.getSize().getX(), container.getSize().getZ());
-            return false;
-        }
+        // Minimum corner of the region, which is the 0,0,0 of the block container
+        getRelativeEndPositionFromAreaSize(regionSize, posMutable);
+        BlockPos endRel = posMutable.toImmutable();
+        int minX = Math.min(rx, rx + posMutable.getX());
+        int minY = Math.min(ry, ry + posMutable.getY());
+        int minZ = Math.min(rz, rz + posMutable.getZ());
 
-        final BlockRotation rotationCombined = schematicPlacement.getRotation().add(placement.getRotation());
+        // Get the relative offset of the minimum corner to the region origin,
+        // and transform that offset by that sub-region's transform
+        posMutable.set(minX - rx, minY - ry, minZ - rz);
+        BlockPos minOffset = posMutable.toImmutable();
+        subRegionPlacement.getTransform().apply(posMutable);
+        BlockPos minOffsetTr = posMutable.toImmutable();
+
+        // Now add the relative origin position to the transformed min corner offset
+        posMutable.addMut(regionOriginRelative);
+        BlockPos minCornerSub = posMutable.toImmutable();
+        // Then transform that minimum corner position by the main placement transform
+        schematicPlacement.getTransform().apply(posMutable);
+        BlockPos minCornerRel = posMutable.toImmutable();
+
+        // Then add the absolute origin to get the final absolute position of the region/block container min corner
+        BlockPos regionMinCorner = posMutable.add(origin);
+        int ax = regionMinCorner.getX();
+        int ay = regionMinCorner.getY();
+        int az = regionMinCorner.getZ();
+
+        // Find the relative start and end offsets of the box within the region block container
+        int startX = Math.min(bounds.minX - ax, bounds.maxX - ax);
+        int startY = Math.min(bounds.minY - ay, bounds.maxY - ay);
+        int startZ = Math.min(bounds.minZ - az, bounds.maxZ - az);
+
+        int endX = Math.max(bounds.minX - ax, bounds.maxX - ax);
+        int endY = Math.max(bounds.minY - ay, bounds.maxY - ay);
+        int endZ = Math.max(bounds.minZ - az, bounds.maxZ - az);
+
+        // FIXME this needs to be a combination of the main placement and the sub-region placement transforms
+        PosTransform fullTransform = schematicPlacement.getTransform();
+
+        // Reverse transform the container-relative offsets
+        posMutable.set(startX, startY, startZ);
+        fullTransform.reverse(posMutable);
+        int x1 = posMutable.getX();
+        int y1 = posMutable.getY();
+        int z1 = posMutable.getZ();
+
+        posMutable.set(endX, endY, endZ);
+        fullTransform.reverse(posMutable);
+        int x2 = posMutable.getX();
+        int y2 = posMutable.getY();
+        int z2 = posMutable.getZ();
+
+        startX = Math.min(Math.abs(x1), Math.abs(x2));
+        startY = Math.min(Math.abs(y1), Math.abs(y2));
+        startZ = Math.min(Math.abs(z1), Math.abs(z2));
+
+        endX = Math.max(Math.abs(x1), Math.abs(x2));
+        endY = Math.max(Math.abs(y1), Math.abs(y2));
+        endZ = Math.max(Math.abs(z1), Math.abs(z2));
+
+        // FIXME These should come from the transform
+        final BlockRotation rotationCombined = schematicPlacement.getRotation().add(subRegionPlacement.getRotation());
         final BlockMirror mirrorMain = schematicPlacement.getMirror();
-        final IBlockState barrier = Blocks.BARRIER.getDefaultState();
-        BlockMirror mirrorSub = placement.getMirror();
+        BlockMirror mirrorSub = subRegionPlacement.getMirror();
 
         if (mirrorSub != BlockMirror.NONE &&
             (schematicPlacement.getRotation() == BlockRotation.CW_90 ||
@@ -523,13 +576,40 @@ public class SchematicPlacingUtils
             mirrorSub = mirrorSub == BlockMirror.X ? BlockMirror.Z : BlockMirror.X;
         }
 
+        final IBlockState barrier = Blocks.BARRIER.getDefaultState();
+
+        System.out.printf("=== START ===\n");
+        System.out.printf("  bounds: %s\n", bounds);
+        System.out.printf("  origin (abs): %s\n", origin);
+        System.out.printf("  container size: %s,\n", container.getSize());
+        System.out.printf("  regionSize: %s\n", regionSize);
+        System.out.printf("  regionOriginRelative: %s\n", regionOriginRelative);
+        System.out.printf("  endRel: %s\n", endRel);
+        System.out.printf("  minOffset: %s\n", minOffset);
+        System.out.printf("  minOffsetTr: %s\n", minOffsetTr);
+        System.out.printf("  minCornerSub: %s\n", minCornerSub);
+        System.out.printf("  minCornerRel: %s\n", minCornerRel);
+        System.out.printf("  regionMinCorner (abs): %s\n", regionMinCorner);
+        System.out.printf("  start X/Y/Z: %d, %d, %d\n", startX, startY, startZ);
+        System.out.printf("  end X/Y/Z: %d, %d, %d\n", endX, endY, endZ);
+        System.out.printf("=== END ===\n");
+
         for (int y = startY; y <= endY; ++y)
         {
             for (int z = startZ; z <= endZ; ++z)
             {
                 for (int x = startX; x <= endX; ++x)
                 {
-                    BlockState state = container.getBlockState(x, y, z);
+                    BlockState state;
+                    try
+                    {
+                        state = container.getBlockState(x, y, z);
+                    }
+                    catch (Exception e)
+                    {
+                        System.out.printf("OOPS @ %d, %d, %d\n", x, y, z);
+                        return true;
+                    }
 
                     if (state.getBlock() == Blocks.STRUCTURE_VOID)
                     {
@@ -538,15 +618,10 @@ public class SchematicPlacingUtils
 
                     posMutable.set(x, y, z);
                     CompoundData beData = blockEntityMap.get(posMutable);
+                    fullTransform.apply(posMutable);
+                    posMutable.addMut(regionMinCorner);
 
-                    posMutable.set(posMinRel.getX() + x - regionPos.getX(),
-                                   posMinRel.getY() + y - regionPos.getY(),
-                                   posMinRel.getZ() + z - regionPos.getZ());
-
-                    BlockPos pos = PositionUtils.getTransformedPlacementPosition(posMutable, schematicPlacement, placement);
-                    pos = pos.add(regionPosTransformed).add(origin);
-
-                    IBlockState stateOld = world.getBlockState(pos).getActualState(world, pos);
+                    IBlockState stateOld = world.getBlockState(posMutable);
 
                     if ((replace == ReplaceBehavior.NONE && stateOld.getMaterial() != Material.AIR) ||
                         (replace == ReplaceBehavior.WITH_NON_AIR && state.vanillaState().getMaterial() == Material.AIR))
@@ -558,7 +633,7 @@ public class SchematicPlacingUtils
                     if (mirrorSub != BlockMirror.NONE)  { state = state.withMirror(mirrorSub); }
                     if (rotationCombined != BlockRotation.NONE) { state = state.withRotation(rotationCombined); }
 
-                    TileEntity beOld = world.getTileEntity(pos);
+                    TileEntity beOld = world.getTileEntity(posMutable);
 
                     if (beOld != null)
                     {
@@ -567,17 +642,17 @@ public class SchematicPlacingUtils
                             ((IInventory) beOld).clear();
                         }
 
-                        world.setBlockState(pos, barrier, 0x14);
+                        world.setBlockState(posMutable, barrier, 0x14);
                     }
 
-                    if (world.setBlockState(pos, state.vanillaState(), 0x12) && beData != null)
+                    if (world.setBlockState(posMutable.toVanillaPos(), state.vanillaState(), 0x12) && beData != null)
                     {
-                        TileEntity be = world.getTileEntity(pos);
+                        TileEntity be = world.getTileEntity(posMutable);
 
                         if (be != null)
                         {
                             beData = beData.copy();
-                            DataTypeUtils.putVec3i(beData, pos);
+                            DataTypeUtils.putVec3i(beData, posMutable);
 
                             try
                             {
@@ -589,7 +664,7 @@ public class SchematicPlacingUtils
                             }
                             catch (Exception e)
                             {
-                                Litematica.LOGGER.warn("Failed to load TileEntity data for {} @ {}", state, pos);
+                                Litematica.LOGGER.warn("Failed to load BlockEntity data for {} @ {}", state, posMutable);
                             }
                         }
                     }
@@ -597,6 +672,7 @@ public class SchematicPlacingUtils
             }
         }
 
+        /*
         if (notifyNeighbors)
         {
             for (int y = startY; y <= endY; ++y)
@@ -614,6 +690,7 @@ public class SchematicPlacingUtils
                 }
             }
         }
+        */
 
         return true;
     }

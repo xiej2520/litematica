@@ -44,6 +44,7 @@ import litematica.schematic.placement.SchematicPlacementManager;
 import litematica.schematic.placement.SubRegionPlacement;
 import litematica.schematic.verifier.SchematicVerifier;
 import litematica.schematic.verifier.SchematicVerifierManager;
+import litematica.util.value.PosTransform;
 
 public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWidget<SubRegionPlacement>>
 {
@@ -67,6 +68,7 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
     protected final GenericButton toggleAllRegionsOffButton;
     protected final GenericButton toggleAllRegionsOnButton;
     protected final GenericButton toggleEnclosingBoxButton;
+    protected final GenericButton transformButton;
     protected final OnOffButton gridSettingsButton;
     protected final OnOffButton toggleEntitiesButton;
     protected final OnOffButton toggleLockedButton;
@@ -90,6 +92,8 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
         this.originLabel = new LabelWidget("litematica.label.schematic_placement_settings.placement_origin");
         this.schematicNameLabel = new LabelWidget();
         this.subRegionsLabel = new LabelWidget();
+
+        this.transformButton           = GenericButton.create(18, this::getTransformButtonLabel, this::transform);
 
         this.changeSchematicButton     = GenericButton.create(16, "litematica.button.schematic_placement_settings.change_schematic", this::changeSchematicButtonClicked);
         this.copyPasteSettingsButton   = GenericButton.create(18, "litematica.button.schematic_placement_settings.export_import_settings", this::clickCopyPasteSettings);
@@ -162,10 +166,46 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
         this.setTitle("litematica.title.screen.schematic_placement_settings", Reference.MOD_VERSION);
     }
 
+    protected String getTransformButtonLabel()
+    {
+        String val = this.placement.getTransform().name();
+        return String.format("Transform: %s", val);
+    }
+
+    protected boolean transform(int mouseButton, GenericButton button)
+    {
+        if (mouseButton == 2)
+        {
+            this.manager.setTransform(this.placement, PosTransform.NONE);
+            return true;
+        }
+
+        boolean reverse = mouseButton == 1;
+        int index = this.placement.getTransform().ordinal();
+
+        if (reverse)
+        {
+            if (--index < 0)
+                index = PosTransform.VALUES.size() - 1;
+        }
+        else
+        {
+            if (++index >= PosTransform.VALUES.size())
+                index = 0;
+        }
+
+        PosTransform newTransform = PosTransform.VALUES.get(index);
+        this.manager.setTransform(this.placement, newTransform);
+
+        return true;
+    }
+
     @Override
     protected void reAddActiveWidgets()
     {
         super.reAddActiveWidgets();
+
+        this.addWidget(this.transformButton);
 
         this.addWidget(this.bbColorWidget);
         this.addWidget(this.changeSchematicButton);
@@ -257,6 +297,7 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
         this.openVerifierButton.setPosition(this.openMaterialListButton.getRight() + 2, y);
         this.openPlacementListButton.setRight(this.getRight() - 4);
         this.openPlacementListButton.setY(y);
+        this.transformButton.setPosition(this.openVerifierButton.getRight() + 2, this.openVerifierButton.getY());
     }
 
     @Override

@@ -11,6 +11,7 @@ import malilib.util.position.BlockPos;
 import malilib.util.position.BlockRotation;
 import malilib.util.position.Coordinate;
 import litematica.util.PositionUtils;
+import litematica.util.value.PosTransform;
 
 public class BasePlacement
 {
@@ -18,6 +19,8 @@ public class BasePlacement
     protected BlockPos position;
     protected BlockRotation rotation = BlockRotation.NONE;
     protected BlockMirror mirror = BlockMirror.NONE;
+    protected PosTransform transform = PosTransform.NONE;
+
     protected Color4f boundingBoxColor = Color4f.WHITE;
     protected boolean enabled = true;
     protected boolean ignoreEntities;
@@ -65,6 +68,11 @@ public class BasePlacement
         return this.mirror;
     }
 
+    public PosTransform getTransform()
+    {
+        return this.transform;
+    }
+
     public Color4f getBoundingBoxColor()
     {
         return this.boundingBoxColor;
@@ -103,6 +111,11 @@ public class BasePlacement
     void setMirror(BlockMirror mirror)
     {
         this.mirror = mirror;
+    }
+
+    public void setTransform(PosTransform transform)
+    {
+        this.transform = transform;
     }
 
     void setPosition(BlockPos pos)
