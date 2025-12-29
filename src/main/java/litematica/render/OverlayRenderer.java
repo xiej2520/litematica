@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableMap;
+import malilib.render.text.StringListRenderer;
 import org.lwjgl.opengl.GL11;
 
 import net.minecraft.block.material.Material;
@@ -70,6 +71,7 @@ public class OverlayRenderer
     private final Minecraft mc;
     private final Map<SchematicPlacement, ImmutableMap<String, SelectionBox>> placements = new HashMap<>();
     private final List<String> blockInfoLines = new ArrayList<>();
+    private final StringListRenderer blockInfoLinesRenderer = new StringListRenderer();
     private Color4f colorPos1 = new Color4f(1f, 0.0625f, 0.0625f);
     private Color4f colorPos2 = new Color4f(0.0625f, 0.0625f, 1f);
     private Color4f colorOverlapping = new Color4f(1f, 0.0625f, 1f);
@@ -484,6 +486,36 @@ public class OverlayRenderer
         boolean useShadow = false;
 
         // TODO FIXME use a StringListRenderer
+        this.blockInfoLinesRenderer.setText(this.blockInfoLines);
+
+        this.blockInfoLinesRenderer.getNormalTextSettings().setTextColor(textColor);
+        this.blockInfoLinesRenderer.getNormalTextSettings().setBackgroundEnabled(useBackground);
+        this.blockInfoLinesRenderer.getNormalTextSettings().setBackgroundColor(bgColor);
+        this.blockInfoLinesRenderer.getTextSettings().setTextShadowEnabled(useShadow);
+        this.blockInfoLinesRenderer.getPadding().setAll(2, 2, 2, 2);
+        this.blockInfoLinesRenderer.setLineHeight(11);
+
+        if (alignment == HudAlignment.BOTTOM_RIGHT || alignment == HudAlignment.TOP_RIGHT)
+        {
+            this.blockInfoLinesRenderer.setHorizontalAlignment(HorizontalAlignment.RIGHT);
+            x = GuiUtils.getScaledWindowWidth() - this.blockInfoLinesRenderer.getTotalRenderWidth() - x;
+        }
+        else if (alignment == HudAlignment.CENTER)
+        {
+            this.blockInfoLinesRenderer.setHorizontalAlignment(HorizontalAlignment.CENTER);
+        }
+        else
+        {
+            this.blockInfoLinesRenderer.setHorizontalAlignment(HorizontalAlignment.LEFT);
+        }
+
+        if (alignment == HudAlignment.BOTTOM_RIGHT || alignment == HudAlignment.BOTTOM_LEFT)
+        {
+            y = GuiUtils.getScaledWindowHeight() - this.blockInfoLinesRenderer.getTotalRenderHeight() - y + 2;
+        }
+
+        this.blockInfoLinesRenderer.renderAt(x, y, 0, false, ctx);
+
         //TextRenderUtils.renderText(x, y, 0, fontScale, textColor, bgColor, alignment, useBackground, useShadow, this.blockInfoLines);
     }
 
