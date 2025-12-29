@@ -1,6 +1,6 @@
 plugins {
-	id 'fabric-loom' version '1.4.5'
-	id 'ploceus' version '1.4.2'
+	id 'fabric-loom' version '1.10-SNAPSHOT'
+	id 'ploceus' version '1.10-SNAPSHOT'
 	id 'maven-publish'
 }
 
@@ -26,23 +26,25 @@ repositories {
 	// for more information about repositories.
 	// maven { url 'https://maven.terraformersmc.com/releases/' }
 
-	maven {
-		name = "masa"
-		url = 'https://masa.dy.fi/maven'
-		content {
-			includeGroupAndSubgroups("malilib")
-		}
-	}
+	//maven {
+	//	name = "masa"
+	//	url = 'https://masa.dy.fi/maven'
+	//	content {
+	//		includeGroupAndSubgroups("malilib")
+	//	}
+	//}
+    mavenLocal()
 }
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 
-	mappings loom.layered {
-		addLayer ploceus.mcpMappings('stable', '1.12', '39')
-		//mappings "net.ornithemc:feather:${project.minecraft_version}+build.${project.feather_build}:v2"
-		//addLayer ploceus.nestedMappings() // remove this line if not using nests
-	}
+    mappings(ploceus.mcpMappings("stable", "1.12", "39"))
+    //mappings loom.layered {
+	//	addLayer ploceus.mcpMappings('stable', '1.12', '39')
+	//	//mappings "net.ornithemc:feather:${project.minecraft_version}+build.${project.feather_build}:v2"
+	//	//addLayer ploceus.nestedMappings() // remove this line if not using nests
+	//}
 	//nests "net.ornithemc:nests:${project.minecraft_version}+build.${project.nests_build}" // remove this line if not using nests
 
 	modImplementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
