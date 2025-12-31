@@ -1,39 +1,126 @@
 package litematica.util.value;
 
+import malilib.util.position.BlockMirror;
 import malilib.util.position.BlockPos;
+import malilib.util.position.BlockRotation;
+import malilib.util.position.Direction;
 import malilib.util.position.Vec3d;
 
 public class Rotation
 {
-    public static final Rotation NONE      = new Rotation(new int[] { 1,  0,  0,    0,  1,  0,    0,  0,  1});
+    public static final Rotation NONE      = new Rotation(new int[] { 1,  0,  0,    0,  1,  0,    0,  0,  1}, new int[] { 1,  0,  0,    0,  1,  0,    0,  0,  1});
 
-    public static final Rotation ROT_X_90  = new Rotation(new int[] { 1,  0,  0,    0,  0,  1,    0, -1,  0});
-    public static final Rotation ROT_X_180 = new Rotation(new int[] { 1,  0,  0,    0, -1,  0,    0,  0, -1});
-    public static final Rotation ROT_X_270 = new Rotation(new int[] { 1,  0,  0,    0,  0, -1,    0,  1,  0});
+    public static final Rotation ROT_X_90  = new Rotation(new int[] { 1,  0,  0,    0,  0,  1,    0, -1,  0}, new int[] { 1,  0,  0,    0,  0, -1,    0,  1,  0});
+    public static final Rotation ROT_X_180 = new Rotation(new int[] { 1,  0,  0,    0, -1,  0,    0,  0, -1}, new int[] { 1,  0,  0,    0, -1,  0,    0,  0, -1});
+    public static final Rotation ROT_X_270 = new Rotation(new int[] { 1,  0,  0,    0,  0, -1,    0,  1,  0}, new int[] { 1,  0,  0,    0,  0,  1,    0, -1,  0});
 
-    public static final Rotation ROT_Y_90  = new Rotation(new int[] { 0,  0, -1,    0,  1,  0,    1,  0,  0});
-    public static final Rotation ROT_Y_180 = new Rotation(new int[] {-1,  0,  0,    0,  1,  0,    0,  0, -1});
-    public static final Rotation ROT_Y_270 = new Rotation(new int[] { 0,  0,  1,    0,  1,  0,   -1,  0,  0});
+    public static final Rotation ROT_Y_90  = new Rotation(new int[] { 0,  0, -1,    0,  1,  0,    1,  0,  0}, new int[] { 0,  0,  1,    0,  1,  0,   -1,  0,  0});
+    public static final Rotation ROT_Y_180 = new Rotation(new int[] {-1,  0,  0,    0,  1,  0,    0,  0, -1}, new int[] {-1,  0,  0,    0,  1,  0,    0,  0, -1});
+    public static final Rotation ROT_Y_270 = new Rotation(new int[] { 0,  0,  1,    0,  1,  0,   -1,  0,  0}, new int[] { 0,  0, -1,    0,  1,  0,    1,  0,  0});
 
-    public static final Rotation ROT_Z_90  = new Rotation(new int[] { 0,  1,  0,   -1,  0,  0,    0,  0,  1});
-    public static final Rotation ROT_Z_180 = new Rotation(new int[] {-1,  0,  0,    0, -1,  0,    0,  0,  1});
-    public static final Rotation ROT_Z_270 = new Rotation(new int[] { 0, -1,  0,    1,  0,  0,    0,  0,  1});
+    public static final Rotation ROT_Z_90  = new Rotation(new int[] { 0,  1,  0,   -1,  0,  0,    0,  0,  1}, new int[] { 0, -1,  0,    1,  0,  0,    0,  0,  1});
+    public static final Rotation ROT_Z_180 = new Rotation(new int[] {-1,  0,  0,    0, -1,  0,    0,  0,  1}, new int[] {-1,  0,  0,    0, -1,  0,    0,  0,  1});
+    public static final Rotation ROT_Z_270 = new Rotation(new int[] { 0, -1,  0,    1,  0,  0,    0,  0,  1}, new int[] { 0,  1,  0,   -1,  0,  0,    0,  0,  1});
 
-    public static final Rotation MIRROR_X  = new Rotation(new int[] {-1,  0,  0,    0,  1,  0,    0,  0,  1});
-    public static final Rotation MIRROR_Y  = new Rotation(new int[] { 1,  0,  0,    0, -1,  0,    0,  0,  1});
-    public static final Rotation MIRROR_Z  = new Rotation(new int[] { 1,  0,  0,    0,  1,  0,    0,  0, -1});
+    public static final Rotation MIRROR_X  = new Rotation(new int[] {-1,  0,  0,    0,  1,  0,    0,  0,  1}, new int[] { 1,  0,  0,    0,  1,  0,    0,  0, -1});
+    public static final Rotation MIRROR_Y  = new Rotation(new int[] { 1,  0,  0,    0, -1,  0,    0,  0,  1}, new int[] { 1,  0,  0,    0, -1,  0,    0,  0,  1});
+    public static final Rotation MIRROR_Z  = new Rotation(new int[] { 1,  0,  0,    0,  1,  0,    0,  0, -1}, new int[] {-1,  0,  0,    0,  1,  0,    0,  0,  1});
 
-    private final int[] matrix;
+    private final int[] forwardMatrix;
+    private final int[] reverseMatrix;
 
-    public Rotation(int[] matrix)
+    public Rotation(int[] forwardMatrix, int[] reverseMatrix)
     {
-        this.matrix = matrix;
+        this.forwardMatrix = forwardMatrix;
+        this.reverseMatrix = reverseMatrix;
     }
 
     public Rotation add(Rotation other)
     {
-        int[] t = this.matrix;
-        int[] o = other.matrix;
+        int[] f = multiply(other.forwardMatrix, this.forwardMatrix);
+        int[] r = multiply(this.reverseMatrix, other.reverseMatrix);
+
+        return new Rotation(f, r);
+    }
+
+    public int[] getForwardMatrix()
+    {
+        return this.forwardMatrix;
+    }
+
+    public int[] getReverseMatrix()
+    {
+        return this.reverseMatrix;
+    }
+
+    public BlockPos.MutBlockPos rotate(BlockPos.MutBlockPos pos)
+    {
+        int x = pos.getX();
+        int y = pos.getY();
+        int z = pos.getZ();
+        int[] m = this.forwardMatrix;
+
+        int newX = x * m[0] + y * m[1] + z * m[2];
+        int newY = x * m[3] + y * m[4] + z * m[5];
+        int newZ = x * m[6] + y * m[7] + z * m[8];
+
+        pos.set(newX, newY, newZ);
+
+        return pos;
+    }
+
+    public BlockPos.MutBlockPos reverse(BlockPos.MutBlockPos pos)
+    {
+        int x = pos.getX();
+        int y = pos.getY();
+        int z = pos.getZ();
+        int[] m = this.reverseMatrix;
+
+        int newX = x * m[0] + y * m[1] + z * m[2];
+        int newY = x * m[3] + y * m[4] + z * m[5];
+        int newZ = x * m[6] + y * m[7] + z * m[8];
+
+        pos.set(newX, newY, newZ);
+
+        return pos;
+    }
+
+    public Vec3d.MutVec3d rotate(Vec3d.MutVec3d pos)
+    {
+        double x = pos.getX();
+        double y = pos.getY();
+        double z = pos.getZ();
+        int[] m = this.forwardMatrix;
+
+        double newX = x * m[0] + y * m[1] + z * m[2];
+        double newY = x * m[3] + y * m[4] + z * m[5];
+        double newZ = x * m[6] + y * m[7] + z * m[8];
+
+        pos.set(newX, newY, newZ);
+
+        return pos;
+    }
+
+    public Vec3d.MutVec3d reverse(Vec3d.MutVec3d pos)
+    {
+        double x = pos.getX();
+        double y = pos.getY();
+        double z = pos.getZ();
+        int[] m = this.reverseMatrix;
+
+        double newX = x * m[0] + y * m[1] + z * m[2];
+        double newY = x * m[3] + y * m[4] + z * m[5];
+        double newZ = x * m[6] + y * m[7] + z * m[8];
+
+        pos.set(newX, newY, newZ);
+
+        return pos;
+    }
+
+    public static int[] multiply(int[] m1, int[] m2)
+    {
+        int[] t = m1;
+        int[] o = m2;
 
         int n11 = t[0] * o[0] + t[1] * o[3] + t[2] * o[6];
         int n21 = t[3] * o[0] + t[4] * o[3] + t[5] * o[6];
@@ -47,38 +134,61 @@ public class Rotation
         int n23 = t[3] * o[2] + t[4] * o[5] + t[5] * o[8];
         int n33 = t[6] * o[2] + t[7] * o[5] + t[8] * o[8];
 
-        int[] n = new int[] {
-            n11, n12, n13, n21, n22, n23, n31, n32, n33
-        };
-
-        return new Rotation(n);
+        return new int[] { n11, n12, n13, n21, n22, n23, n31, n32, n33 };
     }
 
-    public void rotate(BlockPos.MutBlockPos pos)
+    public static Rotation of(BlockRotation rotation, Direction.Axis axis)
     {
-        int x = pos.getX();
-        int y = pos.getY();
-        int z = pos.getZ();
-        int[] m = this.matrix;
+        if (rotation == BlockRotation.NONE)
+        {
+            return NONE;
+        }
 
-        int newX = x * m[0] + y * m[1] + z * m[2];
-        int newY = x * m[3] + y * m[4] + z * m[5];
-        int newZ = x * m[6] + y * m[7] + z * m[8];
+        switch (axis)
+        {
+            case X:
+                switch (rotation)
+                {
+                    case CW_90:     return ROT_X_90;
+                    case CW_180:    return ROT_X_180;
+                    case CCW_90:    return ROT_X_270;
+                }
+                break;
+            case Y:
+                switch (rotation)
+                {
+                    case CW_90:     return ROT_Y_90;
+                    case CW_180:    return ROT_Y_180;
+                    case CCW_90:    return ROT_Y_270;
+                }
+                break;
+            case Z:
+                switch (rotation)
+                {
+                    case CW_90:     return ROT_Z_90;
+                    case CW_180:    return ROT_Z_180;
+                    case CCW_90:    return ROT_Z_270;
+                }
+                break;
+        }
 
-        pos.set(newX, newY, newZ);
+        return NONE;
     }
 
-    public void rotate(Vec3d.MutVec3d pos)
+    public static Rotation of(BlockMirror mirror)
     {
-        double x = pos.getX();
-        double y = pos.getY();
-        double z = pos.getZ();
-        int[] m = this.matrix;
+        if (mirror == BlockMirror.NONE)
+        {
+            return NONE;
+        }
 
-        double newX = x * m[0] + y * m[1] + z * m[2];
-        double newY = x * m[3] + y * m[4] + z * m[5];
-        double newZ = x * m[6] + y * m[7] + z * m[8];
+        switch (mirror)
+        {
+            case X: return MIRROR_X;
+            case Y: return MIRROR_Y;
+            case Z: return MIRROR_Z;
+        }
 
-        pos.set(newX, newY, newZ);
+        return NONE;
     }
 }

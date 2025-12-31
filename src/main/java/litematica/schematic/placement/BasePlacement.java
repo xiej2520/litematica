@@ -10,13 +10,17 @@ import malilib.util.position.BlockMirror;
 import malilib.util.position.BlockPos;
 import malilib.util.position.BlockRotation;
 import malilib.util.position.Coordinate;
+import malilib.util.position.Direction;
 import litematica.util.PositionUtils;
 
 public class BasePlacement
 {
     protected String name;
     protected BlockPos position;
-    protected BlockRotation rotation = BlockRotation.NONE;
+    protected BlockRotation rotation1 = BlockRotation.NONE;
+    protected BlockRotation rotation2 = BlockRotation.NONE;
+    protected Direction.Axis rotation1Axis = Direction.Axis.Y;
+    protected Direction.Axis rotation2Axis = Direction.Axis.X;
     protected BlockMirror mirror = BlockMirror.NONE;
     protected Color4f boundingBoxColor = Color4f.WHITE;
     protected boolean enabled = true;
@@ -57,12 +61,32 @@ public class BasePlacement
 
     public BlockRotation getRotation()
     {
-        return this.rotation;
+        return this.rotation1;
     }
 
     public BlockMirror getMirror()
     {
         return this.mirror;
+    }
+
+    public BlockRotation getRotation1()
+    {
+        return this.rotation1;
+    }
+
+    public BlockRotation getRotation2()
+    {
+        return this.rotation2;
+    }
+
+    public Direction.Axis getRotation1Axis()
+    {
+        return this.rotation1Axis;
+    }
+
+    public Direction.Axis getRotation2Axis()
+    {
+        return this.rotation2Axis;
     }
 
     public Color4f getBoundingBoxColor()
@@ -97,12 +121,32 @@ public class BasePlacement
 
     void setRotation(BlockRotation rotation)
     {
-        this.rotation = rotation;
+        this.rotation1 = rotation;
     }
 
     void setMirror(BlockMirror mirror)
     {
         this.mirror = mirror;
+    }
+
+    void setRotation1(BlockRotation rotation)
+    {
+        this.rotation1 = rotation;
+    }
+
+    void setRotation2(BlockRotation rotation)
+    {
+        this.rotation2 = rotation;
+    }
+
+    void setRotation1Axis(Direction.Axis axis)
+    {
+        this.rotation1Axis = axis;
+    }
+
+    void setRotation2Axis(Direction.Axis axis)
+    {
+        this.rotation2Axis = axis;
     }
 
     void setPosition(BlockPos pos)
@@ -147,8 +191,10 @@ public class BasePlacement
         obj.add("pos", JsonUtils.blockPosToJson(this.position));
 
         // Only add the properties that have changed from the default values
-        JsonUtils.addIfNotEqual(obj, "rotation", this.rotation, BlockRotation.NONE);
+        JsonUtils.addIfNotEqual(obj, "rotation1", this.rotation1, BlockRotation.NONE);
+        JsonUtils.addIfNotEqual(obj, "rotation2", this.rotation2, BlockRotation.NONE);
         JsonUtils.addIfNotEqual(obj, "mirror", this.mirror, BlockMirror.NONE);
+        // TODO axes
         JsonUtils.addIfNotEqual(obj, "enabled", this.enabled, true);
         JsonUtils.addIfNotEqual(obj, "ignore_entities", this.ignoreEntities, false);
         JsonUtils.addIfNotEqual(obj, "render_enclosing_box", this.renderEnclosingBox, false);

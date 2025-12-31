@@ -59,6 +59,7 @@ litematica.button.schematic_placement_list.icon_vs_text.text=Buttons: Text
 litematica.button.schematic_placement_list.open_placement_browser=Saved Placements
 litematica.button.schematic_placement_list.sort_mode.enter_sort_mode=Enter Sort Mode
 litematica.button.schematic_placement_list.sort_mode.leave_sort_mode=Leave Sort Mode
+litematica.button.schematic_placement_settings.axis_value=%s
 litematica.button.schematic_placement_settings.change_schematic=Change Schematic
 litematica.button.schematic_placement_settings.enabled=Placement: %s
 litematica.button.schematic_placement_settings.export_import_settings=Export/Import Settings
@@ -67,7 +68,8 @@ litematica.button.schematic_placement_settings.ignore_entities=Ignore Entities: 
 litematica.button.schematic_placement_settings.locked=Locked: %s
 litematica.button.schematic_placement_settings.mirror_value=Mirror: %s
 litematica.button.schematic_placement_settings.reset_sub_regions=<c=fa3>Reset All Regions
-litematica.button.schematic_placement_settings.rotation_value=Rotation: %s
+litematica.button.schematic_placement_settings.rotation_1_value=Rotation 1: %s
+litematica.button.schematic_placement_settings.rotation_2_value=Rotation 2: %s
 litematica.button.schematic_placement_settings.entry_name.enabled=<c=5f5>%s
 litematica.button.schematic_placement_settings.entry_name.disabled=<c=888>%s
 litematica.button.schematic_placement_settings.toggle_all_off=All §cOFF§r

@@ -22,19 +22,23 @@ import malilib.util.FileUtils;
 import malilib.util.data.Color4f;
 import malilib.util.data.EnabledCondition;
 import malilib.util.data.json.JsonUtils;
+import malilib.util.position.BlockMirror;
 import malilib.util.position.BlockPos;
+import malilib.util.position.BlockRotation;
 import malilib.util.position.IntBoundingBox;
+import malilib.util.position.Vec3i;
 import litematica.Litematica;
-import litematica.schematic.LoadedSchematic;
 import litematica.data.SchematicHolder;
 import litematica.materials.MaterialListBase;
 import litematica.materials.MaterialListPlacement;
+import litematica.schematic.LoadedSchematic;
 import litematica.schematic.Schematic;
 import litematica.schematic.SchematicRegion;
 import litematica.schematic.verifier.SchematicVerifier;
 import litematica.selection.SelectionBox;
 import litematica.util.LitematicaDirectories;
 import litematica.util.PositionUtils;
+import litematica.util.value.Rotation;
 
 public class SchematicPlacement extends BasePlacement
 {
@@ -326,16 +330,114 @@ public class SchematicPlacement extends BasePlacement
         return list;
     }
 
+    public static void getRelativeEndPositionFromAreaSize(Vec3i size, BlockPos.MutBlockPos posMut)
+    {
+        int x = size.getX();
+        int y = size.getY();
+        int z = size.getZ();
+
+        x = x >= 0 ? x - 1 : x + 1;
+        y = y >= 0 ? y - 1 : y + 1;
+        z = z >= 0 ? z - 1 : z + 1;
+
+        posMut.set(x, y, z);
+    }
+
+    public Rotation getFullRotation()
+    {
+        if (this.rotation1 == BlockRotation.NONE &&
+            this.rotation2 == BlockRotation.NONE &&
+            this.mirror == BlockMirror.NONE)
+        {
+            return Rotation.NONE;
+        }
+
+        Rotation rotation = Rotation.NONE;
+
+        /*
+        System.out.printf("\n\nnone: \n");
+        int[] m = rotation.getForwardMatrix();
+        for (int i = 0; i < 9; ++i)
+        {
+            System.out.printf("%2d ", m[i]);
+            if (i == 2 || i == 5)
+                System.out.printf("\n");
+        }
+        */
+
+        if (this.rotation1 != BlockRotation.NONE)
+        {
+            rotation = rotation.add(Rotation.of(this.rotation1, this.rotation1Axis));
+
+            /*
+            System.out.printf("\n\nrot 1: \n");
+            m = rotation.getForwardMatrix();
+            for (int i = 0; i < 9; ++i)
+            {
+                System.out.printf("%2d ", m[i]);
+                if (i == 2 || i == 5)
+                    System.out.printf("\n");
+            }
+            */
+        }
+
+        if (this.rotation2 != BlockRotation.NONE)
+        {
+            rotation = rotation.add(Rotation.of(this.rotation2, this.rotation2Axis));
+
+            /*
+            m = rotation.getForwardMatrix();
+            System.out.printf("\n\nrot 2: \n");
+            for (int i = 0; i < 9; ++i)
+            {
+                System.out.printf("%2d ", m[i]);
+                if (i == 2 || i == 5)
+                    System.out.printf("\n");
+            }
+            */
+        }
+
+        if (this.mirror != BlockMirror.NONE)
+        {
+            rotation = rotation.add(Rotation.of(this.mirror));
+
+            /*
+            m = rotation.getForwardMatrix();
+            System.out.printf("\n\nmirror: \n");
+            for (int i = 0; i < 9; ++i)
+            {
+                System.out.printf("%2d ", m[i]);
+                if (i == 2 || i == 5)
+                    System.out.printf("\n");
+            }
+            */
+        }
+
+        System.out.printf("\n\nfull rot: \n");
+        int[] m = rotation.getForwardMatrix();
+        for (int i = 0; i < 9; ++i)
+        {
+            System.out.printf("%2d ", m[i]);
+            if (i == 2 || i == 5)
+                System.out.printf("\n");
+        }
+        System.out.printf("\n");
+
+        return rotation;
+    }
+
     protected SelectionBox getSelectionBoxForRegion(SubRegionPlacement regionPlacement,
                                                     SchematicRegion schematicRegion)
     {
-        BlockPos boxOriginRelative = regionPlacement.getPosition();
-        BlockPos boxOriginAbsolute = PositionUtils.getTransformedBlockPos(boxOriginRelative, this.mirror, this.rotation).add(this.position);
-        BlockPos pos2 = new BlockPos(PositionUtils.getRelativeEndPositionFromAreaSize(schematicRegion.getSize()));
-        pos2 = PositionUtils.getTransformedBlockPos(pos2, this.mirror, this.rotation);
-        pos2 = PositionUtils.getTransformedBlockPos(pos2, regionPlacement.getMirror(), regionPlacement.getRotation()).add(boxOriginAbsolute);
+        BlockPos.MutBlockPos posMut = new BlockPos.MutBlockPos(regionPlacement.getPosition());
+        //Rotation rotation = Rotation.of(this.getRotation1(), this.getRotation1Axis());
+        Rotation rotation = this.getFullRotation();
+        BlockPos boxOrigin = rotation.rotate(posMut).add(this.position);
 
-        return new SelectionBox(boxOriginAbsolute, pos2, regionPlacement.getName());
+        getRelativeEndPositionFromAreaSize(schematicRegion.getSize(), posMut);
+        BlockPos boxEnd = rotation.rotate(posMut).add(boxOrigin);
+
+        return new SelectionBox(boxOrigin, boxEnd, regionPlacement.getName());
     }
 
     public ImmutableMap<String, SelectionBox> getSubRegionBoxes(EnabledCondition condition)
@@ -515,7 +617,7 @@ public class SchematicPlacement extends BasePlacement
             // The input argument position is an absolute position, so need to convert to relative position here
             newPos = newPos.subtract(this.position);
             // The absolute-based input position needs to be transformed if the entire placement has been rotated or mirrored
-            newPos = PositionUtils.getReverseTransformedBlockPos(newPos, this.mirror, this.rotation);
+            newPos = PositionUtils.getReverseTransformedBlockPos(newPos, this.mirror, this.rotation1);
 
             subRegion.setPosition(newPos);
             this.resetEnclosingBox();
@@ -574,8 +676,11 @@ public class SchematicPlacement extends BasePlacement
 
         this.name = other.name;
         this.position = other.position;
-        this.rotation = other.rotation;
+        this.rotation1 = other.rotation1;
+        this.rotation2 = other.rotation2;
         this.mirror = other.mirror;
+        this.rotation1Axis = other.rotation1Axis;
+        this.rotation2Axis = other.rotation2Axis;
         this.enabled = other.enabled;
         this.ignoreEntities = other.ignoreEntities;
 
@@ -762,8 +867,12 @@ public class SchematicPlacement extends BasePlacement
 
         JsonUtils.copyPropertyIfExists(objIn, obj, "name");
         JsonUtils.copyPropertyIfExists(objIn, obj, "pos");
-        JsonUtils.copyPropertyIfExists(objIn, obj, "rotation");
+        JsonUtils.copyPropertyIfExists(objIn, obj, "rotation1");
+        JsonUtils.copyPropertyIfExists(objIn, obj, "rotation2");
         JsonUtils.copyPropertyIfExists(objIn, obj, "mirror");
+        JsonUtils.copyPropertyIfExists(objIn, obj, "rotation_1_axis");
+        JsonUtils.copyPropertyIfExists(objIn, obj, "rotation_2_axis");
+        JsonUtils.copyPropertyIfExists(objIn, obj, "mirror_axis");
         JsonUtils.copyPropertyIfExists(objIn, obj, "ignore_entities");
         JsonUtils.copyPropertyIfExists(objIn, obj, "regions");
         JsonUtils.copyPropertyIfExists(objIn, obj, "grid");
@@ -823,8 +932,11 @@ public class SchematicPlacement extends BasePlacement
 
         this.position = origin;
         this.name = JsonUtils.getStringOrDefault(obj, "name", this.name);
-        this.rotation = JsonUtils.getRotation(obj, "rotation");
+        this.rotation1 = JsonUtils.getRotation(obj, "rotation1");
+        this.rotation2 = JsonUtils.getRotation(obj, "rotation2");
         this.mirror = JsonUtils.getMirror(obj, "mirror");
+        this.rotation1Axis = JsonUtils.getAxis(obj, "rotation_1_axis");
+        this.rotation2Axis = JsonUtils.getAxis(obj, "rotation_2_axis");
         this.ignoreEntities = JsonUtils.getBooleanOrDefault(obj, "ignore_entities", this.ignoreEntities);
         this.coordinateLockMask = JsonUtils.getIntegerOrDefault(obj, "locked_coords", this.coordinateLockMask);
 

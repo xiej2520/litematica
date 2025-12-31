@@ -746,7 +746,7 @@ public class SchematicPlacementManager
         }
     }
 
-    public void setRotation(SchematicPlacement placement, BlockRotation rotation)
+    public void setRotation1(SchematicPlacement placement, BlockRotation rotation)
     {
         if (placement.isLocked())
         {
@@ -755,13 +755,52 @@ public class SchematicPlacementManager
         }
 
         this.onPrePlacementChange(placement);
-        placement.setRotation(rotation);
+        placement.setRotation1(rotation);
+        this.onPlacementModified(placement);
+    }
+
+    public void setRotation2(SchematicPlacement placement, BlockRotation rotation)
+    {
+        if (placement.isLocked())
+        {
+            this.printLockedErrorMessage();
+            return;
+        }
+
+        this.onPrePlacementChange(placement);
+        placement.setRotation2(rotation);
+        this.onPlacementModified(placement);
+    }
+
+    public void setRotation1Axis(SchematicPlacement placement, Direction.Axis axis)
+    {
+        if (placement.isLocked())
+        {
+            this.printLockedErrorMessage();
+            return;
+        }
+
+        this.onPrePlacementChange(placement);
+        placement.setRotation1Axis(axis);
+        this.onPlacementModified(placement);
+    }
+
+    public void setRotation2Axis(SchematicPlacement placement, Direction.Axis axis)
+    {
+        if (placement.isLocked())
+        {
+            this.printLockedErrorMessage();
+            return;
+        }
+
+        this.onPrePlacementChange(placement);
+        placement.setRotation2Axis(axis);
         this.onPlacementModified(placement);
     }
 
     public void rotateBy(SchematicPlacement placement, BlockRotation rotation)
     {
-        this.setRotation(placement, placement.getRotation().add(rotation));
+        this.setRotation1(placement, placement.getRotation().add(rotation));
     }
 
     public void setMirror(SchematicPlacement placement, BlockMirror mirror)
@@ -826,7 +865,7 @@ public class SchematicPlacementManager
 
     public void setSubRegionRotation(SchematicPlacement placement, String regionName, BlockRotation rotation)
     {
-        this.modifyPlacementRegion(placement, regionName, reg -> reg.rotation = rotation, true);
+        this.modifyPlacementRegion(placement, regionName, reg -> reg.rotation1 = rotation, true);
     }
 
     public void setSubRegionMirror(SchematicPlacement placement, String regionName, BlockMirror mirror)

@@ -7,6 +7,7 @@ import malilib.util.data.json.JsonUtils;
 import malilib.util.position.BlockMirror;
 import malilib.util.position.BlockPos;
 import malilib.util.position.BlockRotation;
+import malilib.util.position.Direction;
 import litematica.Litematica;
 
 public class SubRegionPlacement extends BasePlacement
@@ -42,8 +43,11 @@ public class SubRegionPlacement extends BasePlacement
         SubRegionPlacement copy = new SubRegionPlacement(this.position, this.defaultPos, this.name);
 
         copy.displayName = this.displayName;
-        copy.rotation = this.rotation;
+        copy.rotation1 = this.rotation1;
+        copy.rotation2 = this.rotation2;
         copy.mirror = this.mirror;
+        copy.rotation1Axis = this.rotation1Axis;
+        copy.rotation2Axis = this.rotation2Axis;
         copy.enabled = this.enabled;
         copy.ignoreEntities = this.ignoreEntities;
         copy.renderEnclosingBox = this.renderEnclosingBox;
@@ -63,7 +67,8 @@ public class SubRegionPlacement extends BasePlacement
         return this.enabled == false ||
                this.ignoreEntities ||
                this.mirror != BlockMirror.NONE ||
-               this.rotation != BlockRotation.NONE ||
+               this.rotation1 != BlockRotation.NONE ||
+               this.rotation2 != BlockRotation.NONE ||
                this.position.equals(defaultPosition) == false;
     }
 
@@ -76,8 +81,11 @@ public class SubRegionPlacement extends BasePlacement
     void resetToOriginalValues()
     {
         this.position = this.defaultPos;
-        this.rotation = BlockRotation.NONE;
+        this.rotation1 = BlockRotation.NONE;
+        this.rotation2 = BlockRotation.NONE;
         this.mirror = BlockMirror.NONE;
+        this.rotation1Axis = Direction.Axis.Y;
+        this.rotation2Axis = Direction.Axis.X;
         this.enabled = true;
         this.ignoreEntities = false;
     }
@@ -132,8 +140,11 @@ public class SubRegionPlacement extends BasePlacement
 
         SubRegionPlacement placement = new SubRegionPlacement(pos, defaultPos, name);
         placement.enabled = JsonUtils.getBooleanOrDefault(obj, "enabled", true);
-        placement.rotation = JsonUtils.getRotation(obj, "rotation");
+        placement.rotation1 = JsonUtils.getRotation(obj, "rotation1");
+        placement.rotation2 = JsonUtils.getRotation(obj, "rotation2");
         placement.mirror = JsonUtils.getMirror(obj, "mirror");
+        placement.rotation1Axis = JsonUtils.getAxis(obj, "rotation_1_axis");
+        placement.rotation2Axis = JsonUtils.getAxis(obj, "rotation_2_axis");
         placement.ignoreEntities = JsonUtils.getBooleanOrDefault(obj, "ignore_entities", false);
         placement.coordinateLockMask = JsonUtils.getIntegerOrDefault(obj, "locked_coords", 0);
         placement.displayName = JsonUtils.getStringOrDefault(obj, "display_name", placement.name);

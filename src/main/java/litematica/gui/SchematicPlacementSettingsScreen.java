@@ -3,6 +3,7 @@ package litematica.gui;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -29,8 +30,11 @@ import malilib.listener.EventListener;
 import malilib.overlay.message.MessageDispatcher;
 import malilib.util.StringUtils;
 import malilib.util.data.json.JsonUtils;
+import malilib.util.position.BlockMirror;
 import malilib.util.position.BlockPos;
+import malilib.util.position.BlockRotation;
 import malilib.util.position.Coordinate;
+import malilib.util.position.Direction;
 import litematica.Reference;
 import litematica.data.DataManager;
 import litematica.gui.util.LitematicaIcons;
@@ -63,7 +67,10 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
     protected final GenericButton openPlacementListButton;
     protected final GenericButton openVerifierButton;
     protected final GenericButton resetSubRegionsButton;
-    protected final GenericButton rotateButton;
+    protected final GenericButton rotateButton1;
+    protected final GenericButton rotateButton2;
+    protected final GenericButton rotationAxis1Button;
+    protected final GenericButton rotationAxis2Button;
     protected final GenericButton toggleAllRegionsOffButton;
     protected final GenericButton toggleAllRegionsOnButton;
     protected final GenericButton toggleEnclosingBoxButton;
@@ -99,7 +106,10 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
         this.openPlacementListButton   = GenericButton.create(18, "litematica.button.change_menu.schematic_placements", this::openPlacementList);
         this.openVerifierButton        = GenericButton.create(18, "litematica.button.misc.schematic_verifier", this::openVerifier);
         this.resetSubRegionsButton     = GenericButton.create(18, "litematica.button.schematic_placement_settings.reset_sub_regions", this::resetSubRegions);
-        this.rotateButton              = GenericButton.create(18, this::getRotateButtonLabel, this::rotate);
+        this.rotateButton1             = GenericButton.create(18, this::getRotateButton1Label, this::rotate1);
+        this.rotateButton2             = GenericButton.create(18, this::getRotateButton2Label, this::rotate2);
+        this.rotationAxis1Button       = GenericButton.create(18, this::getRotationAxis1ButtonLabel, this::cycleRotationAxis1);
+        this.rotationAxis2Button       = GenericButton.create(18, this::getRotationAxis2ButtonLabel, this::cycleRotationAxis2);
         this.toggleAllRegionsOffButton = GenericButton.create(18, "litematica.button.schematic_placement_settings.toggle_all_off", this::toggleAllRegionsOff);
         this.toggleAllRegionsOnButton  = GenericButton.create(18, "litematica.button.schematic_placement_settings.toggle_all_on", this::toggleAllRegionsOn);
         this.toggleEnclosingBoxButton  = GenericButton.create(this::getEnclosingBoxButtonIcon, this::toggleEnclosingBoxRendering);
@@ -151,7 +161,8 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
 
         BooleanSupplier enabledSupplier = this::isNotLocked;
         this.mirrorButton.setEnabledStatusSupplier(enabledSupplier);
-        this.rotateButton.setEnabledStatusSupplier(enabledSupplier);
+        this.rotateButton1.setEnabledStatusSupplier(enabledSupplier);
+        this.rotateButton2.setEnabledStatusSupplier(enabledSupplier);
         this.originEditWidget.setEnabledStatusSupplier(enabledSupplier);
 
         this.lockXCoordCheckbox.setBooleanStorage(() -> this.isCoordinateLocked(Coordinate.X), (val) -> this.setCoordinateLocked(val, Coordinate.X));
@@ -183,7 +194,10 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
         this.addWidget(this.originEditWidget);
         this.addWidget(this.originLabel);
         this.addWidget(this.resetSubRegionsButton);
-        this.addWidget(this.rotateButton);
+        this.addWidget(this.rotateButton1);
+        this.addWidget(this.rotateButton2);
+        this.addWidget(this.rotationAxis1Button);
+        this.addWidget(this.rotationAxis2Button);
         this.addWidget(this.schematicNameLabel);
         this.addWidget(this.schematicTypeIcon);
         this.addWidget(this.subRegionsLabel);
@@ -219,7 +233,7 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
 
         this.changeSchematicButton.setPosition(x, this.schematicNameLabel.getBottom() + 1);
 
-        x = this.getRight() - 114;
+        x = this.getRight() - 122;
         this.togglePlacementEnabledButton.setPosition(x, toggleButtonY);
 
         this.copyPasteSettingsButton.setRight(this.togglePlacementEnabledButton.getX() - 4);
@@ -242,8 +256,13 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
         this.originLabel.setPosition(x, this.toggleEntitiesButton.getBottom() + 4);
         this.originEditWidget.setPosition(x, this.originLabel.getBottom() + 1);
 
-        this.rotateButton.setPosition(x, this.originEditWidget.getBottom() + 1);
-        this.mirrorButton.setPosition(x, this.rotateButton.getBottom() + 1);
+        this.rotationAxis1Button.setPosition(x, this.originEditWidget.getBottom() + 1);
+        this.rotationAxis2Button.setPosition(x, this.rotationAxis1Button.getBottom() + 1);
+
+        this.rotateButton1.setPosition(this.rotationAxis1Button.getRight() + 2, this.rotationAxis1Button.getY());
+        this.rotateButton2.setPosition(this.rotateButton1.getX(), this.rotateButton1.getBottom() + 1);
+        this.mirrorButton.setPosition(this.rotateButton1.getX(), this.rotateButton2.getBottom() + 1);
+
         this.resetSubRegionsButton.setPosition(x, this.mirrorButton.getBottom() + 1);
 
         x = this.originEditWidget.getRight() + 2;
@@ -434,15 +453,76 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
 
     protected boolean mirror(int mouseButton, GenericButton button)
     {
-        boolean reverse = mouseButton == 1;
-        this.manager.setMirror(this.placement, this.placement.getMirror().cycle(reverse));
+        if (mouseButton == 2)
+        {
+            this.manager.setMirror(this.placement, BlockMirror.NONE);
+        }
+        else
+        {
+            boolean reverse = mouseButton == 1;
+            this.manager.setMirror(this.placement, this.placement.getMirror().cycle(reverse));
+        }
+
         return true;
     }
 
-    protected boolean rotate(int mouseButton, GenericButton button)
+    protected boolean rotate1(int mouseButton, GenericButton button)
     {
-        boolean reverse = mouseButton == 1;
-        this.manager.setRotation(this.placement, this.placement.getRotation().cycle(reverse));
+        if (mouseButton == 2)
+        {
+            this.manager.setRotation1(this.placement, BlockRotation.NONE);
+        }
+        else
+        {
+            boolean reverse = mouseButton == 1;
+            this.manager.setRotation1(this.placement, this.placement.getRotation1().cycle(reverse));
+        }
+
+        return true;
+    }
+
+    protected boolean rotate2(int mouseButton, GenericButton button)
+    {
+        if (mouseButton == 2)
+        {
+            this.manager.setRotation2(this.placement, BlockRotation.NONE);
+        }
+        else
+        {
+            boolean reverse = mouseButton == 1;
+            this.manager.setRotation2(this.placement, this.placement.getRotation2().cycle(reverse));
+        }
+
+        return true;
+    }
+
+    protected boolean cycleRotationAxis1(int mouseButton, GenericButton button)
+    {
+        if (mouseButton == 2)
+        {
+            this.manager.setRotation1Axis(this.placement, Direction.Axis.Y);
+        }
+        else
+        {
+            boolean reverse = mouseButton == 1;
+            this.manager.setRotation1Axis(this.placement, this.placement.getRotation1Axis().cycle(reverse));
+        }
+
+        return true;
+    }
+
+    protected boolean cycleRotationAxis2(int mouseButton, GenericButton button)
+    {
+        if (mouseButton == 2)
+        {
+            this.manager.setRotation2Axis(this.placement, Direction.Axis.Y);
+        }
+        else
+        {
+            boolean reverse = mouseButton == 1;
+            this.manager.setRotation2Axis(this.placement, this.placement.getRotation2Axis().cycle(reverse));
+        }
+
         return true;
     }
 
@@ -559,10 +639,31 @@ public class SchematicPlacementSettingsScreen extends BaseListScreen<DataListWid
         return StringUtils.translate(key, val);
     }
 
-    protected String getRotateButtonLabel()
+    protected String getRotateButton1Label()
     {
-        String val = this.placement.getRotation().getDisplayName();
-        String key = "litematica.button.schematic_placement_settings.rotation_value";
+        String val = this.placement.getRotation1().getDisplayName();
+        String key = "litematica.button.schematic_placement_settings.rotation_1_value";
+        return StringUtils.translate(key, val);
+    }
+
+    protected String getRotateButton2Label()
+    {
+        String val = this.placement.getRotation2().getDisplayName();
+        String key = "litematica.button.schematic_placement_settings.rotation_2_value";
+        return StringUtils.translate(key, val);
+    }
+
+    protected String getRotationAxis1ButtonLabel()
+    {
+        String val = this.placement.getRotation1Axis().getName().toUpperCase(Locale.ROOT);
+        String key = "litematica.button.schematic_placement_settings.axis_value";
+        return StringUtils.translate(key, val);
+    }
+
+    protected String getRotationAxis2ButtonLabel()
+    {
+        String val = this.placement.getRotation2Axis().getName().toUpperCase(Locale.ROOT);
+        String key = "litematica.button.schematic_placement_settings.axis_value";
         return StringUtils.translate(key, val);
     }
 
