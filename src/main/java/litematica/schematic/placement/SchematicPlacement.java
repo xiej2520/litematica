@@ -22,9 +22,7 @@ import malilib.util.FileUtils;
 import malilib.util.data.Color4f;
 import malilib.util.data.EnabledCondition;
 import malilib.util.data.json.JsonUtils;
-import malilib.util.position.BlockMirror;
 import malilib.util.position.BlockPos;
-import malilib.util.position.BlockRotation;
 import malilib.util.position.IntBoundingBox;
 import malilib.util.position.Vec3i;
 import litematica.Litematica;
@@ -343,99 +341,22 @@ public class SchematicPlacement extends BasePlacement
         posMut.set(x, y, z);
     }
 
-    public Rotation getFullRotation()
+    public Rotation getCombinedRotation(Rotation mainRotation, SubRegionPlacement regionPlacement)
     {
-        if (this.rotation1 == BlockRotation.NONE &&
-            this.rotation2 == BlockRotation.NONE &&
-            this.mirror == BlockMirror.NONE)
-        {
-            return Rotation.NONE;
-        }
-
-        Rotation rotation = Rotation.NONE;
-
-        /*
-        System.out.printf("\n\nnone: \n");
-        int[] m = rotation.getForwardMatrix();
-        for (int i = 0; i < 9; ++i)
-        {
-            System.out.printf("%2d ", m[i]);
-            if (i == 2 || i == 5)
-                System.out.printf("\n");
-        }
-        */
-
-        if (this.rotation1 != BlockRotation.NONE)
-        {
-            rotation = rotation.add(Rotation.of(this.rotation1, this.rotation1Axis));
-
-            /*
-            System.out.printf("\n\nrot 1: \n");
-            m = rotation.getForwardMatrix();
-            for (int i = 0; i < 9; ++i)
-            {
-                System.out.printf("%2d ", m[i]);
-                if (i == 2 || i == 5)
-                    System.out.printf("\n");
-            }
-            */
-        }
-
-        if (this.rotation2 != BlockRotation.NONE)
-        {
-            rotation = rotation.add(Rotation.of(this.rotation2, this.rotation2Axis));
-
-            /*
-            m = rotation.getForwardMatrix();
-            System.out.printf("\n\nrot 2: \n");
-            for (int i = 0; i < 9; ++i)
-            {
-                System.out.printf("%2d ", m[i]);
-                if (i == 2 || i == 5)
-                    System.out.printf("\n");
-            }
-            */
-        }
-
-        if (this.mirror != BlockMirror.NONE)
-        {
-            rotation = rotation.add(Rotation.of(this.mirror));
-
-            /*
-            m = rotation.getForwardMatrix();
-            System.out.printf("\n\nmirror: \n");
-            for (int i = 0; i < 9; ++i)
-            {
-                System.out.printf("%2d ", m[i]);
-                if (i == 2 || i == 5)
-                    System.out.printf("\n");
-            }
-            */
-        }
-
-        System.out.printf("\n\nfull rot: \n");
-        int[] m = rotation.getForwardMatrix();
-        for (int i = 0; i < 9; ++i)
-        {
-            System.out.printf("%2d ", m[i]);
-            if (i == 2 || i == 5)
-                System.out.printf("\n");
-        }
-        System.out.printf("\n");
-
-        return rotation;
+        return regionPlacement.getFullRotation().add(mainRotation);
     }
 
     protected SelectionBox getSelectionBoxForRegion(SubRegionPlacement regionPlacement,
                                                     SchematicRegion schematicRegion)
     {
+        Rotation mainRotation = this.getFullRotation();
+        Rotation fullRotation = this.getCombinedRotation(mainRotation, regionPlacement);
+
         BlockPos.MutBlockPos posMut = new BlockPos.MutBlockPos(regionPlacement.getPosition());
-        //Rotation rotation = Rotation.of(this.getRotation1(), this.getRotation1Axis());
-        Rotation rotation = this.getFullRotation();
-        BlockPos boxOrigin = rotation.rotate(posMut).add(this.position);
+        BlockPos boxOrigin = mainRotation.rotate(posMut).add(this.position);
 
         getRelativeEndPositionFromAreaSize(schematicRegion.getSize(), posMut);
-        BlockPos boxEnd = rotation.rotate(posMut).add(boxOrigin);
+        BlockPos boxEnd = fullRotation.rotate(posMut).add(boxOrigin);
 
         return new SelectionBox(boxOrigin, boxEnd, regionPlacement.getName());
     }

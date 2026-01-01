@@ -1,5 +1,7 @@
 package litematica.util.value;
 
+import java.util.Arrays;
+
 import malilib.util.position.BlockMirror;
 import malilib.util.position.BlockPos;
 import malilib.util.position.BlockRotation;
@@ -38,6 +40,12 @@ public class Rotation
     public Rotation add(Rotation other)
     {
         int[] f = multiply(other.forwardMatrix, this.forwardMatrix);
+
+        if (Arrays.equals(f, NONE.forwardMatrix))
+        {
+            return NONE;
+        }
+
         int[] r = multiply(this.reverseMatrix, other.reverseMatrix);
 
         return new Rotation(f, r);
@@ -55,6 +63,9 @@ public class Rotation
 
     public BlockPos.MutBlockPos rotate(BlockPos.MutBlockPos pos)
     {
+        if (this == NONE)
+            return pos;
+
         int x = pos.getX();
         int y = pos.getY();
         int z = pos.getZ();
@@ -71,6 +82,9 @@ public class Rotation
 
     public BlockPos.MutBlockPos reverse(BlockPos.MutBlockPos pos)
     {
+        if (this == NONE)
+            return pos;
+
         int x = pos.getX();
         int y = pos.getY();
         int z = pos.getZ();
@@ -87,6 +101,9 @@ public class Rotation
 
     public Vec3d.MutVec3d rotate(Vec3d.MutVec3d pos)
     {
+        if (this == NONE)
+            return pos;
+
         double x = pos.getX();
         double y = pos.getY();
         double z = pos.getZ();
@@ -103,6 +120,9 @@ public class Rotation
 
     public Vec3d.MutVec3d reverse(Vec3d.MutVec3d pos)
     {
+        if (this == NONE)
+            return pos;
+
         double x = pos.getX();
         double y = pos.getY();
         double z = pos.getZ();

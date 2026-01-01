@@ -515,15 +515,16 @@ public class SchematicPlacingUtils
         // and transform that offset by that sub-region's transform
         posMutable.set(minX - rx, minY - ry, minZ - rz);
         BlockPos minOffset = posMutable.toImmutable();
-        //subRegionPlacement.getTransform().apply(posMutable); // TODO
+        Rotation subRotation = subRegionPlacement.getFullRotation();
+        subRotation.rotate(posMutable);
         BlockPos minOffsetTr = posMutable.toImmutable();
 
         // Now add the relative origin position to the transformed min corner offset
         posMutable.addMut(regionOriginRelative);
         BlockPos minCornerSub = posMutable.toImmutable();
         // Then transform that minimum corner position by the main placement transform
-        Rotation rotation = schematicPlacement.getFullRotation();
-        rotation.rotate(posMutable);
+        Rotation mainRotation = schematicPlacement.getFullRotation();
+        mainRotation.rotate(posMutable);
         BlockPos minCornerRel = posMutable.toImmutable();
 
         // Then add the absolute origin to get the final absolute position of the region/block container min corner
@@ -541,8 +542,7 @@ public class SchematicPlacingUtils
         int endY = Math.max(bounds.minY - ay, bounds.maxY - ay);
         int endZ = Math.max(bounds.minZ - az, bounds.maxZ - az);
 
-        // FIXME this needs to be a combination of the main placement and the sub-region placement transforms
-        Rotation fullTransform = rotation;
+        Rotation fullTransform = schematicPlacement.getCombinedRotation(mainRotation, subRegionPlacement);
 
         // Reverse transform the container-relative offsets
         posMutable.set(startX, startY, startZ);

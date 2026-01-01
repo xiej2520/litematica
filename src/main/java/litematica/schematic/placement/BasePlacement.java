@@ -12,6 +12,7 @@ import malilib.util.position.BlockRotation;
 import malilib.util.position.Coordinate;
 import malilib.util.position.Direction;
 import litematica.util.PositionUtils;
+import litematica.util.value.Rotation;
 
 public class BasePlacement
 {
@@ -87,6 +88,35 @@ public class BasePlacement
     public Direction.Axis getRotation2Axis()
     {
         return this.rotation2Axis;
+    }
+
+    public Rotation getFullRotation()
+    {
+        if (this.rotation1 == BlockRotation.NONE &&
+            this.rotation2 == BlockRotation.NONE &&
+            this.mirror == BlockMirror.NONE)
+        {
+            return Rotation.NONE;
+        }
+
+        Rotation rotation = Rotation.NONE;
+
+        if (this.rotation1 != BlockRotation.NONE)
+        {
+            rotation = Rotation.of(this.rotation1, this.rotation1Axis);
+        }
+
+        if (this.rotation2 != BlockRotation.NONE)
+        {
+            rotation = rotation.add(Rotation.of(this.rotation2, this.rotation2Axis));
+        }
+
+        if (this.mirror != BlockMirror.NONE)
+        {
+            rotation = rotation.add(Rotation.of(this.mirror));
+        }
+
+        return rotation;
     }
 
     public Color4f getBoundingBoxColor()

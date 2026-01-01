@@ -1,6 +1,7 @@
 package litematica.gui;
 
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.function.BooleanSupplier;
 
 import malilib.gui.BaseScreen;
@@ -16,6 +17,7 @@ import malilib.util.position.BlockMirror;
 import malilib.util.position.BlockPos;
 import malilib.util.position.BlockRotation;
 import malilib.util.position.Coordinate;
+import malilib.util.position.Direction;
 import litematica.Reference;
 import litematica.data.DataManager;
 import litematica.schematic.LoadedSchematic;
@@ -40,7 +42,10 @@ public class SchematicPlacementSubRegionSettingsScreen extends BaseScreen
     protected final GenericButton nameResetButton;
     protected final GenericButton openPlacementSettingsButton;
     protected final GenericButton resetSubRegionButton;
-    protected final GenericButton rotateButton;
+    protected final GenericButton rotation1Button;
+    protected final GenericButton rotation2Button;
+    protected final GenericButton rotationAxis1Button;
+    protected final GenericButton rotationAxis2Button;
     protected final GenericButton toggleEntitiesButton;
     protected final GenericButton toggleRegionEnabledButton;
     protected final CheckBoxWidget lockXCoordCheckbox;
@@ -74,7 +79,10 @@ public class SchematicPlacementSubRegionSettingsScreen extends BaseScreen
         this.nameResetButton             = GenericButton.create(DefaultIcons.RESET_12, this::resetName);
         this.openPlacementSettingsButton = GenericButton.create(18, "litematica.button.schematic_placement_sub_region_settings.placement_settings", this::openPlacementSettings);
         this.resetSubRegionButton        = GenericButton.create(18, "litematica.button.schematic_placement_sub_region_settings.reset_region", this::resetSubRegion);
-        this.rotateButton                = GenericButton.create(18, this::getRotateButtonLabel, this::rotate);
+        this.rotation1Button             = GenericButton.create(18, this::getRotation1ButtonLabel, this::rotate1);
+        this.rotation2Button             = GenericButton.create(18, this::getRotation2ButtonLabel, this::rotate2);
+        this.rotationAxis1Button         = GenericButton.create(18, this::getRotationAxis1ButtonLabel, this::cycleRotationAxis1);
+        this.rotationAxis2Button         = GenericButton.create(18, this::getRotationAxis2ButtonLabel, this::cycleRotationAxis2);
 
         this.toggleEntitiesButton      = OnOffButton.onOff(18, "litematica.button.schematic_placement_settings.ignore_entities",
                                                            this.subRegion::ignoreEntities, this::toggleIgnoreEntities);
@@ -96,8 +104,9 @@ public class SchematicPlacementSubRegionSettingsScreen extends BaseScreen
         this.lockZCoordCheckbox.translateAndAddHoverString("litematica.hover.checkmark.schematic_placement_settings.lock_coordinate");
 
         BooleanSupplier enabledSupplier = this::isNotLocked;
+        this.rotation1Button.setEnabledStatusSupplier(enabledSupplier);
+        this.rotation2Button.setEnabledStatusSupplier(enabledSupplier);
         this.mirrorButton.setEnabledStatusSupplier(enabledSupplier);
-        this.rotateButton.setEnabledStatusSupplier(enabledSupplier);
         this.originEditWidget.setEnabledStatusSupplier(enabledSupplier);
         this.resetSubRegionButton.setEnabledStatusSupplier(() -> this.subRegion.isRegionPlacementModifiedFromDefault() && this.isNotLocked());
 
@@ -122,7 +131,10 @@ public class SchematicPlacementSubRegionSettingsScreen extends BaseScreen
         this.addWidget(this.placementNameLabel);
         this.addWidget(this.regionNameLabel);
         this.addWidget(this.resetSubRegionButton);
-        this.addWidget(this.rotateButton);
+        this.addWidget(this.rotation1Button);
+        this.addWidget(this.rotation2Button);
+        this.addWidget(this.rotationAxis1Button);
+        this.addWidget(this.rotationAxis2Button);
         this.addWidget(this.schematicNameLabel);
         this.addWidget(this.toggleEntitiesButton);
         this.addWidget(this.toggleRegionEnabledButton);
@@ -154,8 +166,13 @@ public class SchematicPlacementSubRegionSettingsScreen extends BaseScreen
         this.originLabel.setPosition(x + 2, this.toggleEntitiesButton.getBottom() + 4);
         this.originEditWidget.setPosition(x + 2, this.originLabel.getBottom() + 1);
 
-        this.rotateButton.setPosition(x, this.originEditWidget.getBottom() + 1);
-        this.mirrorButton.setPosition(x, this.rotateButton.getBottom() + 1);
+        this.rotationAxis1Button.setPosition(x, this.originEditWidget.getBottom() + 1);
+        this.rotationAxis2Button.setPosition(x, this.rotationAxis1Button.getBottom() + 1);
+
+        this.rotation1Button.setPosition(this.rotationAxis1Button.getRight() + 2, this.rotationAxis1Button.getY());
+        this.rotation2Button.setPosition(this.rotation1Button.getX(), this.rotation1Button.getBottom() + 1);
+        this.mirrorButton.setPosition(this.rotation1Button.getX(), this.rotation2Button.getBottom() + 1);
+
         this.resetSubRegionButton.setPosition(x, this.mirrorButton.getBottom() + 1);
 
         x = this.originEditWidget.getRight() + 2;
@@ -206,17 +223,87 @@ public class SchematicPlacementSubRegionSettingsScreen extends BaseScreen
 
     protected boolean mirror(int mouseButton, GenericButton button)
     {
-        boolean reverse = mouseButton == 1;
-        BlockMirror mirror = this.subRegion.getMirror().cycle(reverse);
-        this.manager.setSubRegionMirror(this.placement,this.subRegion.getName(), mirror);
+        String name = this.subRegion.getName();
+
+        if (mouseButton == 2)
+        {
+            this.manager.setSubRegionMirror(this.placement, name, BlockMirror.NONE);
+        }
+        else
+        {
+            boolean reverse = mouseButton == 1;
+            BlockMirror mirror = this.subRegion.getMirror().cycle(reverse);
+            this.manager.setSubRegionMirror(this.placement, name, mirror);
+        }
+
         return true;
     }
 
-    protected boolean rotate(int mouseButton, GenericButton button)
+    protected boolean rotate1(int mouseButton, GenericButton button)
     {
-        boolean reverse = mouseButton == 1;
-        BlockRotation rotation = this.subRegion.getRotation().cycle(reverse);
-        this.manager.setSubRegionRotation(this.placement, this.subRegion.getName(), rotation);
+        String name = this.subRegion.getName();
+
+        if (mouseButton == 2)
+        {
+            this.manager.setSubRegionRotation1(this.placement, name, BlockRotation.NONE);
+        }
+        else
+        {
+            boolean reverse = mouseButton == 1;
+            this.manager.setSubRegionRotation1(this.placement, name, this.subRegion.getRotation1().cycle(reverse));
+        }
+
+        return true;
+    }
+
+    protected boolean rotate2(int mouseButton, GenericButton button)
+    {
+        String name = this.subRegion.getName();
+
+        if (mouseButton == 2)
+        {
+            this.manager.setSubRegionRotation2(this.placement, name, BlockRotation.NONE);
+        }
+        else
+        {
+            boolean reverse = mouseButton == 1;
+            this.manager.setSubRegionRotation2(this.placement, name, this.subRegion.getRotation2().cycle(reverse));
+        }
+
+        return true;
+    }
+
+    protected boolean cycleRotationAxis1(int mouseButton, GenericButton button)
+    {
+        String name = this.subRegion.getName();
+
+        if (mouseButton == 2)
+        {
+            this.manager.setSubRegionRotation1Axis(this.placement, name, Direction.Axis.Y);
+        }
+        else
+        {
+            boolean reverse = mouseButton == 1;
+            this.manager.setSubRegionRotation1Axis(this.placement, name, this.subRegion.getRotation1Axis().cycle(reverse));
+        }
+
+        return true;
+    }
+
+    protected boolean cycleRotationAxis2(int mouseButton, GenericButton button)
+    {
+        String name = this.subRegion.getName();
+
+        if (mouseButton == 2)
+        {
+            this.manager.setSubRegionRotation2Axis(this.placement, name, Direction.Axis.Y);
+        }
+        else
+        {
+            boolean reverse = mouseButton == 1;
+            this.manager.setSubRegionRotation2Axis(this.placement, name, this.subRegion.getRotation2Axis().cycle(reverse));
+        }
+
         return true;
     }
 
@@ -246,10 +333,31 @@ public class SchematicPlacementSubRegionSettingsScreen extends BaseScreen
         return StringUtils.translate(key, val);
     }
 
-    protected String getRotateButtonLabel()
+    protected String getRotation1ButtonLabel()
     {
-        String val = this.subRegion.getRotation().getDisplayName();
-        String key = "litematica.button.schematic_placement_settings.rotation_value";
+        String val = this.subRegion.getRotation1().getDisplayName();
+        String key = "litematica.button.schematic_placement_settings.rotation_1_value";
+        return StringUtils.translate(key, val);
+    }
+
+    protected String getRotation2ButtonLabel()
+    {
+        String val = this.subRegion.getRotation2().getDisplayName();
+        String key = "litematica.button.schematic_placement_settings.rotation_2_value";
+        return StringUtils.translate(key, val);
+    }
+
+    protected String getRotationAxis1ButtonLabel()
+    {
+        String val = this.subRegion.getRotation1Axis().getName().toUpperCase(Locale.ROOT);
+        String key = "litematica.button.schematic_placement_settings.axis_value";
+        return StringUtils.translate(key, val);
+    }
+
+    protected String getRotationAxis2ButtonLabel()
+    {
+        String val = this.subRegion.getRotation2Axis().getName().toUpperCase(Locale.ROOT);
+        String key = "litematica.button.schematic_placement_settings.axis_value";
         return StringUtils.translate(key, val);
     }
 }

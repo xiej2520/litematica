@@ -863,9 +863,24 @@ public class SchematicPlacementManager
         this.modifyPlacementRegion(placement, regionName, SubRegionPlacement::toggleIgnoreEntities, false);
     }
 
-    public void setSubRegionRotation(SchematicPlacement placement, String regionName, BlockRotation rotation)
+    public void setSubRegionRotation1(SchematicPlacement placement, String regionName, BlockRotation rotation)
     {
         this.modifyPlacementRegion(placement, regionName, reg -> reg.rotation1 = rotation, true);
+    }
+
+    public void setSubRegionRotation2(SchematicPlacement placement, String regionName, BlockRotation rotation)
+    {
+        this.modifyPlacementRegion(placement, regionName, reg -> reg.rotation2 = rotation, true);
+    }
+
+    public void setSubRegionRotation1Axis(SchematicPlacement placement, String regionName, Direction.Axis axis)
+    {
+        this.modifyPlacementRegion(placement, regionName, reg -> reg.rotation1Axis = axis, true);
+    }
+
+    public void setSubRegionRotation2Axis(SchematicPlacement placement, String regionName, Direction.Axis axis)
+    {
+        this.modifyPlacementRegion(placement, regionName, reg -> reg.rotation2Axis = axis, true);
     }
 
     public void setSubRegionMirror(SchematicPlacement placement, String regionName, BlockMirror mirror)
