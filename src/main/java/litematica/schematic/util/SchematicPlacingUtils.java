@@ -566,6 +566,7 @@ public class SchematicPlacingUtils
         endZ = Math.max(Math.abs(z1), Math.abs(z2));
 
         // FIXME These should come from the transform
+        /*
         final BlockRotation rotationCombined = schematicPlacement.getRotation().add(subRegionPlacement.getRotation());
         final BlockMirror mirrorMain = schematicPlacement.getMirror();
         BlockMirror mirrorSub = subRegionPlacement.getMirror();
@@ -576,6 +577,7 @@ public class SchematicPlacingUtils
         {
             mirrorSub = mirrorSub == BlockMirror.X ? BlockMirror.Z : BlockMirror.X;
         }
+        */
 
         final IBlockState barrier = Blocks.BARRIER.getDefaultState();
 
@@ -632,9 +634,12 @@ public class SchematicPlacingUtils
                         continue;
                     }
 
+                    /*
                     if (mirrorMain != BlockMirror.NONE) { state = state.withMirror(mirrorMain); }
                     if (mirrorSub != BlockMirror.NONE)  { state = state.withMirror(mirrorSub); }
                     if (rotationCombined != BlockRotation.NONE) { state = state.withRotation(rotationCombined); }
+                    */
+                    state = PositionUtils.rotateState(state, fullTransform);
 
                     TileEntity beOld = world.getTileEntity(posMutable);
 
@@ -661,9 +666,11 @@ public class SchematicPlacingUtils
                             {
                                 BlockWrap.readBlockEntityFrom(be, beData);
 
+                                /*
                                 if (mirrorMain != BlockMirror.NONE) { be.mirror(mirrorMain.getVanillaMirror()); }
                                 if (mirrorSub != BlockMirror.NONE)  { be.mirror(mirrorSub.getVanillaMirror()); }
                                 if (rotationCombined != BlockRotation.NONE) { be.rotate(rotationCombined.getVanillaRotation()); }
+                                */
                             }
                             catch (Exception e)
                             {

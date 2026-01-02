@@ -14,6 +14,18 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import org.apache.commons.lang3.tuple.Pair;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockBanner;
+import net.minecraft.block.BlockLever;
+import net.minecraft.block.BlockLog;
+import net.minecraft.block.BlockRailBase;
+import net.minecraft.block.BlockSlab;
+import net.minecraft.block.BlockStairs;
+import net.minecraft.block.BlockStandingSign;
+import net.minecraft.block.BlockTrapDoor;
+import net.minecraft.block.properties.IProperty;
+import net.minecraft.block.properties.PropertyInteger;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -22,6 +34,7 @@ import net.minecraft.world.border.WorldBorder;
 
 import malilib.overlay.message.MessageDispatcher;
 import malilib.util.data.EnabledCondition;
+import malilib.util.game.BlockUtils;
 import malilib.util.game.wrap.EntityWrap;
 import malilib.util.game.wrap.GameWrap;
 import malilib.util.position.BlockMirror;
@@ -34,6 +47,7 @@ import malilib.util.position.IntBoundingBox;
 import malilib.util.position.LayerRange;
 import malilib.util.position.Vec3d;
 import malilib.util.position.Vec3i;
+import malilib.util.world.BlockState;
 import litematica.config.Configs;
 import litematica.data.DataManager;
 import litematica.schematic.SchematicRegion;
@@ -45,6 +59,7 @@ import litematica.selection.AreaSelectionManager;
 import litematica.selection.BoxCorner;
 import litematica.selection.CornerDefinedBox;
 import litematica.selection.SelectionBox;
+import litematica.util.value.Rotation;
 
 public class PositionUtils
 {
@@ -584,6 +599,356 @@ public class PositionUtils
         }
 
         return map;
+    }
+
+    @Nullable
+    public static EnumFacing facingFromVec(Vec3i vec)
+    {
+        int i = (vec.getZ() & 0xFF) << 16 | (vec.getY() & 0xFF) << 8 | (vec.getX() & 0xFF);
+
+        switch (i)
+        {
+            case 0x000001: return EnumFacing.EAST;
+            case 0x0000FF: return EnumFacing.WEST;
+            case 0x000100: return EnumFacing.UP;
+            case 0x00FF00: return EnumFacing.DOWN;
+            case 0x010000: return EnumFacing.SOUTH;
+            case 0xFF0000: return EnumFacing.NORTH;
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static EnumFacing.Axis axisFromVec(Vec3i vec)
+    {
+        int i = (vec.getZ() & 0xFF) << 16 | (vec.getY() & 0xFF) << 8 | (vec.getX() & 0xFF);
+
+        switch (i)
+        {
+            case 0x000001: return EnumFacing.Axis.X;
+            case 0x0000FF: return EnumFacing.Axis.X;
+            case 0x000100: return EnumFacing.Axis.Y;
+            case 0x00FF00: return EnumFacing.Axis.Y;
+            case 0x010000: return EnumFacing.Axis.Z;
+            case 0xFF0000: return EnumFacing.Axis.Z;
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static BlockLog.EnumAxis logAxisFromVec(Vec3i vec)
+    {
+        int i = (vec.getZ() & 0xFF) << 16 | (vec.getY() & 0xFF) << 8 | (vec.getX() & 0xFF);
+
+        switch (i)
+        {
+            case 0x000001: return BlockLog.EnumAxis.X;
+            case 0x0000FF: return BlockLog.EnumAxis.X;
+            case 0x000100: return BlockLog.EnumAxis.Y;
+            case 0x00FF00: return BlockLog.EnumAxis.Y;
+            case 0x010000: return BlockLog.EnumAxis.Z;
+            case 0xFF0000: return BlockLog.EnumAxis.Z;
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static BlockLever.EnumOrientation leverOrientationFromVec(Vec3i vec)
+    {
+        int i = (vec.getZ() & 0xFF) << 16 | (vec.getY() & 0xFF) << 8 | (vec.getX() & 0xFF);
+
+        switch (i)
+        {
+            case 0x000001: return BlockLever.EnumOrientation.EAST;
+            case 0x0000FF: return BlockLever.EnumOrientation.WEST;
+            case 0x010000: return BlockLever.EnumOrientation.SOUTH;
+            case 0xFF0000: return BlockLever.EnumOrientation.NORTH;
+
+            case 0x000101:
+            case 0x0001FF: return BlockLever.EnumOrientation.UP_X;
+
+            case 0x010100:
+            case 0xFF0100: return BlockLever.EnumOrientation.UP_Z;
+
+            case 0x00FF01:
+            case 0x00FFFF: return BlockLever.EnumOrientation.DOWN_X;
+
+            case 0x01FF00:
+            case 0xFFFF00: return BlockLever.EnumOrientation.DOWN_Z;
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static BlockRailBase.EnumRailDirection railDirectionFromVec(Vec3i vec)
+    {
+        int i = (vec.getZ() & 0xFF) << 16 | (vec.getY() & 0xFF) << 8 | (vec.getX() & 0xFF);
+
+        switch (i)
+        {
+            case 0x000001:
+            case 0x0000FF: return BlockRailBase.EnumRailDirection.EAST_WEST;
+
+            case 0x010000:
+            case 0xFF0000: return BlockRailBase.EnumRailDirection.NORTH_SOUTH;
+
+            case 0x000101:
+            case 0x00FF01: return BlockRailBase.EnumRailDirection.ASCENDING_EAST;
+
+            case 0x0001FF:
+            case 0x00FFFF: return BlockRailBase.EnumRailDirection.ASCENDING_WEST;
+
+            case 0x010100:
+            case 0x01FF00: return BlockRailBase.EnumRailDirection.ASCENDING_SOUTH;
+
+            case 0xFF0100:
+            case 0xFFFF00: return BlockRailBase.EnumRailDirection.ASCENDING_NORTH;
+
+            case 0x010001: return BlockRailBase.EnumRailDirection.SOUTH_EAST;
+            case 0x0100FF: return BlockRailBase.EnumRailDirection.SOUTH_WEST;
+            case 0xFF0001: return BlockRailBase.EnumRailDirection.NORTH_EAST;
+            case 0xFF00FF: return BlockRailBase.EnumRailDirection.NORTH_WEST;
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static BlockSlab.EnumBlockHalf slabHalfFromVec(Vec3i vec)
+    {
+        int i = (vec.getZ() & 0xFF) << 16 | (vec.getY() & 0xFF) << 8 | (vec.getX() & 0xFF);
+
+        switch (i)
+        {
+            case 0x000100: return BlockSlab.EnumBlockHalf.TOP;
+            case 0x00FF00: return BlockSlab.EnumBlockHalf.BOTTOM;
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static BlockStairs.EnumHalf stairHalfFromVec(Vec3i vec)
+    {
+        int i = (vec.getZ() & 0xFF) << 16 | (vec.getY() & 0xFF) << 8 | (vec.getX() & 0xFF);
+
+        switch (i)
+        {
+            case 0x000100: return BlockStairs.EnumHalf.TOP;
+            case 0x00FF00: return BlockStairs.EnumHalf.BOTTOM;
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static BlockTrapDoor.DoorHalf trapdoorHalfFromVec(Vec3i vec)
+    {
+        int i = (vec.getZ() & 0xFF) << 16 | (vec.getY() & 0xFF) << 8 | (vec.getX() & 0xFF);
+
+        switch (i)
+        {
+            case 0x000100: return BlockTrapDoor.DoorHalf.TOP;
+            case 0x00FF00: return BlockTrapDoor.DoorHalf.BOTTOM;
+        }
+
+        return null;
+    }
+
+    @Nullable
+    public static Comparable<?> rotatePropertyValue(IProperty<?> prop,
+                                                    Comparable<?> value,
+                                                    Rotation rotation,
+                                                    BlockPos.MutBlockPos mutPos)
+    {
+        try
+        {
+            if (value instanceof EnumFacing)
+            {
+                mutPos.set(((EnumFacing) value).getDirectionVec());
+                rotation.rotate(mutPos);
+                value = facingFromVec(mutPos);
+            }
+            else if (value instanceof EnumFacing.Axis)
+            {
+                EnumFacing.Axis axis = (EnumFacing.Axis) value;
+
+                switch (axis)
+                {
+                    case X: mutPos.set(1, 0, 0); break;
+                    case Y: mutPos.set(0, 1, 0); break;
+                    case Z: mutPos.set(0, 0, 1); break;
+                }
+
+                rotation.rotate(mutPos);
+                value = axisFromVec(mutPos);
+            }
+            else if (value instanceof BlockLog.EnumAxis)
+            {
+                BlockLog.EnumAxis axis = (BlockLog.EnumAxis) value;
+
+                switch (axis)
+                {
+                    case X: mutPos.set(1, 0, 0); break;
+                    case Y: mutPos.set(0, 1, 0); break;
+                    case Z: mutPos.set(0, 0, 1); break;
+                    default: return value;
+                }
+
+                rotation.rotate(mutPos);
+                value = logAxisFromVec(mutPos);
+            }
+            else if (value instanceof BlockSlab.EnumBlockHalf)
+            {
+                BlockSlab.EnumBlockHalf half = (BlockSlab.EnumBlockHalf) value;
+
+                switch (half)
+                {
+                    case TOP:    mutPos.set(0,  1, 0); break;
+                    case BOTTOM: mutPos.set(0, -1, 0); break;
+                }
+
+                rotation.rotate(mutPos);
+                value = slabHalfFromVec(mutPos);
+            }
+            else if (value instanceof BlockStairs.EnumHalf)
+            {
+                BlockStairs.EnumHalf half = (BlockStairs.EnumHalf) value;
+
+                switch (half)
+                {
+                    case TOP:    mutPos.set(0,  1, 0); break;
+                    case BOTTOM: mutPos.set(0, -1, 0); break;
+                }
+
+                rotation.rotate(mutPos);
+                value = stairHalfFromVec(mutPos);
+            }
+            // TODO Stair Shape
+            else if (value instanceof BlockTrapDoor.DoorHalf)
+            {
+                BlockTrapDoor.DoorHalf half = (BlockTrapDoor.DoorHalf) value;
+
+                switch (half)
+                {
+                    case TOP:    mutPos.set(0,  1, 0); break;
+                    case BOTTOM: mutPos.set(0, -1, 0); break;
+                }
+
+                rotation.rotate(mutPos);
+                value = trapdoorHalfFromVec(mutPos);
+            }
+            else if (value instanceof BlockLever.EnumOrientation)
+            {
+                BlockLever.EnumOrientation orient = (BlockLever.EnumOrientation) value;
+
+                switch (orient)
+                {
+                    case EAST:    mutPos.set( 1,  0,  0); break;
+                    case WEST:    mutPos.set(-1,  0,  0); break;
+                    case SOUTH:   mutPos.set( 0,  0,  1); break;
+                    case NORTH:   mutPos.set( 0,  0, -1); break;
+                    case DOWN_X:  mutPos.set( 1, -1,  0); break;
+                    case DOWN_Z:  mutPos.set( 0, -1,  1); break;
+                    case UP_X:    mutPos.set( 1,  1,  0); break;
+                    case UP_Z:    mutPos.set( 0,  1,  1); break;
+                }
+
+                rotation.rotate(mutPos);
+                value = leverOrientationFromVec(mutPos);
+            }
+            else if (value instanceof BlockRailBase.EnumRailDirection)
+            {
+                BlockRailBase.EnumRailDirection direction = (BlockRailBase.EnumRailDirection) value;
+
+                switch (direction)
+                {
+                    case NORTH_SOUTH:     mutPos.set( 0,  0,  1); break;
+                    case EAST_WEST:       mutPos.set( 1,  0,  0); break;
+                    case ASCENDING_EAST:  mutPos.set( 1,  1,  0); break;
+                    case ASCENDING_WEST:  mutPos.set(-1,  1,  0); break;
+                    case ASCENDING_NORTH: mutPos.set( 0,  1, -1); break;
+                    case ASCENDING_SOUTH: mutPos.set( 0,  1,  1); break;
+                    case SOUTH_EAST:      mutPos.set( 1,  0,  1); break;
+                    case SOUTH_WEST:      mutPos.set(-1,  0,  1); break;
+                    case NORTH_WEST:      mutPos.set(-1,  0, -1); break;
+                    case NORTH_EAST:      mutPos.set( 1,  0, -1); break;
+                }
+
+                rotation.rotate(mutPos);
+                value = railDirectionFromVec(mutPos);
+            }
+            else if (prop == BlockStandingSign.ROTATION || prop == BlockBanner.ROTATION)
+            {
+                // Take a horizontal vector and rotate it
+                mutPos.set( 1,  0,  0);
+                rotation.rotate(mutPos);
+
+                // If it's still horizontal, and not the same as the original, then apply the rotation
+                if (mutPos.getY() == 0 && mutPos.getX() != 1)
+                {
+                    int i = (mutPos.getZ() & 0xFF) << 8 | (mutPos.getX() & 0xFF);
+                    int steps = -1;
+
+                    switch (i)
+                    {
+                        case 0x0001: steps = 0; break;
+                        case 0x00FF: steps = 2; break;
+                        case 0x0100: steps = 1; break;
+                        case 0xFF00: steps = 3; break;
+                    }
+
+                    if (steps >= 0)
+                    {
+                        int numValues = 16;
+                        value = (((Integer) value) + numValues * steps / 4) & 0xF;
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            System.out.printf("rotatePropertyValue(): OOPS, prop: %s, value: %s\n", prop, value);
+        }
+
+        return value;
+    }
+
+    public static BlockState rotateState(BlockState state, Rotation rotation)
+    {
+        IBlockState vanillaState = state.vanillaState();
+        IBlockState newVanillaState = vanillaState;
+        Block block = vanillaState.getBlock();
+        BlockPos.MutBlockPos mutPos = new BlockPos.MutBlockPos();
+
+        for (Map.Entry<IProperty<?>, Comparable<?>> entry : vanillaState.getProperties().entrySet())
+        {
+            IProperty<?> prop = entry.getKey();
+            Comparable<?> value = entry.getValue();
+
+            Comparable<?> newValue = rotatePropertyValue(prop, value, rotation, mutPos);
+
+            if (newValue != null && newValue != value)
+            {
+                if (prop.getAllowedValues().contains(newValue))
+                {
+                    //System.out.printf("old: %s, ", vanillaState);
+                    newVanillaState = BlockUtils.getBlockStateWithProperty(newVanillaState, prop, newValue);
+                    //System.out.printf("new: %s\n", newVanillaState);
+                }
+                // Non-supported rotation, use the default property value
+                else
+                {
+                    newVanillaState = BlockUtils.getBlockStateWithProperty(newVanillaState, prop, block.getDefaultState().getValue(prop));
+                }
+            }
+        }
+
+        return newVanillaState != vanillaState ? BlockState.of(newVanillaState) : state;
     }
 
     @Nullable
