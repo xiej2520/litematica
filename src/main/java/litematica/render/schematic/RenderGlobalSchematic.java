@@ -1,19 +1,12 @@
 package litematica.render.schematic;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import javax.annotation.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.WorldClient;
-import net.minecraft.client.renderer.BlockFluidRenderer;
 import net.minecraft.client.renderer.BlockModelShapes;
 import net.minecraft.client.renderer.BlockRendererDispatcher;
 import net.minecraft.client.renderer.RenderGlobal;
@@ -53,7 +46,6 @@ import malilib.util.position.BlockPos;
 import malilib.util.position.ChunkSectionPos;
 import malilib.util.position.LayerRange;
 import litematica.data.DataManager;
-import litematica.mixin.IMixinBlockRendererDispatcher;
 import litematica.mixin.IMixinViewFrustum;
 import litematica.render.schematic.RenderChunkSchematicVbo.OverlayRenderType;
 
@@ -63,7 +55,7 @@ public class RenderGlobalSchematic extends RenderGlobal
     private final RenderManager renderManager;
     private final BlockModelShapes blockModelShapes;
     private final BlockModelRendererSchematic blockModelRenderer;
-    private final BlockFluidRenderer fluidRenderer;
+    private final BlockFluidRendererSchematic fluidRenderer;
     private final Set<TileEntity> setTileEntities = new HashSet<>();
     private final List<RenderChunkSchematicVbo> renderInfos = new ArrayList<>(1024);
     private final List<ChunkSectionPos> subChunksWithinRenderRange = new ArrayList<>();
@@ -124,7 +116,7 @@ public class RenderGlobalSchematic extends RenderGlobal
         BlockRendererDispatcher dispatcher = mc.getBlockRendererDispatcher();
         this.blockModelShapes = dispatcher.getBlockModelShapes();
         this.blockModelRenderer = new BlockModelRendererSchematic(mc.getBlockColors());
-        this.fluidRenderer = ((IMixinBlockRendererDispatcher) dispatcher).getFluidRenderer();
+        this.fluidRenderer = new BlockFluidRendererSchematic(mc.getBlockColors());
 
         DataManager.getSchematicPlacementManager().addRebuildListener(this::onEvent);
     }
@@ -682,8 +674,7 @@ public class RenderGlobalSchematic extends RenderGlobal
                     case ENTITYBLOCK_ANIMATED:
                         return false;
                     case LIQUID:
-                        // TODO FIXME add a custom fluid renderer that uses the VertexBuilder
-                        //return this.fluidRenderer.renderFluid(blockAccess, state, pos, builder);
+                        return this.fluidRenderer.renderFluid(blockAccess, state, pos, builder);
                     default:
                         return false;
                 }
