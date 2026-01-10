@@ -159,13 +159,16 @@ public class ChunkRenderWorkerLitematica implements Runnable
             }
             else if (generatorType == ChunkCompileTaskGeneratorSchematic.Type.RESORT_TRANSPARENCY)
             {
-                VertexBuilder buffer = buffers.getWorldRendererByLayer(BlockRenderLayer.TRANSLUCENT);
-                futuresList.add(this.chunkRenderDispatcher.uploadChunkBlocks(BlockRenderLayer.TRANSLUCENT, buffer, renderChunk, compiledChunk, generator.getDistanceSq()));
+                if (compiledChunk.isLayerEmpty(BlockRenderLayer.TRANSLUCENT) == false)
+                {
+                    VertexBuilder buffer = buffers.getWorldRendererByLayer(BlockRenderLayer.TRANSLUCENT);
+                    futuresList.add(this.chunkRenderDispatcher.uploadChunkBlocks(BlockRenderLayer.TRANSLUCENT, buffer, renderChunk, compiledChunk, generator.getDistanceSq()));
+                }
 
                 if (compiledChunk.isOverlayTypeEmpty(OverlayRenderType.QUAD) == false)
                 {
                     //if (GuiBase.isCtrlDown()) System.out.printf("RESORT_TRANSPARENCY pre uploadChunkOverlay()\n");
-                    buffer = buffers.getOverlayBuffer(OverlayRenderType.QUAD);
+                    VertexBuilder buffer = buffers.getOverlayBuffer(OverlayRenderType.QUAD);
                     futuresList.add(this.chunkRenderDispatcher.uploadChunkOverlay(OverlayRenderType.QUAD, buffer, renderChunk, compiledChunk, generator.getDistanceSq()));
                 }
             }

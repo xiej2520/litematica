@@ -1,6 +1,7 @@
 package litematica.render.schematic;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -8,6 +9,8 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nullable;
 import com.google.common.collect.Sets;
+import litematica.Litematica;
+import net.minecraft.util.ReportedException;
 import org.lwjgl.opengl.GL11;
 
 import net.minecraft.block.Block;
@@ -255,7 +258,26 @@ public class RenderChunkSchematicVbo extends RenderChunk
                             for (int bx = box.minX; bx <= box.maxX; ++bx)
                             {
                                 posMutable.set(bx, by, bz);
-                                this.renderBlocksAndOverlay(posMutable, tileEntities, usedLayers, data, buffers);
+                                try {
+                                    this.renderBlocksAndOverlay(posMutable, tileEntities, usedLayers, data, buffers);
+                                } catch (ReportedException e) {
+                                    Litematica.LOGGER.error(e);
+                                    Litematica.LOGGER.error("message {}", e.getMessage());
+                                    Litematica.LOGGER.error("crashreport {}", e.getCrashReport());
+                                    Litematica.LOGGER.error("stacktrace {}", Arrays.toString(e.getStackTrace()));
+                                    Litematica.LOGGER.info("Used Layers {}\n", Arrays.toString(usedLayers));
+                                    for (BlockRenderLayer b : BlockRenderLayer.values()) {
+                                        Litematica.LOGGER.info("block render layer {}, state {}", b.toString(), data.getBlockBufferState(b));
+                                        Litematica.LOGGER.info("layer started: {}, layer empty: {}", String.valueOf(data.isLayerStarted(b)), data.isLayerEmpty(b));
+                                        if (data.getBlockBufferState(b) != null) {
+                                            Litematica.LOGGER.info("vertex count {}, vertex format {}", String.valueOf(data.getBlockBufferState(b).getVertexCount()), data.getBlockBufferState(b).getVertexFormat());
+                                        }
+                                        if (buffers.getWorldRendererByLayer(b) != null) {
+                                            Litematica.LOGGER.info("b is started: {}", String.valueOf(buffers.getWorldRendererByLayer(b).isStarted()));
+                                        }
+                                    }
+                                    return;
+                                }
                             }
                         }
                     }
@@ -345,7 +367,6 @@ public class RenderChunkSchematicVbo extends RenderChunk
                     data.setLayerStarted(layer);
                     this.preRenderBlocks(builder, this.getPosition());
                 }
-
                 usedLayers[layerIndex] |= this.renderGlobal.renderBlock(stateSchematic, pos, this.schematicWorldView, builder);
             }
         }
