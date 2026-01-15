@@ -42,4 +42,16 @@ public class VertexBuilderCache
     {
         return this.overlayBufferBuilders[type.ordinal()];
     }
+
+    public void finishBuffers()
+    {
+        for (VertexBuilder builder : worldRenderers)
+        {
+            builder.finishDrawing();
+        }
+        for (VertexBuilder builder : overlayBufferBuilders)
+        {
+            builder.finishDrawing();
+        }
+    }
 }

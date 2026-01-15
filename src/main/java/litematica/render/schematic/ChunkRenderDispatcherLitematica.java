@@ -208,6 +208,9 @@ public class ChunkRenderDispatcherLitematica
 
     public void freeRenderBuilder(VertexBuilderCache builderCache)
     {
+        // make sure all buffers are not started
+        builderCache.finishBuffers();
+
         this.queueFreeRenderBuilders.add(builderCache);
     }
 
