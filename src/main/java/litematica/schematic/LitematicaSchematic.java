@@ -192,6 +192,7 @@ public class LitematicaSchematic extends BaseSchematic
             if (needsVersionConversion)
             {
                 this.convertSchematicDataToCurrentGameVersion(paletteTag, container, blockEntityMap, blockTickMap, entityList);
+                this.minecraftDataVersion = CURRENT_MINECRAFT_DATA_VERSION;
             }
 
             if (readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette(), dataVersion) == false) {

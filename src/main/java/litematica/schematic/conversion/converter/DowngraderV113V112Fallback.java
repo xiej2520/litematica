@@ -5,6 +5,7 @@ import litematica.schematic.conversion.SchematicDataConverter;
 import litematica.schematic.data.EntityData;
 import malilib.gui.BaseScreen;
 import malilib.overlay.message.MessageDispatcher;
+import malilib.util.data.Constants;
 import malilib.util.data.tag.CompoundData;
 import malilib.util.data.tag.ListData;
 import malilib.util.game.BlockUtils;
@@ -16,16 +17,16 @@ import net.minecraft.init.Blocks;
 
 import java.util.*;
 
-public class DowngraderV113V112 extends SchematicDataConverter
+public class DowngraderV113V112Fallback extends SchematicDataConverter
 {
-    public static DowngraderV113V112 INSTANCE = new DowngraderV113V112();
+    public static DowngraderV113V112Fallback INSTANCE = new DowngraderV113V112Fallback();
 
     private Map<CompoundData, CompoundData> stateMap = new HashMap<>();
 
     public static MinecraftVersion versionFrom = MinecraftVersion.MC_1_13;
     public static MinecraftVersion versionTo = MinecraftVersion.MC_1_12;
 
-    private DowngraderV113V112()
+    private DowngraderV113V112Fallback()
     {
         Optional<Map<CompoundData, CompoundData>> stateMap = BlockStateMapReader.readMap("block_state_map_113_to_112.json", "1.13", "1.12");
         if (stateMap.isPresent())
@@ -37,16 +38,48 @@ public class DowngraderV113V112 extends SchematicDataConverter
             MessageDispatcher.error("failed to read block_state_map_113_to_112.json");
         }
 
+        Optional<Map<CompoundData, CompoundData>> fallbackStatemap = BlockStateMapReader.readMap("block_state_map_113_to_112_fallbacks.json", "1.13", "1.12");
+        if (stateMap.isPresent())
+        {
+            for (Map.Entry<CompoundData, CompoundData> entry : fallbackStatemap.get().entrySet())
+            {
+                if (this.stateMap.containsKey(entry.getKey())) {
+                    MessageDispatcher.error("conflicting entries for " + entry.getKey());
+                    System.out.printf("conflicting entries for %s\n", entry);
+                }
+                else {
+                    this.stateMap.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        else
+        {
+            MessageDispatcher.error("failed to read block_state_map_113_to_112.json");
+        }
+
+        Map<CompoundData, CompoundData> waterlogged = new HashMap<>();
+        for (Map.Entry<CompoundData, CompoundData> entry : this.stateMap.entrySet())
+        {
+            CompoundData props = entry.getKey().getCompound("Properties");
+            if (props != null && props.contains("waterlogged", Constants.NBT.TAG_STRING)) {
+                CompoundData waterloggedState = entry.getKey().copy();
+                waterloggedState.getCompound("Properties").putString("waterlogged", "true");
+                waterlogged.put(waterloggedState, entry.getValue());
+                System.out.printf("WATERLOGGED MAPPING: %s %s %s\n",props, waterloggedState, entry.getValue());
+            }
+        }
+        this.stateMap.putAll(waterlogged);
     }
 
 
-    // right inverse converter: if a blockstate exists in 1.13, and a 1.12 blockstate gets converted
-    // to it by vanilla datafixer, then this converter should try to restore the 1.13 blockstate to
-    // the 1.12 blockstate. If multiple 1.12 blockstates map to the 1.13 state, pick the most reasonable one.
-    // duplicates from merges:
-    // dirt/coarse dirt, flowing water/lava, leaves, shrub (tallgrass 31:0), double stone slab,
-    // smooth_stone, smooth (red)sandstone, smooth quartz, mushroom blocks, pumpkin/melon stem
-    // flower pot, skull, powered redstone comparator, double_plant
+    // includes downgrades for 1.13 blockstates that don't have a 1.12 blockstate that converts to
+    // the 1.13 one, but a somewhat reasonable replacement for them in 1.12 exists:
+    //   mushroom blocks, <wood type> pressure plate/trapdoor/button, button/lever orientation,
+    //   leaves[distance], purple shulker box, stripped wood/logs, void/cave air, pumpkin,
+    //   waterlogged blocks, bubble column
+    // remaining 1.13 blocks not converted:
+    //  prismarine slab/stairs, prismarine brick slab/stairs, dark prismarine slab/stairs
+    //  seagrass, tall seagrass, kelp, sea pickle, turtle egg, live/dead coral fan/blocks, conduit, blue ice
     public void convertContainer(
         ListData paletteTag,
         ArrayBlockContainer container,
