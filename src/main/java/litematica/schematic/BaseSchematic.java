@@ -7,7 +7,7 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableMap;
 
-import litematica.schematic.conversion.SchematicConverter;
+import litematica.schematic.conversion.SchematicDataConverter;
 import malilib.mixin.access.DataFixerMixin;
 import malilib.overlay.message.MessageDispatcher;
 import malilib.util.ListUtils;
@@ -278,56 +278,4 @@ public abstract class BaseSchematic implements Schematic
         return Optional.empty();
     }
 
-    public ListData convertBlockStatePaletteToCurrentGameVersion(ListData paletteTag)
-    {
-        Optional<MinecraftVersion> versionFrom = MinecraftVersion.getVersionByDataVersion(this.minecraftDataVersion);
-        if (versionFrom.isPresent())
-        {
-            return SchematicConverter.convertBlockStatePalette(paletteTag, versionFrom.get(), MinecraftVersion.CURRENT_VERSION);
-        }
-        else
-        {
-            MessageDispatcher.error("TODO unknown data version");
-            return paletteTag;
-        }
-    }
-
-    public void convertBlockEntityMapToCurrentGameVersion(Map<BlockPos, CompoundData> blockEntityMap)
-    {
-        Optional<MinecraftVersion> versionFrom = MinecraftVersion.getVersionByDataVersion(this.minecraftDataVersion);
-        if (versionFrom.isPresent())
-        {
-            SchematicConverter.convertBlockEntityMap(blockEntityMap, versionFrom.get(), MinecraftVersion.CURRENT_VERSION);
-        }
-        else
-        {
-            MessageDispatcher.error("TODO unknown data version");
-        }
-    }
-
-    public void convertBlockTickMapToCurrentGameVersion(Map<BlockPos, ScheduledBlockTickData> blockTickMap)
-    {
-        Optional<MinecraftVersion> versionFrom = MinecraftVersion.getVersionByDataVersion(this.minecraftDataVersion);
-        if (versionFrom.isPresent())
-        {
-            SchematicConverter.convertBlockTickMap(blockTickMap, versionFrom.get(), MinecraftVersion.CURRENT_VERSION);
-        }
-        else
-        {
-            MessageDispatcher.error("TODO unknown data version");
-        }
-    }
-
-    public void convertEntityListToCurrentGameVersion(List<EntityData> entityList)
-    {
-        Optional<MinecraftVersion> versionFrom = MinecraftVersion.getVersionByDataVersion(this.minecraftDataVersion);
-        if (versionFrom.isPresent())
-        {
-            SchematicConverter.convertEntityList(entityList, versionFrom.get(), MinecraftVersion.CURRENT_VERSION);
-        }
-        else
-        {
-            MessageDispatcher.error("TODO unknown data version");
-        }
-    }
 }

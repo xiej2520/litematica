@@ -8,6 +8,7 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableMap;
 
+import litematica.schematic.conversion.SchematicDataConverter;
 import malilib.overlay.message.MessageDispatcher;
 import malilib.util.data.Constants;
 import malilib.util.data.tag.CompoundData;
@@ -190,10 +191,7 @@ public class LitematicaSchematic extends BaseSchematic
 
             if (needsVersionConversion)
             {
-                paletteTag = this.convertBlockStatePaletteToCurrentGameVersion(paletteTag);
-                this.convertBlockEntityMapToCurrentGameVersion(blockEntityMap);
-                this.convertBlockTickMapToCurrentGameVersion(blockTickMap);
-                this.convertEntityListToCurrentGameVersion(entityList);
+                this.convertSchematicDataToCurrentGameVersion(paletteTag, container, blockEntityMap, blockTickMap, entityList);
             }
 
             if (readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette(), dataVersion) == false) {
@@ -506,6 +504,34 @@ public class LitematicaSchematic extends BaseSchematic
             Litematica.LOGGER.error("LitematicaSchematic#createContainerFromData: volume: {}, entryWidthBits: {}, blockStates.length: {}",
                                     volume, entryWidthBits, blockStates.length);
             return null;
+        }
+    }
+
+    // mutates input data
+    public void convertSchematicDataToCurrentGameVersion(
+        ListData paletteTag,
+        ArrayBlockContainer container,
+        Map<BlockPos, CompoundData> blockEntityMap,
+        Map<BlockPos, ScheduledBlockTickData> blockTickMap,
+        List<EntityData> entityList
+    )
+    {
+        Optional<MinecraftVersion> versionFrom = MinecraftVersion.getVersionByDataVersion(this.minecraftDataVersion);
+        if (versionFrom.isPresent())
+        {
+            SchematicDataConverter.convert(
+                paletteTag,
+                container,
+                blockEntityMap,
+                blockTickMap,
+                entityList,
+                versionFrom.get(),
+                MinecraftVersion.CURRENT_VERSION
+            );
+        }
+        else
+        {
+            MessageDispatcher.error("TODO unknown data version");
         }
     }
 }

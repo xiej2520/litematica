@@ -13,7 +13,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
-import litematica.schematic.conversion.SchematicConverter;
+import litematica.schematic.conversion.SchematicDataConverter;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
@@ -181,7 +181,6 @@ public class DataManager implements DirectoryCache
     {
         TaskScheduler.getInstanceClient().clearTasks();
         InfoHud.getInstance().reset(); // remove the line providers and clear the data
-        SchematicConverter.INSTANCE.reset();
 
         INSTANCE.clearData(true);
     }
