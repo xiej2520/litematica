@@ -7,9 +7,7 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableMap;
 
-import litematica.schematic.conversion.SchematicDataConverter;
 import malilib.mixin.access.DataFixerMixin;
-import malilib.overlay.message.MessageDispatcher;
 import malilib.util.ListUtils;
 import malilib.util.data.Constants;
 import malilib.util.data.palette.Palette;
@@ -17,7 +15,6 @@ import malilib.util.data.tag.CompoundData;
 import malilib.util.data.tag.ListData;
 import malilib.util.data.tag.util.DataTypeUtils;
 import malilib.util.game.BlockUtils;
-import malilib.util.game.MinecraftVersion;
 import malilib.util.game.wrap.GameWrap;
 import malilib.util.position.BlockPos;
 import malilib.util.position.Vec3d;
@@ -27,7 +24,6 @@ import litematica.schematic.container.ArrayBlockContainer;
 import litematica.schematic.container.BlockContainer;
 import litematica.schematic.container.SparseBlockContainer;
 import litematica.schematic.data.EntityData;
-import malilib.util.world.ScheduledBlockTickData;
 
 public abstract class BaseSchematic implements Schematic
 {

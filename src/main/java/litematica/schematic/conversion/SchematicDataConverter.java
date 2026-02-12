@@ -9,13 +9,10 @@ import malilib.util.data.tag.ListData;
 import malilib.util.game.MinecraftVersion;
 import malilib.util.position.BlockPos;
 import malilib.util.world.ScheduledBlockTickData;
-import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.BiFunction;
 
 public abstract class SchematicDataConverter {
 
@@ -28,7 +25,8 @@ public abstract class SchematicDataConverter {
     {
         if (versionTo.equals(MinecraftVersion.MC_1_12_2) && versionFrom.dataVersion > MinecraftVersion.MC_1_13.dataVersion)
         {
-            return Optional.of(DowngraderV113V112.INSTANCE);
+            return Optional.of(DowngraderV113V112Fallback.INSTANCE);
+            //return Optional.of(DowngraderV113V112.INSTANCE);
         }
 
         return Optional.empty();
