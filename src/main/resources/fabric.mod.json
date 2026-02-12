@@ -35,7 +35,7 @@
 
     "depends": {
         "minecraft": "1.15.2",
-        "malilib": ">=0.18.4"
+        "malilib": ">=0.18.5"
     },
 
     "custom": {
