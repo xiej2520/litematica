@@ -5,7 +5,6 @@ import litematica.schematic.conversion.SchematicDataConverter;
 import litematica.schematic.data.EntityData;
 import malilib.gui.BaseScreen;
 import malilib.overlay.message.MessageDispatcher;
-import malilib.util.data.Constants;
 import malilib.util.data.tag.CompoundData;
 import malilib.util.data.tag.ListData;
 import malilib.util.game.BlockUtils;
@@ -26,7 +25,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
     public static MinecraftVersion versionFrom = MinecraftVersion.MC_1_13;
     public static MinecraftVersion versionTo = MinecraftVersion.MC_1_12;
 
-    private DowngraderV113V112()
+    protected DowngraderV113V112()
     {
         Optional<Map<CompoundData, CompoundData>> stateMap = BlockStateMapReader.readMap("block_state_map_113_to_112.json", "1.13", "1.12");
         if (stateMap.isPresent())
@@ -41,6 +40,13 @@ public class DowngraderV113V112 extends SchematicDataConverter
     }
 
 
+    // right inverse converter: if a blockstate exists in 1.13, and a 1.12 blockstate gets converted
+    // to it by vanilla datafixer, then this converter should try to restore the 1.13 blockstate to
+    // the 1.12 blockstate. If multiple 1.12 blockstates map to the 1.13 state, pick the most reasonable one.
+    // duplicates from merges:
+    // dirt/coarse dirt, flowing water/lava, leaves, shrub (tallgrass 31:0), double stone slab,
+    // smooth_stone, smooth (red)sandstone, smooth quartz, mushroom blocks, pumpkin/melon stem
+    // flower pot, skull, powered redstone comparator, double_plant
     public void convertContainer(
         ListData paletteTag,
         ArrayBlockContainer container,
