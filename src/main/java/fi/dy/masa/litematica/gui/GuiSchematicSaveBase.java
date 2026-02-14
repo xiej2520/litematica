@@ -1,7 +1,6 @@
 package fi.dy.masa.litematica.gui;
 
 import javax.annotation.Nullable;
-import net.minecraft.client.util.math.MatrixStack;
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import fi.dy.masa.malilib.gui.GuiTextFieldGeneric;
 import fi.dy.masa.malilib.gui.Message.MessageType;
@@ -33,7 +32,7 @@ public abstract class GuiSchematicSaveBase extends GuiSchematicBrowserBase imple
 
         this.textField = new GuiTextFieldGeneric(10, 32, 160, 20, this.textRenderer);
         this.textField.setMaxLength(256);
-        this.textField.setFocused(true);
+        this.textField.setFocusedWrapper(true);
 
         this.checkboxSaveFromSchematicWorld = new WidgetCheckBox(0, 0, Icons.CHECKBOX_UNSELECTED, Icons.CHECKBOX_SELECTED, "Save from schematic world", "If enabled, then the schematic is created by saving the\ncontents of the selection from the schematic world\ninstead of the normal vanilla world.\nThis allows you to combine or trim schematics without having\nto paste them to a temporary creative world.");
     }
@@ -51,11 +50,11 @@ public abstract class GuiSchematicSaveBase extends GuiSchematicBrowserBase imple
 
         boolean focused = this.textField.isFocused();
         String text = this.textField.getText();
-        int pos = this.textField.getCursorPosition();
+        int pos = this.textField.getCursor();
         this.textField = new GuiTextFieldGeneric(10, 32, this.width - 196, 20, this.textRenderer);
         this.textField.setText(text);
-        this.textField.setCursorPosition(pos);
-        this.textField.setFocused(focused);
+        this.textField.setCursor(pos);
+        this.textField.setFocusedWrapper(focused);
 
         DirectoryEntry entry = this.getListWidget().getLastSelectedEntry();
 
@@ -97,7 +96,7 @@ public abstract class GuiSchematicSaveBase extends GuiSchematicBrowserBase imple
     {
         this.lastText = text;
         this.textField.setText(text);
-        this.textField.setCursorPositionEnd();
+        this.textField.setCursorToEnd();
     }
 
     protected String getTextFieldText()
@@ -179,7 +178,7 @@ public abstract class GuiSchematicSaveBase extends GuiSchematicBrowserBase imple
         }
         else if (keyCode == KeyCodes.KEY_TAB)
         {
-            this.textField.setFocused(! this.textField.isFocused());
+            this.textField.setFocusedWrapper(! this.textField.isFocused());
             return true;
         }
 

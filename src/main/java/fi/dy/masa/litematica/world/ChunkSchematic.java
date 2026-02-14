@@ -134,7 +134,6 @@ public class ChunkSchematic extends WorldChunk
                     if (te == null)
                     {
                         te = ((BlockEntityProvider) blockNew).createBlockEntity(this.getWorld());
-                        this.getWorld().setBlockEntity(pos, te);
 
                         if (te != null)
                         {
