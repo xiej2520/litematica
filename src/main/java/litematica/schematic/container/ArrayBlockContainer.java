@@ -36,6 +36,12 @@ public class ArrayBlockContainer extends BaseBlockContainer implements PaletteRe
         }
     }
 
+    public int getPaletteId(int x, int y, int z)
+    {
+        long storageIndex = this.getIndex(x, y, z);
+        return this.storage.getAt(storageIndex);
+    }
+
     @Override
     public BlockState getBlockState(int x, int y, int z)
     {
