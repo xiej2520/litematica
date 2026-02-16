@@ -1,10 +1,12 @@
 package litematica.schematic.conversion.converter;
 
+import com.google.common.collect.ImmutableMap;
 import litematica.schematic.container.ArrayBlockContainer;
 import litematica.schematic.conversion.SchematicDataConverter;
 import litematica.schematic.data.EntityData;
 import malilib.gui.BaseScreen;
 import malilib.overlay.message.MessageDispatcher;
+import malilib.util.data.Constants;
 import malilib.util.data.tag.CompoundData;
 import malilib.util.data.tag.ListData;
 import malilib.util.game.BlockUtils;
@@ -13,6 +15,7 @@ import malilib.util.position.BlockPos;
 import malilib.util.world.BlockState;
 import malilib.util.world.ScheduledBlockTickData;
 import net.minecraft.init.Blocks;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 
@@ -20,7 +23,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
 {
     public static DowngraderV113V112 INSTANCE = new DowngraderV113V112();
 
-    private Map<CompoundData, CompoundData> stateMap = new HashMap<>();
+    protected Map<CompoundData, CompoundData> stateMap = new HashMap<>();
 
     public static MinecraftVersion versionFrom = MinecraftVersion.MC_1_13;
     public static MinecraftVersion versionTo = MinecraftVersion.MC_1_12;
@@ -36,7 +39,6 @@ public class DowngraderV113V112 extends SchematicDataConverter
         {
             MessageDispatcher.error("failed to read block_state_map_113_to_112.json");
         }
-
     }
 
 
@@ -60,25 +62,45 @@ public class DowngraderV113V112 extends SchematicDataConverter
         int successCount = 0;
         int failCount = 0;
 
+        ListData paletteTagOriginal = paletteTag.copy();
+        boolean needBlockFixer = false;
+
         for (int i = 0; i < paletteSize; ++i)
         {
             CompoundData tag = paletteTag.getCompoundAt(i);
-            CompoundData convertedTag = this.stateMap.get(tag);
+            String flattenedBlockName = tag.getString("Name");
 
-            if (convertedTag != null)
+            if (this.convertBlockStateData(tag))
             {
-                //System.out.printf("converted: %s => %s\n", tag, convertedTag);
-                paletteTag.set(i, convertedTag.copy());
-                //paletteTagOut.add(convertedTag.copy());
+                System.out.printf("converted: %s => %s\n", paletteTagOriginal.getCompoundAt(i), tag);
+                if (unfixers.containsKey(flattenedBlockName))
+                {
+                    needBlockFixer = true;
+                }
                 ++successCount;
             }
             else
             {
-                System.out.printf("FAILED: %s => %s\n", tag, convertedTag);
+                System.out.printf("FAILED: %s\n", tag);
                 failedStates.add(tag.toString());
-                //paletteTagOut.add(tag.copy());
                 paletteTag.set(i, BlockUtils.writeBlockState(new CompoundData(), BlockState.of(Blocks.BARRIER.getDefaultState())));
-                ++failCount;
+                failCount += 1;
+            }
+        }
+
+        if (needBlockFixer) {
+            for (int x = 0; x < container.getSize().getX(); x++) {
+                for (int y = 0; y < container.getSize().getY(); y++) {
+                    for (int z = 0; z < container.getSize().getZ(); z++) {
+                        int i = container.getPaletteId(x, y, z);
+                        CompoundData tag = paletteTagOriginal.getCompoundAt(i);
+                        String blockName = tag.getString("Name");
+                        UnfixBlockEntityCreator fixer = unfixers.get(blockName);
+                        if (fixer != null) {
+                            fixer.recreateBlockEntity(new BlockPos(x, y, z), container, blockEntityMap, tag);
+                        }
+                    }
+                }
             }
         }
 
@@ -94,11 +116,95 @@ public class DowngraderV113V112 extends SchematicDataConverter
         }
     }
 
+    public boolean convertBlockStateData(CompoundData data) {
+        CompoundData convertedData = this.stateMap.get(data);
+        if (convertedData == null) {
+            return false;
+        }
+        data.putString("Name", convertedData.getString("Name"));
+        data.remove("Properties");
+        if (convertedData.contains("Properties", Constants.NBT.TAG_COMPOUND)) {
+            data.put("Properties", convertedData.getCompound("Properties").copy());
+        }
+        return true;
+    }
+
     public void convertEntityList(List<EntityData> entityList)
     {
 
     }
 
+    static final ImmutableMap<String, Pair<String, Integer>> flowerPotData =
+        ImmutableMap.<String, Pair<String, Integer>>builder()
+        .put("minecraft:flower_pot",              Pair.of("minecraft:air", 0))
+        .put("minecraft:potted_poppy",            Pair.of("minecraft:red_flower", 0))
+        .put("minecraft:potted_blue_orchid",      Pair.of("minecraft:red_flower", 1))
+        .put("minecraft:potted_allium",           Pair.of("minecraft:red_flower", 2))
+        .put("minecraft:potted_azure_bluet",      Pair.of("minecraft:red_flower", 3))
+        .put("minecraft:potted_red_tulip",        Pair.of("minecraft:red_flower", 4))
+        .put("minecraft:potted_orange_tulip",     Pair.of("minecraft:red_flower", 5))
+        .put("minecraft:potted_white_tulip",      Pair.of("minecraft:red_flower", 6))
+        .put("minecraft:potted_pink_tulip",       Pair.of("minecraft:red_flower", 7))
+        .put("minecraft:potted_oxeye_daisy",      Pair.of("minecraft:red_flower", 8))
+        .put("minecraft:potted_dandelion",        Pair.of("minecraft:yellow_flower", 0))
+        .put("minecraft:potted_oak_sapling",      Pair.of("minecraft:sapling", 0))
+        .put("minecraft:potted_spruce_sapling",   Pair.of("minecraft:sapling", 1))
+        .put("minecraft:potted_birch_sapling",    Pair.of("minecraft:sapling", 2))
+        .put("minecraft:potted_jungle_sapling",   Pair.of("minecraft:sapling", 3))
+        .put("minecraft:potted_acacia_sapling",   Pair.of("minecraft:sapling", 4))
+        .put("minecraft:potted_dark_oak_sapling", Pair.of("minecraft:sapling", 5))
+        .put("minecraft:potted_brown_mushroom",   Pair.of("minecraft:brown_mushroom", 0))
+        .put("minecraft:potted_red_mushroom",     Pair.of("minecraft:red_mushroom", 0))
+        .put("minecraft:potted_dead_bush",        Pair.of("minecraft:deadbush", 0))
+        .put("minecraft:potted_fern",             Pair.of("minecraft:tallgrass", 2))
+        .put("minecraft:potted_cactus",           Pair.of("minecraft:cactus", 0))
+        .build();
 
+    static final UnfixBlockEntityCreator UNFIX_FLOWERPOT = (pos, container, blockEntityMap, originalTag) -> {
+        Pair<String, Integer> itemData = flowerPotData.get(originalTag.getString("Name"));
+
+        CompoundData flowerPotBeTag = new CompoundData();
+        flowerPotBeTag.putString("Item", itemData.getLeft());
+        flowerPotBeTag.putInt("Data", itemData.getRight());
+        flowerPotBeTag.putString("id", "minecraft:flower_pot");
+        flowerPotBeTag.putInt("x", pos.getX());
+        flowerPotBeTag.putInt("y", pos.getY());
+        flowerPotBeTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, flowerPotBeTag);
+    };
+
+    static final Map<String, UnfixBlockEntityCreator> unfixers = new HashMap<>();
+    static {
+        unfixers.put("minecraft:flower_pot",              UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_poppy",            UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_blue_orchid",      UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_allium",           UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_azure_bluet",      UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_red_tulip",        UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_orange_tulip",     UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_white_tulip",      UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_pink_tulip",       UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_oxeye_daisy",      UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_dandelion",        UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_oak_sapling",      UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_spruce_sapling",   UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_birch_sapling",    UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_jungle_sapling",   UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_acacia_sapling",   UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_dark_oak_sapling", UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_brown_mushroom",   UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_red_mushroom",     UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_dead_bush",        UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_fern",             UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_cactus",           UNFIX_FLOWERPOT);
+    }
 }
 
+interface UnfixBlockEntityCreator {
+    void recreateBlockEntity(
+        BlockPos pos,
+        ArrayBlockContainer container,
+        Map<BlockPos, CompoundData> blockEntityMap,
+        CompoundData originalTag
+    );
+}

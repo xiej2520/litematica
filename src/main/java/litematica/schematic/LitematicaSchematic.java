@@ -68,8 +68,25 @@ public class LitematicaSchematic extends BaseSchematic
                                       this.minecraftDataVersion, CURRENT_MINECRAFT_DATA_VERSION);
         }
 
+        boolean needsVersionConversion = this.minecraftDataVersion != CURRENT_MINECRAFT_DATA_VERSION;
+
         this.regions = this.readRegions(data, version, this.minecraftDataVersion);
         this.metadata = createAndReadMetadata(data).orElse(new SchematicMetadata());
+
+        // TODO: only recalculate when conversion has actually been done
+        if (needsVersionConversion)
+        {
+            int entityCount = 0;
+            long blockEntityCount = 0;
+            for (SchematicRegion region : this.regions.values())
+            {
+                entityCount += region.getEntityList().size();
+                blockEntityCount += region.getBlockEntityMap().size();
+            }
+            this.metadata.setEntityCount(entityCount);
+            this.metadata.setBlockEntityCount(blockEntityCount);
+        }
+
         this.enclosingSize = this.metadata.getEnclosingSize();
 
         return true;
@@ -193,6 +210,7 @@ public class LitematicaSchematic extends BaseSchematic
             {
                 this.convertSchematicDataToCurrentGameVersion(paletteTag, container, blockEntityMap, blockTickMap, entityList);
                 this.minecraftDataVersion = CURRENT_MINECRAFT_DATA_VERSION;
+                dataVersion = CURRENT_MINECRAFT_DATA_VERSION;
             }
 
             if (readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette(), dataVersion) == false) {
