@@ -9,6 +9,7 @@ import java.util.Map;
 import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
+import litematica.util.ItemUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockBed;
 import net.minecraft.block.BlockDoor;
@@ -121,6 +122,10 @@ public class MaterialCache
         {
             world.setBlockState(pos, state.vanillaState(), 0x14);
             stack = state.getBlock().getItem(world, pos, state.vanillaState());
+            if (stack.getItem() == Items.AIR)
+            {
+                stack = ItemUtils.getStateToItemOverride(state.vanillaState());
+            }
         }
 
         if (stack == null || ItemWrap.isEmpty(stack))
