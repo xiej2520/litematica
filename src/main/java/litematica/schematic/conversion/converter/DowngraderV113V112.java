@@ -1,6 +1,7 @@
 package litematica.schematic.conversion.converter;
 
 import com.google.common.collect.ImmutableMap;
+import litematica.Litematica;
 import litematica.schematic.container.ArrayBlockContainer;
 import litematica.schematic.conversion.SchematicDataConverter;
 import litematica.schematic.data.EntityData;
@@ -173,6 +174,30 @@ public class DowngraderV113V112 extends SchematicDataConverter
         blockEntityMap.put(pos, flowerPotBeTag);
     };
 
+    static final UnfixBlockEntityCreator UNFIX_NOTE_BLOCK = (pos, container, blockEntityMap, originalTag) -> {
+        CompoundData properties = originalTag.getCompound("Properties");
+        if (properties != null)
+        {
+            byte note = 0;
+            boolean powered = Boolean.parseBoolean(properties.getString("powered"));
+            try {
+                note = Byte.parseByte(properties.getString("note"));
+            } catch (NumberFormatException e) {
+                Litematica.LOGGER.error(e);
+            }
+            // instrument is not stored in 1.12
+
+            CompoundData noteBlockBeTag = new CompoundData();
+            noteBlockBeTag.putByte("note", note);
+            noteBlockBeTag.putBoolean("powered", powered);
+            noteBlockBeTag.putString("id", "minecraft:noteblock");
+            noteBlockBeTag.putInt("x", pos.getX());
+            noteBlockBeTag.putInt("y", pos.getY());
+            noteBlockBeTag.putInt("z", pos.getZ());
+            blockEntityMap.put(pos, noteBlockBeTag);
+        }
+    };
+
     static final Map<String, UnfixBlockEntityCreator> unfixers = new HashMap<>();
     static {
         unfixers.put("minecraft:flower_pot",              UNFIX_FLOWERPOT);
@@ -197,6 +222,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
         unfixers.put("minecraft:potted_dead_bush",        UNFIX_FLOWERPOT);
         unfixers.put("minecraft:potted_fern",             UNFIX_FLOWERPOT);
         unfixers.put("minecraft:potted_cactus",           UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:note_block", UNFIX_NOTE_BLOCK);
     }
 }
 
