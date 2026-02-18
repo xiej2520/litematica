@@ -1,5 +1,6 @@
 package litematica.schematic.conversion.converter;
 
+import litematica.Litematica;
 import litematica.schematic.container.ArrayBlockContainer;
 import litematica.schematic.conversion.SchematicDataConverter;
 import litematica.schematic.data.EntityData;
@@ -60,6 +61,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
         this.fixerMap.put("minecraft:potted_dead_bush",        FIXER_FLOWERPOT);
         this.fixerMap.put("minecraft:potted_fern",             FIXER_FLOWERPOT);
         this.fixerMap.put("minecraft:potted_cactus",           FIXER_FLOWERPOT);
+        this.fixerMap.put("minecraft:note_block",              FIXER_NOTE_BLOCK);
     }
 
 
@@ -114,6 +116,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
                 ++failCount;
             }
         }
+        // TODO fix duplciate blockstates in palette from downgrade, e.g. merge "flower_pot"s
 
         if (needBlockFixer) {
             for (int x = 0; x < container.getSize().getX(); x++) {
@@ -184,6 +187,30 @@ public class DowngraderV113V112 extends SchematicDataConverter
         flowerPotBeTag.putInt("y", pos.getY());
         flowerPotBeTag.putInt("z", pos.getZ());
         blockEntityMap.put(pos, flowerPotBeTag);
+    };
+
+    final StateFixer FIXER_NOTE_BLOCK = (pos, container, blockEntityMap, originalTag) -> {
+        CompoundData properties = originalTag.getCompound("Properties");
+        if (properties != null)
+        {
+            byte note = 0;
+            boolean powered = Boolean.parseBoolean(properties.getString("powered"));
+            try {
+                note = Byte.parseByte(properties.getString("note"));
+            } catch (NumberFormatException e) {
+                Litematica.LOGGER.error(e);
+            }
+            // instrument is not stored in 1.12
+
+            CompoundData noteBlockBeTag = new CompoundData();
+            noteBlockBeTag.putByte("note", note);
+            noteBlockBeTag.putBoolean("powered", powered);
+            noteBlockBeTag.putString("id", "minecraft:noteblock");
+            noteBlockBeTag.putInt("x", pos.getX());
+            noteBlockBeTag.putInt("y", pos.getY());
+            noteBlockBeTag.putInt("z", pos.getZ());
+            blockEntityMap.put(pos, noteBlockBeTag);
+        }
     };
 
     private void fixSkullBlockEntity() {
