@@ -20,6 +20,47 @@ import java.util.*;
 
 public class DowngraderV113V112 extends SchematicDataConverter
 {
+
+    // initialize all static data before INSTANCE constructor call
+    static final Map<String, Pair<String, Integer>> flowerPotDataMap = new HashMap<>();
+    static {
+        flowerPotDataMap.put("minecraft:flower_pot",              Pair.of("minecraft:air", 0));
+        flowerPotDataMap.put("minecraft:potted_poppy",            Pair.of("minecraft:red_flower", 0));
+        flowerPotDataMap.put("minecraft:potted_blue_orchid",      Pair.of("minecraft:red_flower", 1));
+        flowerPotDataMap.put("minecraft:potted_allium",           Pair.of("minecraft:red_flower", 2));
+        flowerPotDataMap.put("minecraft:potted_azure_bluet",      Pair.of("minecraft:red_flower", 3));
+        flowerPotDataMap.put("minecraft:potted_red_tulip",        Pair.of("minecraft:red_flower", 4));
+        flowerPotDataMap.put("minecraft:potted_orange_tulip",     Pair.of("minecraft:red_flower", 5));
+        flowerPotDataMap.put("minecraft:potted_white_tulip",      Pair.of("minecraft:red_flower", 6));
+        flowerPotDataMap.put("minecraft:potted_pink_tulip",       Pair.of("minecraft:red_flower", 7));
+        flowerPotDataMap.put("minecraft:potted_oxeye_daisy",      Pair.of("minecraft:red_flower", 8));
+        flowerPotDataMap.put("minecraft:potted_dandelion",        Pair.of("minecraft:yellow_flower", 0));
+        flowerPotDataMap.put("minecraft:potted_oak_sapling",      Pair.of("minecraft:sapling", 0));
+        flowerPotDataMap.put("minecraft:potted_spruce_sapling",   Pair.of("minecraft:sapling", 1));
+        flowerPotDataMap.put("minecraft:potted_birch_sapling",    Pair.of("minecraft:sapling", 2));
+        flowerPotDataMap.put("minecraft:potted_jungle_sapling",   Pair.of("minecraft:sapling", 3));
+        flowerPotDataMap.put("minecraft:potted_acacia_sapling",   Pair.of("minecraft:sapling", 4));
+        flowerPotDataMap.put("minecraft:potted_dark_oak_sapling", Pair.of("minecraft:sapling", 5));
+        flowerPotDataMap.put("minecraft:potted_brown_mushroom",   Pair.of("minecraft:brown_mushroom", 0));
+        flowerPotDataMap.put("minecraft:potted_red_mushroom",     Pair.of("minecraft:red_mushroom", 0));
+        flowerPotDataMap.put("minecraft:potted_dead_bush",        Pair.of("minecraft:deadbush", 0));
+        flowerPotDataMap.put("minecraft:potted_fern",             Pair.of("minecraft:tallgrass", 2));
+        flowerPotDataMap.put("minecraft:potted_cactus",           Pair.of("minecraft:cactus", 0));
+    }
+
+    static final String[] colorId = new String[] {
+        "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+        "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
+    };
+
+    static final HashMap<String, Integer> bedColorMap = new HashMap<>();
+    static {
+        for (int i = 0; i < 16; i++)
+        {
+            bedColorMap.put("minecraft:" + colorId[i] + "_bed", i);
+        }
+    }
+
     public static DowngraderV113V112 INSTANCE = new DowngraderV113V112();
 
     private Map<CompoundData, CompoundData> stateMap = new HashMap<>();
@@ -61,7 +102,13 @@ public class DowngraderV113V112 extends SchematicDataConverter
         this.fixerMap.put("minecraft:potted_dead_bush",        FIXER_FLOWERPOT);
         this.fixerMap.put("minecraft:potted_fern",             FIXER_FLOWERPOT);
         this.fixerMap.put("minecraft:potted_cactus",           FIXER_FLOWERPOT);
+
         this.fixerMap.put("minecraft:note_block",              FIXER_NOTE_BLOCK);
+
+        for (String color : colorId)
+        {
+            this.fixerMap.put("minecraft:" + color + "_bed", FIXER_BED);
+        }
     }
 
 
@@ -151,31 +198,6 @@ public class DowngraderV113V112 extends SchematicDataConverter
 
     }
 
-    static final Map<String, Pair<String, Integer>> flowerPotDataMap = new HashMap<>();
-    static {
-        flowerPotDataMap.put("minecraft:flower_pot",              Pair.of("minecraft:air", 0));
-        flowerPotDataMap.put("minecraft:potted_poppy",            Pair.of("minecraft:red_flower", 0));
-        flowerPotDataMap.put("minecraft:potted_blue_orchid",      Pair.of("minecraft:red_flower", 1));
-        flowerPotDataMap.put("minecraft:potted_allium",           Pair.of("minecraft:red_flower", 2));
-        flowerPotDataMap.put("minecraft:potted_azure_bluet",      Pair.of("minecraft:red_flower", 3));
-        flowerPotDataMap.put("minecraft:potted_red_tulip",        Pair.of("minecraft:red_flower", 4));
-        flowerPotDataMap.put("minecraft:potted_orange_tulip",     Pair.of("minecraft:red_flower", 5));
-        flowerPotDataMap.put("minecraft:potted_white_tulip",      Pair.of("minecraft:red_flower", 6));
-        flowerPotDataMap.put("minecraft:potted_pink_tulip",       Pair.of("minecraft:red_flower", 7));
-        flowerPotDataMap.put("minecraft:potted_oxeye_daisy",      Pair.of("minecraft:red_flower", 8));
-        flowerPotDataMap.put("minecraft:potted_dandelion",        Pair.of("minecraft:yellow_flower", 0));
-        flowerPotDataMap.put("minecraft:potted_oak_sapling",      Pair.of("minecraft:sapling", 0));
-        flowerPotDataMap.put("minecraft:potted_spruce_sapling",   Pair.of("minecraft:sapling", 1));
-        flowerPotDataMap.put("minecraft:potted_birch_sapling",    Pair.of("minecraft:sapling", 2));
-        flowerPotDataMap.put("minecraft:potted_jungle_sapling",   Pair.of("minecraft:sapling", 3));
-        flowerPotDataMap.put("minecraft:potted_acacia_sapling",   Pair.of("minecraft:sapling", 4));
-        flowerPotDataMap.put("minecraft:potted_dark_oak_sapling", Pair.of("minecraft:sapling", 5));
-        flowerPotDataMap.put("minecraft:potted_brown_mushroom",   Pair.of("minecraft:brown_mushroom", 0));
-        flowerPotDataMap.put("minecraft:potted_red_mushroom",     Pair.of("minecraft:red_mushroom", 0));
-        flowerPotDataMap.put("minecraft:potted_dead_bush",        Pair.of("minecraft:deadbush", 0));
-        flowerPotDataMap.put("minecraft:potted_fern",             Pair.of("minecraft:tallgrass", 2));
-        flowerPotDataMap.put("minecraft:potted_cactus",           Pair.of("minecraft:cactus", 0));
-    }
     final StateFixer FIXER_FLOWERPOT = (pos, container, blockEntityMap, originalTag) -> {
         Pair<String, Integer> beData = flowerPotDataMap.get(originalTag.getString("Name"));
 
@@ -213,14 +235,19 @@ public class DowngraderV113V112 extends SchematicDataConverter
         }
     };
 
+    final StateFixer FIXER_BED = (pos, container, blockEntityMap, originalTag) -> {
+        int colorId = bedColorMap.getOrDefault(originalTag.getString("Name"), 0);
+
+        CompoundData bedBeTag = new CompoundData();
+        bedBeTag.putInt("color", colorId);
+        bedBeTag.putString("id", "minecraft:bed");
+        bedBeTag.putInt("x", pos.getX());
+        bedBeTag.putInt("y", pos.getY());
+        bedBeTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, bedBeTag);
+    };
+
     private void fixSkullBlockEntity() {
-
-    }
-
-    private void fixNoteBlockEntity() {
-
-    }
-    private void fixBedBlockEntity() {
 
     }
 
