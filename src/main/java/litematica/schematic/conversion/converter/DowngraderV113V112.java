@@ -161,6 +161,19 @@ public class DowngraderV113V112 extends SchematicDataConverter
         .put("minecraft:potted_cactus",           Pair.of("minecraft:cactus", 0))
         .build();
 
+    static final String[] colorId = new String[] {
+        "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+        "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
+    };
+
+    static final Map<String, Integer> bedColor = new HashMap<>();
+    static {
+        for (int i = 0; i < 16; i++)
+        {
+            bedColor.put("minecraft:" + colorId[i] + "_bed", i);
+        }
+    }
+
     static final UnfixBlockEntityCreator UNFIX_FLOWERPOT = (pos, container, blockEntityMap, originalTag) -> {
         Pair<String, Integer> itemData = flowerPotData.get(originalTag.getString("Name"));
 
@@ -198,6 +211,18 @@ public class DowngraderV113V112 extends SchematicDataConverter
         }
     };
 
+    static final UnfixBlockEntityCreator UNFIX_BED = (pos, container, blockEntityMap, originalTag) -> {
+        int color = bedColor.getOrDefault(originalTag.getString("Name"), 0);
+
+        CompoundData blockEntityTag = new CompoundData();
+        blockEntityTag.putInt("color", color);
+        blockEntityTag.putString("id", "minecraft:bed");
+        blockEntityTag.putInt("x", pos.getX());
+        blockEntityTag.putInt("y", pos.getY());
+        blockEntityTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, blockEntityTag);
+    };
+
     static final Map<String, UnfixBlockEntityCreator> unfixers = new HashMap<>();
     static {
         unfixers.put("minecraft:flower_pot",              UNFIX_FLOWERPOT);
@@ -223,6 +248,10 @@ public class DowngraderV113V112 extends SchematicDataConverter
         unfixers.put("minecraft:potted_fern",             UNFIX_FLOWERPOT);
         unfixers.put("minecraft:potted_cactus",           UNFIX_FLOWERPOT);
         unfixers.put("minecraft:note_block", UNFIX_NOTE_BLOCK);
+        for (String color : colorId)
+        {
+            unfixers.put("minecraft:" + color + "_bed", UNFIX_BED);
+        }
     }
 }
 
