@@ -65,6 +65,21 @@ public class DowngraderV113V112 extends SchematicDataConverter
             bannerColorMap.put("minecraft:" + colorId[i] + "_wall_banner", 15 - i);
         }
     }
+    static final HashMap<String, Integer> skullTypeMap = new HashMap<>();
+    static {
+        skullTypeMap.put("minecraft:skeleton_skull", 0);
+        skullTypeMap.put("minecraft:skeleton_wall_skull", 0);
+        skullTypeMap.put("minecraft:wither_skeleton_skull", 1);
+        skullTypeMap.put("minecraft:wither_skeleton_wall_skull", 1);
+        skullTypeMap.put("minecraft:zombie_head", 2);
+        skullTypeMap.put("minecraft:zombie_wall_head", 2);
+        skullTypeMap.put("minecraft:player_head", 3);
+        skullTypeMap.put("minecraft:player_wall_head", 3);
+        skullTypeMap.put("minecraft:creeper_head", 4);
+        skullTypeMap.put("minecraft:creeper_wall_head", 4);
+        skullTypeMap.put("minecraft:dragon_head", 5);
+        skullTypeMap.put("minecraft:dragon_wall_head", 5);
+    }
 
     public static DowngraderV113V112 INSTANCE = new DowngraderV113V112();
 
@@ -116,6 +131,18 @@ public class DowngraderV113V112 extends SchematicDataConverter
             this.fixerMap.put("minecraft:" + color + "_banner", FIXER_BANNER);
             this.fixerMap.put("minecraft:" + color + "_wall_banner", FIXER_BANNER);
         }
+        this.fixerMap.put("minecraft:skeleton_skull",             FIXER_SKULL);
+        this.fixerMap.put("minecraft:skeleton_wall_skull",        FIXER_SKULL);
+        this.fixerMap.put("minecraft:wither_skeleton_skull",      FIXER_SKULL);
+        this.fixerMap.put("minecraft:wither_skeleton_wall_skull", FIXER_SKULL);
+        this.fixerMap.put("minecraft:player_head",                FIXER_SKULL);
+        this.fixerMap.put("minecraft:player_wall_head",           FIXER_SKULL);
+        this.fixerMap.put("minecraft:zombie_head",                FIXER_SKULL);
+        this.fixerMap.put("minecraft:zombie_wall_head",           FIXER_SKULL);
+        this.fixerMap.put("minecraft:creeper_head",               FIXER_SKULL);
+        this.fixerMap.put("minecraft:creeper_wall_head",          FIXER_SKULL);
+        this.fixerMap.put("minecraft:dragon_head",                FIXER_SKULL);
+        this.fixerMap.put("minecraft:dragon_wall_head",           FIXER_SKULL);
     }
 
 
@@ -286,9 +313,49 @@ public class DowngraderV113V112 extends SchematicDataConverter
         blockEntityMap.put(pos, bannerBeTag);
     };
 
-    private void fixSkullBlockEntity() {
+    final StateFixer FIXER_SKULL = (pos, container, blockEntityMap, originalTag) -> {
+        CompoundData skullBeTag = new CompoundData();
 
-    }
+        CompoundData originalBe = blockEntityMap.get(pos);
+        if (originalBe != null)
+        {
+            CompoundData owner = originalBe.getCompound("Owner");
+            if (owner != null && owner.isEmpty() == false) {
+                skullBeTag.put("Owner", owner);
+            }
+        }
+
+        byte rotationByte = 0;
+        CompoundData properties = originalTag.getCompound("Properties");
+        if (properties != null)
+        {
+            String facing = originalTag.getString("facing");
+            switch (facing) {
+                case "north": rotationByte = 2; break;
+                case "south": rotationByte = 3; break;
+                case "west":  rotationByte = 4; break;
+                case "east":  rotationByte = 5; break;
+            }
+
+            String rotation = properties.getString("rotation");
+            if (rotation != null && rotation.isEmpty() == false)
+            {
+                try {
+                    rotationByte = Byte.parseByte(properties.getString("rotation"));
+                } catch (NumberFormatException e) {
+                    Litematica.LOGGER.error(e);
+                }
+            }
+        }
+
+        skullBeTag.putByte("Rot", rotationByte);
+        skullBeTag.putString("id", "minecraft:skull");
+        skullBeTag.putByte("SkullType", (byte) (int) skullTypeMap.getOrDefault(originalTag.getString("Name"), 0));
+        skullBeTag.putInt("x", pos.getX());
+        skullBeTag.putInt("y", pos.getY());
+        skullBeTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, skullBeTag);
+    };
 }
 
 interface StateFixer {
