@@ -177,6 +177,20 @@ public class DowngraderV113V112 extends SchematicDataConverter
             bannerColor.put("minecraft:" + colorId[i] + "_wall_banner", 15 - i);
         }
     }
+    static final ImmutableMap<String, Integer> skullTypes = ImmutableMap.<String, Integer>builder()
+        .put("minecraft:skeleton_skull",             0)
+        .put("minecraft:skeleton_wall_skull",        0)
+        .put("minecraft:wither_skeleton_skull",      1)
+        .put("minecraft:wither_skeleton_wall_skull", 1)
+        .put("minecraft:zombie_head",                2)
+        .put("minecraft:zombie_wall_head",           2)
+        .put("minecraft:player_head",                3)
+        .put("minecraft:player_wall_head",           3)
+        .put("minecraft:creeper_head",               4)
+        .put("minecraft:creeper_wall_head",          4)
+        .put("minecraft:dragon_head",                5)
+        .put("minecraft:dragon_wall_head",           5)
+        .build();
 
     static final UnfixBlockEntityCreator UNFIX_FLOWERPOT = (pos, container, blockEntityMap, originalTag) -> {
         Pair<String, Integer> itemData = flowerPotData.get(originalTag.getString("Name"));
@@ -268,6 +282,50 @@ public class DowngraderV113V112 extends SchematicDataConverter
         }
     }
 
+    static final UnfixBlockEntityCreator UNFIX_SKULL = (pos, container, blockEntityMap, originalTag) -> {
+        CompoundData blockEntityTag = new CompoundData();
+
+        CompoundData flattenedBlockEntityTag = blockEntityMap.get(pos);
+        if (flattenedBlockEntityTag != null)
+        {
+            CompoundData owner = flattenedBlockEntityTag.getCompound("Owner");
+            if (owner != null && owner.isEmpty() == false) {
+                blockEntityTag.put("Owner", owner);
+            }
+        }
+
+        byte rotationByte = 0;
+        CompoundData properties = originalTag.getCompound("Properties");
+        if (properties != null)
+        {
+            String facing = properties.getString("facing");
+            switch (facing) {
+                case "north": rotationByte = 2; break;
+                case "south": rotationByte = 3; break;
+                case "west":  rotationByte = 4; break;
+                case "east":  rotationByte = 5; break;
+            }
+
+            String rotation = properties.getString("rotation");
+            if (rotation != null && rotation.isEmpty() == false)
+            {
+                try {
+                    rotationByte = Byte.parseByte(properties.getString("rotation"));
+                } catch (NumberFormatException e) {
+                    Litematica.LOGGER.error(e);
+                }
+            }
+        }
+
+        blockEntityTag.putByte("Rot", rotationByte);
+        blockEntityTag.putString("id", "minecraft:skull");
+        blockEntityTag.putByte("SkullType", skullTypes.getOrDefault(originalTag.getString("Name"), 0).byteValue());
+        blockEntityTag.putInt("x", pos.getX());
+        blockEntityTag.putInt("y", pos.getY());
+        blockEntityTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, blockEntityTag);
+    };
+
     static final Map<String, UnfixBlockEntityCreator> unfixers = new HashMap<>();
     static {
         unfixers.put("minecraft:flower_pot",              UNFIX_FLOWERPOT);
@@ -299,6 +357,18 @@ public class DowngraderV113V112 extends SchematicDataConverter
             unfixers.put("minecraft:" + color + "_banner",      UNFIX_BANNER);
             unfixers.put("minecraft:" + color + "_wall_banner", UNFIX_BANNER);
         }
+        unfixers.put("minecraft:skeleton_skull",             UNFIX_SKULL);
+        unfixers.put("minecraft:skeleton_wall_skull",        UNFIX_SKULL);
+        unfixers.put("minecraft:wither_skeleton_skull",      UNFIX_SKULL);
+        unfixers.put("minecraft:wither_skeleton_wall_skull", UNFIX_SKULL);
+        unfixers.put("minecraft:player_head",                UNFIX_SKULL);
+        unfixers.put("minecraft:player_wall_head",           UNFIX_SKULL);
+        unfixers.put("minecraft:zombie_head",                UNFIX_SKULL);
+        unfixers.put("minecraft:zombie_wall_head",           UNFIX_SKULL);
+        unfixers.put("minecraft:creeper_head",               UNFIX_SKULL);
+        unfixers.put("minecraft:creeper_wall_head",          UNFIX_SKULL);
+        unfixers.put("minecraft:dragon_head",                UNFIX_SKULL);
+        unfixers.put("minecraft:dragon_wall_head",           UNFIX_SKULL);
     }
 }
 
