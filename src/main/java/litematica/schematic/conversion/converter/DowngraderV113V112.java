@@ -6,6 +6,7 @@ import litematica.schematic.conversion.SchematicDataConverter;
 import litematica.schematic.data.EntityData;
 import malilib.gui.BaseScreen;
 import malilib.overlay.message.MessageDispatcher;
+import malilib.util.data.Constants;
 import malilib.util.data.tag.CompoundData;
 import malilib.util.data.tag.ListData;
 import malilib.util.game.BlockUtils;
@@ -54,10 +55,14 @@ public class DowngraderV113V112 extends SchematicDataConverter
     };
 
     static final HashMap<String, Integer> bedColorMap = new HashMap<>();
+    static final HashMap<String, Integer> bannerColorMap = new HashMap<>();
     static {
         for (int i = 0; i < 16; i++)
         {
             bedColorMap.put("minecraft:" + colorId[i] + "_bed", i);
+            // banner color ids are the metadata, which is reversed
+            bannerColorMap.put("minecraft:" + colorId[i] + "_banner", 15 - i);
+            bannerColorMap.put("minecraft:" + colorId[i] + "_wall_banner", 15 - i);
         }
     }
 
@@ -108,6 +113,8 @@ public class DowngraderV113V112 extends SchematicDataConverter
         for (String color : colorId)
         {
             this.fixerMap.put("minecraft:" + color + "_bed", FIXER_BED);
+            this.fixerMap.put("minecraft:" + color + "_banner", FIXER_BANNER);
+            this.fixerMap.put("minecraft:" + color + "_wall_banner", FIXER_BANNER);
         }
     }
 
@@ -163,7 +170,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
                 ++failCount;
             }
         }
-        // TODO fix duplciate blockstates in palette from downgrade, e.g. merge "flower_pot"s
+        // TODO fix duplicate blockstates in palette from downgrade, e.g. merge "flower_pot"s
 
         if (needBlockFixer) {
             for (int x = 0; x < container.getSize().getX(); x++) {
@@ -247,11 +254,39 @@ public class DowngraderV113V112 extends SchematicDataConverter
         blockEntityMap.put(pos, bedBeTag);
     };
 
+    final StateFixer FIXER_BANNER = (pos, container, blockEntityMap, originalTag) -> {
+        CompoundData bannerBeTag = new CompoundData();
+        // black by default
+        bannerBeTag.putString("id", "minecraft:banner");
+
+        CompoundData originalBe = blockEntityMap.get(pos);
+        if (originalBe != null)
+        {
+            ListData originalPatterns = originalBe.getList("Patterns", Constants.NBT.TAG_COMPOUND);
+            if (originalPatterns != null && originalPatterns.size() > 0)
+            {
+                ListData patterns = originalPatterns.copy();
+                for (int i = 0; i < patterns.size(); i++)
+                {
+                    CompoundData pattern = patterns.getCompoundAt(i);
+                    if (pattern != null)
+                    {
+                        // 1.12 stores metadata color value, 1.13 stores id color value
+                        pattern.putInt("Color", 15 - pattern.getIntOrDefault("Color", 0));
+                    }
+                }
+                bannerBeTag.put("Patterns", patterns);
+            }
+        }
+        int colorMetaData = bannerColorMap.getOrDefault(originalTag.getString("Name"), 15);
+        bannerBeTag.putInt("Base", colorMetaData);
+        bannerBeTag.putInt("x", pos.getX());
+        bannerBeTag.putInt("y", pos.getY());
+        bannerBeTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, bannerBeTag);
+    };
+
     private void fixSkullBlockEntity() {
-
-    }
-
-    private void fixBannerBlockEntity() {
 
     }
 }
