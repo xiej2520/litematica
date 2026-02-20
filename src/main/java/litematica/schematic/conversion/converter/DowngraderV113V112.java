@@ -167,10 +167,14 @@ public class DowngraderV113V112 extends SchematicDataConverter
     };
 
     static final Map<String, Integer> bedColor = new HashMap<>();
+    static final Map<String, Integer> bannerColor = new HashMap<>();
     static {
         for (int i = 0; i < 16; i++)
         {
             bedColor.put("minecraft:" + colorId[i] + "_bed", i);
+            // banner color ids are the metadata, which is reversed
+            bannerColor.put("minecraft:" + colorId[i] + "_banner", 15 - i);
+            bannerColor.put("minecraft:" + colorId[i] + "_wall_banner", 15 - i);
         }
     }
 
@@ -223,6 +227,47 @@ public class DowngraderV113V112 extends SchematicDataConverter
         blockEntityMap.put(pos, blockEntityTag);
     };
 
+    // banner needs to get it's Base color id using the container
+    // but the block entity should already exist in the schematic, recreate it to be safe
+    static final UnfixBlockEntityCreator UNFIX_BANNER = (pos, container, blockEntityMap, originalTag) -> {
+        CompoundData blockEntityTag = blockEntityMap.getOrDefault(pos, new CompoundData());
+        // black by default
+        blockEntityTag.putString("id", "minecraft:banner");
+
+        // do not run unfixBannerBlockEntity(blockEntityTag) here, run it in the block entity converter
+
+        int colorMetadata = bannerColor.getOrDefault(originalTag.getString("Name"), 15);
+        blockEntityTag.putInt("Base", colorMetadata);
+        blockEntityTag.putInt("x", pos.getX());
+        blockEntityTag.putInt("y", pos.getY());
+        blockEntityTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, blockEntityTag);
+    };
+
+    static void unfixBannerBlockEntity(CompoundData blockEntityTag)
+    {
+        if (blockEntityTag.containsList("Patterns", Constants.NBT.TAG_COMPOUND)) {
+            ListData patterns = blockEntityTag.getList("Patterns", Constants.NBT.TAG_COMPOUND);
+            if (patterns.size() > 0)
+            {
+                for (int i = 0; i < patterns.size(); i++)
+                {
+                    CompoundData pattern = patterns.getCompoundAt(i);
+                    // 1.12 stores metadata color value, 1.13 stores id color value
+                    pattern.putInt("Color", 15 - pattern.getIntOrDefault("Color", 0));
+                }
+            }
+            else
+            {
+                blockEntityTag.remove("Patterns");
+            }
+        }
+        else
+        {
+            blockEntityTag.remove("Patterns");
+        }
+    }
+
     static final Map<String, UnfixBlockEntityCreator> unfixers = new HashMap<>();
     static {
         unfixers.put("minecraft:flower_pot",              UNFIX_FLOWERPOT);
@@ -251,6 +296,8 @@ public class DowngraderV113V112 extends SchematicDataConverter
         for (String color : colorId)
         {
             unfixers.put("minecraft:" + color + "_bed", UNFIX_BED);
+            unfixers.put("minecraft:" + color + "_banner",      UNFIX_BANNER);
+            unfixers.put("minecraft:" + color + "_wall_banner", UNFIX_BANNER);
         }
     }
 }
