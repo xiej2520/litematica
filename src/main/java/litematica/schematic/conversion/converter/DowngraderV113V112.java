@@ -1,5 +1,9 @@
 package litematica.schematic.conversion.converter;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import litematica.Litematica;
 import litematica.schematic.container.ArrayBlockContainer;
 import litematica.schematic.conversion.SchematicDataConverter;
@@ -24,6 +28,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
     public static DowngraderV113V112 INSTANCE = new DowngraderV113V112();
 
     private Map<CompoundData, CompoundData> stateMap = new HashMap<>();
+    private Map<String, ItemIdDamage> itemMap = new HashMap<>();
 
     public static MinecraftVersion versionFrom = MinecraftVersion.MC_1_13;
     public static MinecraftVersion versionTo = MinecraftVersion.MC_1_12;
@@ -38,6 +43,23 @@ public class DowngraderV113V112 extends SchematicDataConverter
         else
         {
             MessageDispatcher.error("failed to read block_state_map_113_to_112.json");
+        }
+
+        Optional<Map<CompoundData, CompoundData>> itemTagMap = ItemMapReader.readMap("item_map_113_to_112.ndjson", "1.13", "1.12");
+        if (itemTagMap.isPresent())
+        {
+            for (Map.Entry<CompoundData, CompoundData> entry : itemTagMap.get().entrySet())
+            {
+                String id113 = entry.getKey().getString("id");
+
+                CompoundData tag112 = entry.getValue();
+                ItemIdDamage idDamage112 = new ItemIdDamage(tag112.getString("id"), tag112.getShort("Damage"));
+                this.itemMap.put(id113, idDamage112);
+            }
+        }
+        else
+        {
+            MessageDispatcher.error("failed to read item_map_113_to_112.json");
         }
     }
 
@@ -129,6 +151,51 @@ public class DowngraderV113V112 extends SchematicDataConverter
 
     public void convertEntityList(List<EntityData> entityList)
     {
+        // TODO: painting Motive remap
+        //   "donkeykong" <- "donkey_kong"; "burningskull" <- "burning_skull; "skullandroses" <- "skull_and_roses"
+
+        for (EntityData entityData : entityList) {
+            convertEntityData(entityData.data);
+        }
+    }
+
+    private void convertEntityData(CompoundData data)
+    {
+        String id = data.getString("id");
+        String unrenamedId = ENTITY_UNRENAME_MAP.get(id);
+        if (unrenamedId != null) {
+            data.putString("id", unrenamedId);
+        }
+
+        if (id.equals("minecraft:item_frame")) { // v1456
+            byte facing3d = data.getByte("Facing");
+            byte facing2d;
+            switch (facing3d) {
+                case 3: facing2d = 0; break;
+                case 4: facing2d = 1; break;
+                case 2: facing2d = 2; break;
+                case 5: facing2d = 3; break;
+                default: facing2d = 2;
+            }
+            data.putByte("Facing", facing2d);
+        }
+
+        if (data.contains("Item", Constants.NBT.TAG_COMPOUND)) {
+            convertItem(data.getCompound("Item"));
+        }
+        if (data.containsList("Items", Constants.NBT.TAG_COMPOUND)) {
+            convertItemsTag(data.getList("Items", Constants.NBT.TAG_COMPOUND));
+        }
+        if (data.containsList("ArmorItems", Constants.NBT.TAG_COMPOUND)) {
+            convertItemsTag(data.getList("ArmorItems", Constants.NBT.TAG_COMPOUND));
+        }
+        if (data.containsList("HandItems", Constants.NBT.TAG_COMPOUND)) {
+            convertItemsTag(data.getList("HandItems", Constants.NBT.TAG_COMPOUND));
+        }
+
+        if (data.contains("Offers", Constants.NBT.TAG_COMPOUND)) {
+            convertOffers(data.getCompound("Offers"));
+        }
 
     }
 
@@ -136,12 +203,168 @@ public class DowngraderV113V112 extends SchematicDataConverter
     {
         for (CompoundData blockEntityTag : blockEntityMap.values())
         {
+            convertBlockEntityTag(blockEntityTag);
+        }
+    }
 
+    // TODO: in 1.12, double chests have reversed inventories when facing north or east
+    private void convertBlockEntityTag(CompoundData blockEntityTag)
+    {
+        String id = blockEntityTag.getString("id");
+        switch (id) {
+            case "minecraft:beacon":
+            case "minecraft:enchanting_table":
+                convertNamed(blockEntityTag);
+                break;
+            case "minecraft:banner":
+                convertNamed(blockEntityTag);
+                unfixBannerBlockEntity(blockEntityTag);
+                blockEntityTag.remove("id"); // not stored in tag in 1.12
+                break;
+            case "minecraft:brewing_stand":
+            case "minecraft:chest":
+            case "minecraft:dispenser":
+            case "minecraft:dropper":
+            case "minecraft:furnace":
+            case "minecraft:hopper":
+            case "minecraft:shulker_box":
+                convertNamedInventory(blockEntityTag);
+                break;
+            case "minecraft:trapped_chest":
+                blockEntityTag.putString("id", "minecraft:chest"); // v1624, 1.13.1
+                convertNamedInventory(blockEntityTag);
+                break;
+            // TODO piston Block 36 blockState -> blockId + blockData
+            // TODO Jukebox RecordItem id Count -> Record
+            default:
+                break;
+        }
+    }
+    
+    
+    private void convertNamed(CompoundData blockEntityTag)
+    {
+        // TODO: verify this is correct, from plain text component
+        // v1458
+        if (blockEntityTag.contains("CustomName", Constants.NBT.TAG_STRING)) {
+            JsonObject obj = JsonParser.parseString(blockEntityTag.getString("CustomName")).getAsJsonObject();
+            JsonElement textComponent = obj.get("text");
+            if (textComponent != null && textComponent.isJsonPrimitive()) {
+                String customName = textComponent.getAsString();
+                blockEntityTag.putString("CustomName", customName);
+            }
+        }
+    }
+
+    private void convertNamedInventory(CompoundData blockEntityTag)
+    {
+        // v1458
+        convertNamed(blockEntityTag);
+        if (blockEntityTag.containsList("Items", Constants.NBT.TAG_COMPOUND)) {
+            convertItemsTag(blockEntityTag.getList("Items", Constants.NBT.TAG_COMPOUND));
+        }
+    }
+
+    private void convertItemsTag(ListData items)
+    {
+        for (int i = 0; i < items.size(); i++) {
+            CompoundData itemTag = items.getCompoundAt(i);
+            if (itemTag != null && itemTag.isEmpty() == false) {
+                convertItem(itemTag);
+            }
+        }
+    }
+
+    private void convertOffers(CompoundData offers)
+    {
+        if (offers.containsList("Recipes", Constants.NBT.TAG_COMPOUND)) {
+            ListData recipes = offers.getList("Recipes", Constants.NBT.TAG_COMPOUND);
+            for (int i = 0; i < recipes.size(); i++) {
+                CompoundData recipe = recipes.getCompoundAt(i);
+                if (recipe.contains("buy", Constants.NBT.TAG_COMPOUND)) {
+                    convertItem(recipe.getCompound("buy"));
+                }
+                if (recipe.contains("sell", Constants.NBT.TAG_COMPOUND)) {
+                    convertItem(recipe.getCompound("sell"));
+                }
+            }
         }
     }
 
     private void convertItem(CompoundData itemTag)
     {
+        // v1451 flattening item names
+        String id13 = itemTag.getString("id");
+        ItemIdDamage idDamage = this.itemMap.get(id13);
+
+        // TODO: fallback items
+        if (idDamage != null) {
+            itemTag.putString("id", idDamage.id);
+            itemTag.putShort("Damage", idDamage.damage);
+        }
+
+        CompoundData tag = itemTag.getCompound("tag");
+        if (tag != null && tag.isEmpty() == false) {
+            if (tag.contains("Damage", Constants.NBT.TAG_INT)) {
+                short actualDamage = tag.getShort("Damage");
+                itemTag.putShort("Damage", actualDamage);
+                tag.remove("Damage");
+            }
+
+            if (tag.contains("StoredEnchantments", Constants.NBT.TAG_LIST)) { // v1494
+                ListData storedEnchantments = tag.getList("StoredEnchantments", Constants.NBT.TAG_LIST);
+                convertEnchantments(storedEnchantments);
+            }
+            if (tag.contains("Enchantments", Constants.NBT.TAG_LIST)) { // v1494
+                ListData enchantments = tag.getList("Enchantments", Constants.NBT.TAG_LIST);
+                convertEnchantments(enchantments);
+                tag.remove("Enchantments");
+                tag.put("ench", enchantments);
+            }
+
+            // Potion stayed the same (I think?)
+            //if (tag.contains("Potion", Constants.NBT.TAG_STRING))
+
+            if (tag.contains("EntityTag", Constants.NBT.TAG_COMPOUND)) {
+                CompoundData entityTag = tag.getCompound("EntityTag");
+                // TODO: confirm this is correct
+                convertEntityData(entityTag);
+            }
+
+            if (tag.contains("BlockEntityTag", Constants.NBT.TAG_COMPOUND)) {
+                CompoundData blockEntityTag = tag.getCompound("BlockEntityTag");
+                convertBlockEntityTag(blockEntityTag);
+            }
+
+            if (tag.contains("display", Constants.NBT.TAG_COMPOUND)) {
+                CompoundData displayTag = tag.getCompound("display");
+                if (displayTag.contains("Name", Constants.NBT.TAG_STRING)) {
+                    JsonObject obj = JsonParser.parseString(displayTag.getString("Name")).getAsJsonObject();
+                    JsonElement textComponent = obj.get("text");
+                    if (textComponent != null && textComponent.isJsonPrimitive()) {
+                        String customName = textComponent.getAsString();
+                        displayTag.putString("Name", customName);
+                    }
+                }
+            }
+
+        }
+        if (tag.isEmpty())
+        {
+            itemTag.remove("tag");
+        }
+
+    }
+
+    // v1494 enchantment id to name
+    private void convertEnchantments(ListData storedEnchantments)
+    {
+        for (int i = 0; i < storedEnchantments.size(); i++) {
+            CompoundData enchantmentTag = storedEnchantments.getCompoundAt(i);
+            String nameId = enchantmentTag.getString("id");
+            enchantmentTag.putShort("id", ENCHANTMENT_NAME_TO_ID.get(nameId));
+            // keep lvl the same
+        }
 
     }
 
@@ -252,30 +475,15 @@ public class DowngraderV113V112 extends SchematicDataConverter
         blockEntityMap.put(pos, blockEntityTag);
     };
 
+    // banner needs to get it's Base color id using the container
+    // but the block entity should already exist in the schematic, recreate it to be safe
     static final UnfixBlockEntityCreator UNFIX_BANNER = (pos, container, blockEntityMap, originalTag) -> {
-        CompoundData blockEntityTag = new CompoundData();
+        CompoundData blockEntityTag = blockEntityMap.getOrDefault(pos, new CompoundData());
         // black by default
         blockEntityTag.putString("id", "minecraft:banner");
 
-        CompoundData flattenedBlockEntityTag = blockEntityMap.get(pos);
-        if (flattenedBlockEntityTag != null)
-        {
-            ListData flattenedPatterns = flattenedBlockEntityTag.getList("Patterns", Constants.NBT.TAG_COMPOUND);
-            if (flattenedPatterns != null && flattenedPatterns.size() > 0)
-            {
-                ListData patterns = flattenedPatterns.copy();
-                for (int i = 0; i < patterns.size(); i++)
-                {
-                    CompoundData pattern = patterns.getCompoundAt(i);
-                    if (pattern != null)
-                    {
-                        // 1.12 stores metadata color value, 1.13 stores id color value
-                        pattern.putInt("Color", 15 - pattern.getIntOrDefault("Color", 0));
-                    }
-                }
-                blockEntityTag.put("Patterns", patterns);
-            }
-        }
+        // do not run unfixBannerBlockEntity(blockEntityTag) here, run it in the block entity converter
+
         int colorMetadata = bannerColor.getOrDefault(originalTag.getString("Name"), 15);
         blockEntityTag.putInt("Base", colorMetadata);
         blockEntityTag.putInt("x", pos.getX());
@@ -283,6 +491,30 @@ public class DowngraderV113V112 extends SchematicDataConverter
         blockEntityTag.putInt("z", pos.getZ());
         blockEntityMap.put(pos, blockEntityTag);
     };
+
+    static void unfixBannerBlockEntity(CompoundData blockEntityTag)
+    {
+        if (blockEntityTag.containsList("Patterns", Constants.NBT.TAG_COMPOUND)) {
+            ListData patterns = blockEntityTag.getList("Patterns", Constants.NBT.TAG_COMPOUND);
+            if (patterns.size() > 0)
+            {
+                for (int i = 0; i < patterns.size(); i++)
+                {
+                    CompoundData pattern = patterns.getCompoundAt(i);
+                    // 1.12 stores metadata color value, 1.13 stores id color value
+                    pattern.putInt("Color", 15 - pattern.getIntOrDefault("Color", 0));
+                }
+            }
+            else
+            {
+                blockEntityTag.remove("Patterns");
+            }
+        }
+        else
+        {
+            blockEntityTag.remove("Patterns");
+        }
+    }
 
     static final UnfixBlockEntityCreator UNFIX_SKULL = (pos, container, blockEntityMap, originalTag) -> {
         CompoundData blockEntityTag = new CompoundData();
@@ -374,6 +606,64 @@ public class DowngraderV113V112 extends SchematicDataConverter
         unfixers.put("minecraft:dragon_head",                UNFIX_SKULL);
         unfixers.put("minecraft:dragon_wall_head",           UNFIX_SKULL);
     }
+
+    static final Map<Integer, String> ENCHANTMENT_ID_TO_NAME = new HashMap<>();
+    static final Map<String, Short> ENCHANTMENT_NAME_TO_ID = new HashMap<>();
+    static {
+        ENCHANTMENT_ID_TO_NAME.put(0, "minecraft:protection");
+        ENCHANTMENT_ID_TO_NAME.put(1, "minecraft:fire_protection");
+        ENCHANTMENT_ID_TO_NAME.put(2, "minecraft:feather_falling");
+        ENCHANTMENT_ID_TO_NAME.put(3, "minecraft:blast_protection");
+        ENCHANTMENT_ID_TO_NAME.put(4, "minecraft:projectile_protection");
+        ENCHANTMENT_ID_TO_NAME.put(5, "minecraft:respiration");
+        ENCHANTMENT_ID_TO_NAME.put(6, "minecraft:aqua_affinity");
+        ENCHANTMENT_ID_TO_NAME.put(7, "minecraft:thorns");
+        ENCHANTMENT_ID_TO_NAME.put(8, "minecraft:depth_strider");
+        ENCHANTMENT_ID_TO_NAME.put(9, "minecraft:frost_walker");
+        ENCHANTMENT_ID_TO_NAME.put(10, "minecraft:binding_curse");
+        ENCHANTMENT_ID_TO_NAME.put(16, "minecraft:sharpness");
+        ENCHANTMENT_ID_TO_NAME.put(17, "minecraft:smite");
+        ENCHANTMENT_ID_TO_NAME.put(18, "minecraft:bane_of_arthropods");
+        ENCHANTMENT_ID_TO_NAME.put(19, "minecraft:knockback");
+        ENCHANTMENT_ID_TO_NAME.put(20, "minecraft:fire_aspect");
+        ENCHANTMENT_ID_TO_NAME.put(21, "minecraft:looting");
+        ENCHANTMENT_ID_TO_NAME.put(22, "minecraft:sweeping");
+        ENCHANTMENT_ID_TO_NAME.put(32, "minecraft:efficiency");
+        ENCHANTMENT_ID_TO_NAME.put(33, "minecraft:silk_touch");
+        ENCHANTMENT_ID_TO_NAME.put(34, "minecraft:unbreaking");
+        ENCHANTMENT_ID_TO_NAME.put(35, "minecraft:fortune");
+        ENCHANTMENT_ID_TO_NAME.put(48, "minecraft:power");
+        ENCHANTMENT_ID_TO_NAME.put(49, "minecraft:punch");
+        ENCHANTMENT_ID_TO_NAME.put(50, "minecraft:flame");
+        ENCHANTMENT_ID_TO_NAME.put(51, "minecraft:infinity");
+        ENCHANTMENT_ID_TO_NAME.put(61, "minecraft:luck_of_the_sea");
+        ENCHANTMENT_ID_TO_NAME.put(62, "minecraft:lure");
+        ENCHANTMENT_ID_TO_NAME.put(65, "minecraft:loyalty");
+        ENCHANTMENT_ID_TO_NAME.put(66, "minecraft:impaling");
+        ENCHANTMENT_ID_TO_NAME.put(67, "minecraft:riptide");
+        ENCHANTMENT_ID_TO_NAME.put(68, "minecraft:channeling");
+        ENCHANTMENT_ID_TO_NAME.put(70, "minecraft:mending");
+        ENCHANTMENT_ID_TO_NAME.put(71, "minecraft:vanishing_curse");
+        for (Map.Entry<Integer, String> entry : ENCHANTMENT_ID_TO_NAME.entrySet()) {
+            ENCHANTMENT_NAME_TO_ID.put(entry.getValue(), entry.getKey().shortValue());
+        }
+    }
+
+    static final ImmutableMap<String, String> ENTITY_UNRENAME_MAP = ImmutableMap.<String, String>builder()
+        // v1510
+        .put("minecraft:command_block_minecart", "minecraft:commandblock_minecart")
+        .put("minecraft:end_crystal", "minecraft:ender_crystal")
+        .put("minecraft:snow_golem", "minecraft:snowman")
+        .put("minecraft:evoker", "minecraft:evocation_illager")
+        .put("minecraft:evoker_fangs", "minecraft:evocation_fangs")
+        .put("minecraft:illusioner", "minecraft:illusion_illager")
+        .put("minecraft:vindicator", "minecraft:vindication_illager")
+        .put("minecraft:iron_golem", "minecraft:villager_golem")
+        .put("minecraft:experience_orb", "minecraft:xp_orb")
+        .put("minecraft:experience_bottle", "minecraft:xp_bottle")
+        .put("minecraft:eye_of_ender", "minecraft:eye_of_ender_signal")
+        .put("minecraft:firework_rocket", "minecraft:fireworks_rocket")
+        .build();
 }
 
 interface UnfixBlockEntityCreator {
@@ -383,5 +673,15 @@ interface UnfixBlockEntityCreator {
         Map<BlockPos, CompoundData> blockEntityMap,
         CompoundData originalTag
     );
+}
+
+class ItemIdDamage {
+    String id;
+    short damage;
+    public ItemIdDamage(String id, short damage)
+    {
+        this.id = id;
+        this.damage = damage;
+    }
 }
 
