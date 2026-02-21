@@ -21,70 +21,9 @@ import java.util.*;
 
 public class DowngraderV113V112 extends SchematicDataConverter
 {
-
-    // initialize all static data before INSTANCE constructor call
-    static final Map<String, Pair<String, Integer>> flowerPotDataMap = new HashMap<>();
-    static {
-        flowerPotDataMap.put("minecraft:flower_pot",              Pair.of("minecraft:air", 0));
-        flowerPotDataMap.put("minecraft:potted_poppy",            Pair.of("minecraft:red_flower", 0));
-        flowerPotDataMap.put("minecraft:potted_blue_orchid",      Pair.of("minecraft:red_flower", 1));
-        flowerPotDataMap.put("minecraft:potted_allium",           Pair.of("minecraft:red_flower", 2));
-        flowerPotDataMap.put("minecraft:potted_azure_bluet",      Pair.of("minecraft:red_flower", 3));
-        flowerPotDataMap.put("minecraft:potted_red_tulip",        Pair.of("minecraft:red_flower", 4));
-        flowerPotDataMap.put("minecraft:potted_orange_tulip",     Pair.of("minecraft:red_flower", 5));
-        flowerPotDataMap.put("minecraft:potted_white_tulip",      Pair.of("minecraft:red_flower", 6));
-        flowerPotDataMap.put("minecraft:potted_pink_tulip",       Pair.of("minecraft:red_flower", 7));
-        flowerPotDataMap.put("minecraft:potted_oxeye_daisy",      Pair.of("minecraft:red_flower", 8));
-        flowerPotDataMap.put("minecraft:potted_dandelion",        Pair.of("minecraft:yellow_flower", 0));
-        flowerPotDataMap.put("minecraft:potted_oak_sapling",      Pair.of("minecraft:sapling", 0));
-        flowerPotDataMap.put("minecraft:potted_spruce_sapling",   Pair.of("minecraft:sapling", 1));
-        flowerPotDataMap.put("minecraft:potted_birch_sapling",    Pair.of("minecraft:sapling", 2));
-        flowerPotDataMap.put("minecraft:potted_jungle_sapling",   Pair.of("minecraft:sapling", 3));
-        flowerPotDataMap.put("minecraft:potted_acacia_sapling",   Pair.of("minecraft:sapling", 4));
-        flowerPotDataMap.put("minecraft:potted_dark_oak_sapling", Pair.of("minecraft:sapling", 5));
-        flowerPotDataMap.put("minecraft:potted_brown_mushroom",   Pair.of("minecraft:brown_mushroom", 0));
-        flowerPotDataMap.put("minecraft:potted_red_mushroom",     Pair.of("minecraft:red_mushroom", 0));
-        flowerPotDataMap.put("minecraft:potted_dead_bush",        Pair.of("minecraft:deadbush", 0));
-        flowerPotDataMap.put("minecraft:potted_fern",             Pair.of("minecraft:tallgrass", 2));
-        flowerPotDataMap.put("minecraft:potted_cactus",           Pair.of("minecraft:cactus", 0));
-    }
-
-    static final String[] colorId = new String[] {
-        "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
-        "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
-    };
-
-    static final HashMap<String, Integer> bedColorMap = new HashMap<>();
-    static final HashMap<String, Integer> bannerColorMap = new HashMap<>();
-    static {
-        for (int i = 0; i < 16; i++)
-        {
-            bedColorMap.put("minecraft:" + colorId[i] + "_bed", i);
-            // banner color ids are the metadata, which is reversed
-            bannerColorMap.put("minecraft:" + colorId[i] + "_banner", 15 - i);
-            bannerColorMap.put("minecraft:" + colorId[i] + "_wall_banner", 15 - i);
-        }
-    }
-    static final HashMap<String, Integer> skullTypeMap = new HashMap<>();
-    static {
-        skullTypeMap.put("minecraft:skeleton_skull", 0);
-        skullTypeMap.put("minecraft:skeleton_wall_skull", 0);
-        skullTypeMap.put("minecraft:wither_skeleton_skull", 1);
-        skullTypeMap.put("minecraft:wither_skeleton_wall_skull", 1);
-        skullTypeMap.put("minecraft:zombie_head", 2);
-        skullTypeMap.put("minecraft:zombie_wall_head", 2);
-        skullTypeMap.put("minecraft:player_head", 3);
-        skullTypeMap.put("minecraft:player_wall_head", 3);
-        skullTypeMap.put("minecraft:creeper_head", 4);
-        skullTypeMap.put("minecraft:creeper_wall_head", 4);
-        skullTypeMap.put("minecraft:dragon_head", 5);
-        skullTypeMap.put("minecraft:dragon_wall_head", 5);
-    }
-
     public static DowngraderV113V112 INSTANCE = new DowngraderV113V112();
 
     private Map<CompoundData, CompoundData> stateMap = new HashMap<>();
-    private Map<String, StateFixer> fixerMap = new HashMap<>();
 
     public static MinecraftVersion versionFrom = MinecraftVersion.MC_1_13;
     public static MinecraftVersion versionTo = MinecraftVersion.MC_1_12;
@@ -100,59 +39,18 @@ public class DowngraderV113V112 extends SchematicDataConverter
         {
             MessageDispatcher.error("failed to read block_state_map_113_to_112.json");
         }
-        this.fixerMap.put("minecraft:flower_pot",              FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_poppy",            FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_blue_orchid",      FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_allium",           FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_azure_bluet",      FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_red_tulip",        FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_orange_tulip",     FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_white_tulip",      FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_pink_tulip",       FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_oxeye_daisy",      FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_dandelion",        FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_oak_sapling",      FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_spruce_sapling",   FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_birch_sapling",    FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_jungle_sapling",   FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_acacia_sapling",   FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_dark_oak_sapling", FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_brown_mushroom",   FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_red_mushroom",     FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_dead_bush",        FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_fern",             FIXER_FLOWERPOT);
-        this.fixerMap.put("minecraft:potted_cactus",           FIXER_FLOWERPOT);
-
-        this.fixerMap.put("minecraft:note_block",              FIXER_NOTE_BLOCK);
-
-        for (String color : colorId)
-        {
-            this.fixerMap.put("minecraft:" + color + "_bed", FIXER_BED);
-            this.fixerMap.put("minecraft:" + color + "_banner", FIXER_BANNER);
-            this.fixerMap.put("minecraft:" + color + "_wall_banner", FIXER_BANNER);
-        }
-        this.fixerMap.put("minecraft:skeleton_skull",             FIXER_SKULL);
-        this.fixerMap.put("minecraft:skeleton_wall_skull",        FIXER_SKULL);
-        this.fixerMap.put("minecraft:wither_skeleton_skull",      FIXER_SKULL);
-        this.fixerMap.put("minecraft:wither_skeleton_wall_skull", FIXER_SKULL);
-        this.fixerMap.put("minecraft:player_head",                FIXER_SKULL);
-        this.fixerMap.put("minecraft:player_wall_head",           FIXER_SKULL);
-        this.fixerMap.put("minecraft:zombie_head",                FIXER_SKULL);
-        this.fixerMap.put("minecraft:zombie_wall_head",           FIXER_SKULL);
-        this.fixerMap.put("minecraft:creeper_head",               FIXER_SKULL);
-        this.fixerMap.put("minecraft:creeper_wall_head",          FIXER_SKULL);
-        this.fixerMap.put("minecraft:dragon_head",                FIXER_SKULL);
-        this.fixerMap.put("minecraft:dragon_wall_head",           FIXER_SKULL);
     }
 
 
-    // right inverse converter: if a blockstate exists in 1.13, and a 1.12 blockstate gets converted
-    // to it by vanilla datafixer, then this converter should try to restore the 1.13 blockstate to
-    // the 1.12 blockstate. If multiple 1.12 blockstates map to the 1.13 state, pick the most reasonable one.
-    // duplicates from merges:
-    // dirt/coarse dirt, flowing water/lava, leaves, shrub (tallgrass 31:0), double stone slab,
-    // smooth_stone, smooth (red)sandstone, smooth quartz, mushroom blocks, pumpkin/melon stem
-    // flower pot, skull, powered redstone comparator, double_plant
+    /// BlockState downgrade converter
+    /// right inverse function: if a blockstate exists in 1.13, and a 1.12 blockstate gets converted
+    /// to it by vanilla datafixer, then this converter should try to restore the 1.13 blockstate to
+    /// the 1.12 blockstate. If multiple 1.12 blockstates map to the 1.13 state, pick the most reasonable one.
+    ///
+    /// duplicates from merges:
+    /// dirt/coarse dirt, flowing water/lava, leaves, shrub (tallgrass 31:0), double stone slab,
+    /// smooth_stone, smooth (red)sandstone, smooth quartz, mushroom blocks, pumpkin/melon stem
+    /// flower pot, skull, powered redstone comparator, double_plant
     public void convertContainer(
         ListData paletteTag,
         ArrayBlockContainer container,
@@ -183,7 +81,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
 
                 String blockName = tag.getString("Name");
 
-                if (fixerMap.containsKey(blockName))
+                if (unfixers.containsKey(blockName))
                 {
                     needBlockFixer = true;
                 }
@@ -206,14 +104,16 @@ public class DowngraderV113V112 extends SchematicDataConverter
                         int i = container.getPaletteId(x, y, z);
                         CompoundData tag = paletteTagOriginal.getCompoundAt(i);
                         String blockName = tag.getString("Name");
-                        StateFixer fixer = fixerMap.get(blockName);
+                        UnfixBlockEntityCreator fixer = unfixers.get(blockName);
                         if (fixer != null) {
-                            fixer.fixState(new BlockPos(x, y, z), container, blockEntityMap, tag);
+                            fixer.recreateBlockEntity(new BlockPos(x, y, z), container, blockEntityMap, tag);
                         }
                     }
                 }
             }
         }
+
+        convertBlockEntities(blockEntityMap);
 
         if (failCount > 0)
         {
@@ -232,20 +132,91 @@ public class DowngraderV113V112 extends SchematicDataConverter
 
     }
 
-    final StateFixer FIXER_FLOWERPOT = (pos, container, blockEntityMap, originalTag) -> {
-        Pair<String, Integer> beData = flowerPotDataMap.get(originalTag.getString("Name"));
+    private void convertBlockEntities(Map<BlockPos, CompoundData> blockEntityMap)
+    {
+        for (CompoundData blockEntityTag : blockEntityMap.values())
+        {
 
-        CompoundData flowerPotBeTag = new CompoundData();
-        flowerPotBeTag.putString("Item", beData.getLeft());
-        flowerPotBeTag.putInt("Data", beData.getRight());
-        flowerPotBeTag.putString("id", "minecraft:flower_pot");
-        flowerPotBeTag.putInt("x", pos.getX());
-        flowerPotBeTag.putInt("y", pos.getY());
-        flowerPotBeTag.putInt("z", pos.getZ());
-        blockEntityMap.put(pos, flowerPotBeTag);
+        }
+    }
+
+    private void convertItem(CompoundData itemTag)
+    {
+
+    }
+
+    static final Map<String, Pair<String, Integer>> flowerPotData = new HashMap<>();
+    static {
+        flowerPotData.put("minecraft:flower_pot",              Pair.of("minecraft:air", 0));
+        flowerPotData.put("minecraft:potted_poppy",            Pair.of("minecraft:red_flower", 0));
+        flowerPotData.put("minecraft:potted_blue_orchid",      Pair.of("minecraft:red_flower", 1));
+        flowerPotData.put("minecraft:potted_allium",           Pair.of("minecraft:red_flower", 2));
+        flowerPotData.put("minecraft:potted_azure_bluet",      Pair.of("minecraft:red_flower", 3));
+        flowerPotData.put("minecraft:potted_red_tulip",        Pair.of("minecraft:red_flower", 4));
+        flowerPotData.put("minecraft:potted_orange_tulip",     Pair.of("minecraft:red_flower", 5));
+        flowerPotData.put("minecraft:potted_white_tulip",      Pair.of("minecraft:red_flower", 6));
+        flowerPotData.put("minecraft:potted_pink_tulip",       Pair.of("minecraft:red_flower", 7));
+        flowerPotData.put("minecraft:potted_oxeye_daisy",      Pair.of("minecraft:red_flower", 8));
+        flowerPotData.put("minecraft:potted_dandelion",        Pair.of("minecraft:yellow_flower", 0));
+        flowerPotData.put("minecraft:potted_oak_sapling",      Pair.of("minecraft:sapling", 0));
+        flowerPotData.put("minecraft:potted_spruce_sapling",   Pair.of("minecraft:sapling", 1));
+        flowerPotData.put("minecraft:potted_birch_sapling",    Pair.of("minecraft:sapling", 2));
+        flowerPotData.put("minecraft:potted_jungle_sapling",   Pair.of("minecraft:sapling", 3));
+        flowerPotData.put("minecraft:potted_acacia_sapling",   Pair.of("minecraft:sapling", 4));
+        flowerPotData.put("minecraft:potted_dark_oak_sapling", Pair.of("minecraft:sapling", 5));
+        flowerPotData.put("minecraft:potted_brown_mushroom",   Pair.of("minecraft:brown_mushroom", 0));
+        flowerPotData.put("minecraft:potted_red_mushroom",     Pair.of("minecraft:red_mushroom", 0));
+        flowerPotData.put("minecraft:potted_dead_bush",        Pair.of("minecraft:deadbush", 0));
+        flowerPotData.put("minecraft:potted_fern",             Pair.of("minecraft:tallgrass", 2));
+        flowerPotData.put("minecraft:potted_cactus",           Pair.of("minecraft:cactus", 0));
+    }
+
+    static final String[] colorId = new String[] {
+        "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+        "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
     };
 
-    final StateFixer FIXER_NOTE_BLOCK = (pos, container, blockEntityMap, originalTag) -> {
+    static final Map<String, Integer> bedColor = new HashMap<>();
+    static final Map<String, Integer> bannerColor = new HashMap<>();
+    static {
+        for (int i = 0; i < 16; i++)
+        {
+            bedColor.put("minecraft:" + colorId[i] + "_bed", i);
+            // banner color ids are the metadata, which is reversed
+            bannerColor.put("minecraft:" + colorId[i] + "_banner", 15 - i);
+            bannerColor.put("minecraft:" + colorId[i] + "_wall_banner", 15 - i);
+        }
+    }
+    static final Map<String, Integer> skullTypes = new HashMap<>();
+    static {
+        skullTypes.put("minecraft:skeleton_skull", 0);
+        skullTypes.put("minecraft:skeleton_wall_skull", 0);
+        skullTypes.put("minecraft:wither_skeleton_skull", 1);
+        skullTypes.put("minecraft:wither_skeleton_wall_skull", 1);
+        skullTypes.put("minecraft:zombie_head", 2);
+        skullTypes.put("minecraft:zombie_wall_head", 2);
+        skullTypes.put("minecraft:player_head", 3);
+        skullTypes.put("minecraft:player_wall_head", 3);
+        skullTypes.put("minecraft:creeper_head", 4);
+        skullTypes.put("minecraft:creeper_wall_head", 4);
+        skullTypes.put("minecraft:dragon_head", 5);
+        skullTypes.put("minecraft:dragon_wall_head", 5);
+    }
+
+    static final UnfixBlockEntityCreator UNFIX_FLOWERPOT = (pos, container, blockEntityMap, originalTag) -> {
+        Pair<String, Integer> itemData = flowerPotData.get(originalTag.getString("Name"));
+
+        CompoundData blockEntityTag = new CompoundData();
+        blockEntityTag.putString("Item", itemData.getLeft());
+        blockEntityTag.putInt("Data", itemData.getRight());
+        blockEntityTag.putString("id", "minecraft:flower_pot");
+        blockEntityTag.putInt("x", pos.getX());
+        blockEntityTag.putInt("y", pos.getY());
+        blockEntityTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, blockEntityTag);
+    };
+
+    static final UnfixBlockEntityCreator UNFIX_NOTE_BLOCK = (pos, container, blockEntityMap, originalTag) -> {
         CompoundData properties = originalTag.getCompound("Properties");
         if (properties != null)
         {
@@ -258,41 +229,41 @@ public class DowngraderV113V112 extends SchematicDataConverter
             }
             // instrument is not stored in 1.12
 
-            CompoundData noteBlockBeTag = new CompoundData();
-            noteBlockBeTag.putByte("note", note);
-            noteBlockBeTag.putBoolean("powered", powered);
-            noteBlockBeTag.putString("id", "minecraft:noteblock");
-            noteBlockBeTag.putInt("x", pos.getX());
-            noteBlockBeTag.putInt("y", pos.getY());
-            noteBlockBeTag.putInt("z", pos.getZ());
-            blockEntityMap.put(pos, noteBlockBeTag);
+            CompoundData blockEntityTag = new CompoundData();
+            blockEntityTag.putByte("note", note);
+            blockEntityTag.putBoolean("powered", powered);
+            blockEntityTag.putString("id", "minecraft:noteblock");
+            blockEntityTag.putInt("x", pos.getX());
+            blockEntityTag.putInt("y", pos.getY());
+            blockEntityTag.putInt("z", pos.getZ());
+            blockEntityMap.put(pos, blockEntityTag);
         }
     };
 
-    final StateFixer FIXER_BED = (pos, container, blockEntityMap, originalTag) -> {
-        int colorId = bedColorMap.getOrDefault(originalTag.getString("Name"), 0);
+    static final UnfixBlockEntityCreator UNFIX_BED = (pos, container, blockEntityMap, originalTag) -> {
+        int color = bedColor.getOrDefault(originalTag.getString("Name"), 0);
 
-        CompoundData bedBeTag = new CompoundData();
-        bedBeTag.putInt("color", colorId);
-        bedBeTag.putString("id", "minecraft:bed");
-        bedBeTag.putInt("x", pos.getX());
-        bedBeTag.putInt("y", pos.getY());
-        bedBeTag.putInt("z", pos.getZ());
-        blockEntityMap.put(pos, bedBeTag);
+        CompoundData blockEntityTag = new CompoundData();
+        blockEntityTag.putInt("color", color);
+        blockEntityTag.putString("id", "minecraft:bed");
+        blockEntityTag.putInt("x", pos.getX());
+        blockEntityTag.putInt("y", pos.getY());
+        blockEntityTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, blockEntityTag);
     };
 
-    final StateFixer FIXER_BANNER = (pos, container, blockEntityMap, originalTag) -> {
-        CompoundData bannerBeTag = new CompoundData();
+    static final UnfixBlockEntityCreator UNFIX_BANNER = (pos, container, blockEntityMap, originalTag) -> {
+        CompoundData blockEntityTag = new CompoundData();
         // black by default
-        bannerBeTag.putString("id", "minecraft:banner");
+        blockEntityTag.putString("id", "minecraft:banner");
 
-        CompoundData originalBe = blockEntityMap.get(pos);
-        if (originalBe != null)
+        CompoundData flattenedBlockEntityTag = blockEntityMap.get(pos);
+        if (flattenedBlockEntityTag != null)
         {
-            ListData originalPatterns = originalBe.getList("Patterns", Constants.NBT.TAG_COMPOUND);
-            if (originalPatterns != null && originalPatterns.size() > 0)
+            ListData flattenedPatterns = flattenedBlockEntityTag.getList("Patterns", Constants.NBT.TAG_COMPOUND);
+            if (flattenedPatterns != null && flattenedPatterns.size() > 0)
             {
-                ListData patterns = originalPatterns.copy();
+                ListData patterns = flattenedPatterns.copy();
                 for (int i = 0; i < patterns.size(); i++)
                 {
                     CompoundData pattern = patterns.getCompoundAt(i);
@@ -302,26 +273,26 @@ public class DowngraderV113V112 extends SchematicDataConverter
                         pattern.putInt("Color", 15 - pattern.getIntOrDefault("Color", 0));
                     }
                 }
-                bannerBeTag.put("Patterns", patterns);
+                blockEntityTag.put("Patterns", patterns);
             }
         }
-        int colorMetaData = bannerColorMap.getOrDefault(originalTag.getString("Name"), 15);
-        bannerBeTag.putInt("Base", colorMetaData);
-        bannerBeTag.putInt("x", pos.getX());
-        bannerBeTag.putInt("y", pos.getY());
-        bannerBeTag.putInt("z", pos.getZ());
-        blockEntityMap.put(pos, bannerBeTag);
+        int colorMetadata = bannerColor.getOrDefault(originalTag.getString("Name"), 15);
+        blockEntityTag.putInt("Base", colorMetadata);
+        blockEntityTag.putInt("x", pos.getX());
+        blockEntityTag.putInt("y", pos.getY());
+        blockEntityTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, blockEntityTag);
     };
 
-    final StateFixer FIXER_SKULL = (pos, container, blockEntityMap, originalTag) -> {
-        CompoundData skullBeTag = new CompoundData();
+    static final UnfixBlockEntityCreator UNFIX_SKULL = (pos, container, blockEntityMap, originalTag) -> {
+        CompoundData blockEntityTag = new CompoundData();
 
-        CompoundData originalBe = blockEntityMap.get(pos);
-        if (originalBe != null)
+        CompoundData flattenedBlockEntityTag = blockEntityMap.get(pos);
+        if (flattenedBlockEntityTag != null)
         {
-            CompoundData owner = originalBe.getCompound("Owner");
+            CompoundData owner = flattenedBlockEntityTag.getCompound("Owner");
             if (owner != null && owner.isEmpty() == false) {
-                skullBeTag.put("Owner", owner);
+                blockEntityTag.put("Owner", owner);
             }
         }
 
@@ -348,18 +319,65 @@ public class DowngraderV113V112 extends SchematicDataConverter
             }
         }
 
-        skullBeTag.putByte("Rot", rotationByte);
-        skullBeTag.putString("id", "minecraft:skull");
-        skullBeTag.putByte("SkullType", (byte) (int) skullTypeMap.getOrDefault(originalTag.getString("Name"), 0));
-        skullBeTag.putInt("x", pos.getX());
-        skullBeTag.putInt("y", pos.getY());
-        skullBeTag.putInt("z", pos.getZ());
-        blockEntityMap.put(pos, skullBeTag);
+        blockEntityTag.putByte("Rot", rotationByte);
+        blockEntityTag.putString("id", "minecraft:skull");
+        blockEntityTag.putByte("SkullType", (byte) (int) skullTypes.getOrDefault(originalTag.getString("Name"), 0));
+        blockEntityTag.putInt("x", pos.getX());
+        blockEntityTag.putInt("y", pos.getY());
+        blockEntityTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, blockEntityTag);
     };
+
+    static final Map<String, UnfixBlockEntityCreator> unfixers = new HashMap<>();
+    static {
+        unfixers.put("minecraft:flower_pot",              UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_poppy",            UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_blue_orchid",      UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_allium",           UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_azure_bluet",      UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_red_tulip",        UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_orange_tulip",     UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_white_tulip",      UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_pink_tulip",       UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_oxeye_daisy",      UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_dandelion",        UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_oak_sapling",      UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_spruce_sapling",   UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_birch_sapling",    UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_jungle_sapling",   UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_acacia_sapling",   UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_dark_oak_sapling", UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_brown_mushroom",   UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_red_mushroom",     UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_dead_bush",        UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_fern",             UNFIX_FLOWERPOT);
+        unfixers.put("minecraft:potted_cactus",           UNFIX_FLOWERPOT);
+
+        unfixers.put("minecraft:note_block", UNFIX_NOTE_BLOCK);
+
+        for (String color : colorId)
+        {
+            unfixers.put("minecraft:" + color + "_bed", UNFIX_BED);
+            unfixers.put("minecraft:" + color + "_banner",      UNFIX_BANNER);
+            unfixers.put("minecraft:" + color + "_wall_banner", UNFIX_BANNER);
+        }
+        unfixers.put("minecraft:skeleton_skull",             UNFIX_SKULL);
+        unfixers.put("minecraft:skeleton_wall_skull",        UNFIX_SKULL);
+        unfixers.put("minecraft:wither_skeleton_skull",      UNFIX_SKULL);
+        unfixers.put("minecraft:wither_skeleton_wall_skull", UNFIX_SKULL);
+        unfixers.put("minecraft:player_head",                UNFIX_SKULL);
+        unfixers.put("minecraft:player_wall_head",           UNFIX_SKULL);
+        unfixers.put("minecraft:zombie_head",                UNFIX_SKULL);
+        unfixers.put("minecraft:zombie_wall_head",           UNFIX_SKULL);
+        unfixers.put("minecraft:creeper_head",               UNFIX_SKULL);
+        unfixers.put("minecraft:creeper_wall_head",          UNFIX_SKULL);
+        unfixers.put("minecraft:dragon_head",                UNFIX_SKULL);
+        unfixers.put("minecraft:dragon_wall_head",           UNFIX_SKULL);
+    }
 }
 
-interface StateFixer {
-    void fixState(
+interface UnfixBlockEntityCreator {
+    void recreateBlockEntity(
         BlockPos pos,
         ArrayBlockContainer container,
         Map<BlockPos, CompoundData> blockEntityMap,
