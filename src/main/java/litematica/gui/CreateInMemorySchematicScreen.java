@@ -18,6 +18,7 @@ import litematica.gui.util.SchematicTypeIcons;
 import litematica.gui.widget.SchematicSaveSettingsWidget;
 import litematica.scheduler.TaskScheduler;
 import litematica.scheduler.task.LocalCreateSchematicTask;
+import litematica.scheduler.task.LocalCreateDebugItemSchematicTask;
 import litematica.schematic.LoadedSchematic;
 import litematica.schematic.Schematic;
 import litematica.schematic.SchematicSaveSettings;
@@ -39,6 +40,8 @@ public class CreateInMemorySchematicScreen extends BaseScreen
     protected final GenericButton saveButton;
     protected boolean supportServerSideSaving;
 
+    protected final GenericButton debugItemSchematicButton;
+
     public CreateInMemorySchematicScreen(AreaSelection selection)
     {
         this.selection = selection;
@@ -57,6 +60,8 @@ public class CreateInMemorySchematicScreen extends BaseScreen
         this.customSettingsEnabled.setBooleanValue(Configs.Internal.SAVE_WITH_CUSTOM_SETTINGS.getBooleanValue());
         this.customSettingsEnabled.setValueChangeCallback((n, o) -> this.onCustomSettingsToggled());
         this.customSettingsButton = new BooleanConfigButton(-1, 20, this.customSettingsEnabled, OnOffButton.OnOffStyle.TEXT_ON_OFF, "litematica.button.schematic_save.custom_settings");
+
+        this.debugItemSchematicButton = GenericButton.create(20, "create debug item schematic", this::createDebugItemSchematic);
 
         this.supportServerSideSaving = false; // TODO
 
@@ -84,6 +89,7 @@ public class CreateInMemorySchematicScreen extends BaseScreen
         this.addWidget(this.schematicTypeDropdown);
         this.addWidget(this.saveButton);
         this.addWidget(this.customSettingsButton);
+        this.addWidget(this.debugItemSchematicButton);
 
         if (this.customSettingsEnabled.getBooleanValue())
         {
@@ -109,6 +115,8 @@ public class CreateInMemorySchematicScreen extends BaseScreen
 
         this.customSettingsButton.setPosition(x, this.saveButton.getBottom() + 10);
         this.settingsWidget.setPosition(x, this.customSettingsButton.getBottom() + 2);
+
+        this.debugItemSchematicButton.setPosition(this.customSettingsButton.getRight() + 10, this.customSettingsButton.getY());
     }
 
     @Override
@@ -167,6 +175,11 @@ public class CreateInMemorySchematicScreen extends BaseScreen
         }
     }
 
+    protected void createDebugItemSchematic()
+    {
+        this.saveDebugItemSchematic();
+    }
+
     protected void saveSchematicOnClient(SchematicSaveSettings settings)
     {
         String name = this.nameTextField.getText();
@@ -188,5 +201,15 @@ public class CreateInMemorySchematicScreen extends BaseScreen
     {
         SchematicHolder.INSTANCE.addSchematic(new LoadedSchematic(schematic), true);
         MessageDispatcher.success("litematica.message.in_memory_schematic_created", name);
+    }
+
+    protected void saveDebugItemSchematic()
+    {
+        String name = this.nameTextField.getText();
+        LocalCreateDebugItemSchematicTask task = new LocalCreateDebugItemSchematicTask(
+            sch -> this.onInMemorySchematicCreated(sch, name)
+        );
+
+        TaskScheduler.getServerInstanceIfExistsOrClient().scheduleTask(task, 10);
     }
 }
