@@ -27,13 +27,13 @@ public class DowngraderV113V112 extends SchematicDataConverter
 {
     public static DowngraderV113V112 INSTANCE = new DowngraderV113V112();
 
-    private Map<CompoundData, CompoundData> stateMap = new HashMap<>();
-    private Map<String, ItemIdDamage> itemMap = new HashMap<>();
+    protected Map<CompoundData, CompoundData> stateMap = new HashMap<>();
+    protected Map<String, ItemIdDamage> itemMap = new HashMap<>();
 
     public static MinecraftVersion versionFrom = MinecraftVersion.MC_1_13;
     public static MinecraftVersion versionTo = MinecraftVersion.MC_1_12;
 
-    private DowngraderV113V112()
+    protected DowngraderV113V112()
     {
         Optional<Map<CompoundData, CompoundData>> stateMap = BlockStateMapReader.readMap("block_state_map_113_to_112.json", "1.13", "1.12");
         if (stateMap.isPresent())

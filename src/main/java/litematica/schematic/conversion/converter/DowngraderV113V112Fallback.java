@@ -17,17 +17,16 @@ import net.minecraft.init.Blocks;
 
 import java.util.*;
 
-public class DowngraderV113V112Fallback extends SchematicDataConverter
+public class DowngraderV113V112Fallback extends DowngraderV113V112
 {
     public static DowngraderV113V112Fallback INSTANCE = new DowngraderV113V112Fallback();
-
-    private Map<CompoundData, CompoundData> stateMap = new HashMap<>();
 
     public static MinecraftVersion versionFrom = MinecraftVersion.MC_1_13;
     public static MinecraftVersion versionTo = MinecraftVersion.MC_1_12;
 
     private DowngraderV113V112Fallback()
     {
+        super();
         Optional<Map<CompoundData, CompoundData>> stateMap = BlockStateMapReader.readMap("block_state_map_113_to_112.json", "1.13", "1.12");
         if (stateMap.isPresent())
         {
@@ -69,6 +68,8 @@ public class DowngraderV113V112Fallback extends SchematicDataConverter
             }
         }
         this.stateMap.putAll(waterlogged);
+
+        this.itemMap.put("minecraft:pumpkin", new ItemIdDamage("minecraft:pumpkin", (short) 0));
     }
 
 
@@ -80,58 +81,5 @@ public class DowngraderV113V112Fallback extends SchematicDataConverter
     // remaining 1.13 blocks not converted:
     //  prismarine slab/stairs, prismarine brick slab/stairs, dark prismarine slab/stairs
     //  seagrass, tall seagrass, kelp, sea pickle, turtle egg, live/dead coral fan/blocks, conduit, blue ice
-    public void convertContainer(
-        ListData paletteTag,
-        ArrayBlockContainer container,
-        Map<BlockPos, CompoundData> blockEntityMap,
-        Map<BlockPos, ScheduledBlockTickData> blockTickMap
-    ) {
-        final int paletteSize = paletteTag.size();
-        //ListData paletteTagOut = new ListData(Constants.NBT.TAG_COMPOUND);
-
-        ArrayList<String> failedStates = new ArrayList<>();
-        int successCount = 0;
-        int failCount = 0;
-
-        for (int i = 0; i < paletteSize; ++i)
-        {
-            CompoundData tag = paletteTag.getCompoundAt(i);
-            CompoundData convertedTag = this.stateMap.get(tag);
-
-            if (convertedTag != null)
-            {
-                //System.out.printf("converted: %s => %s\n", tag, convertedTag);
-                paletteTag.set(i, convertedTag.copy());
-                //paletteTagOut.add(convertedTag.copy());
-                ++successCount;
-            }
-            else
-            {
-                System.out.printf("FAILED: %s => %s\n", tag, convertedTag);
-                failedStates.add(tag.toString());
-                //paletteTagOut.add(tag.copy());
-                paletteTag.set(i, BlockUtils.writeBlockState(new CompoundData(), BlockState.of(Blocks.BARRIER.getDefaultState())));
-                ++failCount;
-            }
-        }
-
-        if (failCount > 0)
-        {
-            String verFrom = versionFrom.displayName;
-            String verTo = versionTo.displayName;
-            String strSu = String.valueOf(successCount);
-            String strFa = String.valueOf(failCount);
-            MessageDispatcher.warning("litematica.message.warn.schematic_conversion.palette_conversion_failures", verFrom, verTo, strSu, strFa);
-            MessageDispatcher.error(String.join("\n", failedStates));
-            BaseScreen.openPopupScreen(new SaveConversionFailureLogScreen(failedStates));
-        }
-    }
-
-    public void convertEntityList(List<EntityData> entityList)
-    {
-
-    }
-
-
 }
 
