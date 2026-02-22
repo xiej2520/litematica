@@ -362,37 +362,37 @@ public class DowngraderV113V112 extends SchematicDataConverter
         for (int i = 0; i < storedEnchantments.size(); i++) {
             CompoundData enchantmentTag = storedEnchantments.getCompoundAt(i);
             String nameId = enchantmentTag.getString("id");
-            enchantmentTag.putShort("id", ENCHANTMENT_NAME_TO_ID.get(nameId));
+            enchantmentTag.putShort("id", ENCHANTMENT_ID_TO_NAME.get(nameId).shortValue());
             // keep lvl the same
         }
 
     }
 
-    static final Map<String, Pair<String, Integer>> flowerPotData = new HashMap<>();
-    static {
-        flowerPotData.put("minecraft:flower_pot",              Pair.of("minecraft:air", 0));
-        flowerPotData.put("minecraft:potted_poppy",            Pair.of("minecraft:red_flower", 0));
-        flowerPotData.put("minecraft:potted_blue_orchid",      Pair.of("minecraft:red_flower", 1));
-        flowerPotData.put("minecraft:potted_allium",           Pair.of("minecraft:red_flower", 2));
-        flowerPotData.put("minecraft:potted_azure_bluet",      Pair.of("minecraft:red_flower", 3));
-        flowerPotData.put("minecraft:potted_red_tulip",        Pair.of("minecraft:red_flower", 4));
-        flowerPotData.put("minecraft:potted_orange_tulip",     Pair.of("minecraft:red_flower", 5));
-        flowerPotData.put("minecraft:potted_white_tulip",      Pair.of("minecraft:red_flower", 6));
-        flowerPotData.put("minecraft:potted_pink_tulip",       Pair.of("minecraft:red_flower", 7));
-        flowerPotData.put("minecraft:potted_oxeye_daisy",      Pair.of("minecraft:red_flower", 8));
-        flowerPotData.put("minecraft:potted_dandelion",        Pair.of("minecraft:yellow_flower", 0));
-        flowerPotData.put("minecraft:potted_oak_sapling",      Pair.of("minecraft:sapling", 0));
-        flowerPotData.put("minecraft:potted_spruce_sapling",   Pair.of("minecraft:sapling", 1));
-        flowerPotData.put("minecraft:potted_birch_sapling",    Pair.of("minecraft:sapling", 2));
-        flowerPotData.put("minecraft:potted_jungle_sapling",   Pair.of("minecraft:sapling", 3));
-        flowerPotData.put("minecraft:potted_acacia_sapling",   Pair.of("minecraft:sapling", 4));
-        flowerPotData.put("minecraft:potted_dark_oak_sapling", Pair.of("minecraft:sapling", 5));
-        flowerPotData.put("minecraft:potted_brown_mushroom",   Pair.of("minecraft:brown_mushroom", 0));
-        flowerPotData.put("minecraft:potted_red_mushroom",     Pair.of("minecraft:red_mushroom", 0));
-        flowerPotData.put("minecraft:potted_dead_bush",        Pair.of("minecraft:deadbush", 0));
-        flowerPotData.put("minecraft:potted_fern",             Pair.of("minecraft:tallgrass", 2));
-        flowerPotData.put("minecraft:potted_cactus",           Pair.of("minecraft:cactus", 0));
-    }
+    static final ImmutableMap<String, Pair<String, Integer>> flowerPotData =
+        ImmutableMap.<String, Pair<String, Integer>>builder()
+        .put("minecraft:flower_pot",              Pair.of("minecraft:air", 0))
+        .put("minecraft:potted_poppy",            Pair.of("minecraft:red_flower", 0))
+        .put("minecraft:potted_blue_orchid",      Pair.of("minecraft:red_flower", 1))
+        .put("minecraft:potted_allium",           Pair.of("minecraft:red_flower", 2))
+        .put("minecraft:potted_azure_bluet",      Pair.of("minecraft:red_flower", 3))
+        .put("minecraft:potted_red_tulip",        Pair.of("minecraft:red_flower", 4))
+        .put("minecraft:potted_orange_tulip",     Pair.of("minecraft:red_flower", 5))
+        .put("minecraft:potted_white_tulip",      Pair.of("minecraft:red_flower", 6))
+        .put("minecraft:potted_pink_tulip",       Pair.of("minecraft:red_flower", 7))
+        .put("minecraft:potted_oxeye_daisy",      Pair.of("minecraft:red_flower", 8))
+        .put("minecraft:potted_dandelion",        Pair.of("minecraft:yellow_flower", 0))
+        .put("minecraft:potted_oak_sapling",      Pair.of("minecraft:sapling", 0))
+        .put("minecraft:potted_spruce_sapling",   Pair.of("minecraft:sapling", 1))
+        .put("minecraft:potted_birch_sapling",    Pair.of("minecraft:sapling", 2))
+        .put("minecraft:potted_jungle_sapling",   Pair.of("minecraft:sapling", 3))
+        .put("minecraft:potted_acacia_sapling",   Pair.of("minecraft:sapling", 4))
+        .put("minecraft:potted_dark_oak_sapling", Pair.of("minecraft:sapling", 5))
+        .put("minecraft:potted_brown_mushroom",   Pair.of("minecraft:brown_mushroom", 0))
+        .put("minecraft:potted_red_mushroom",     Pair.of("minecraft:red_mushroom", 0))
+        .put("minecraft:potted_dead_bush",        Pair.of("minecraft:deadbush", 0))
+        .put("minecraft:potted_fern",             Pair.of("minecraft:tallgrass", 2))
+        .put("minecraft:potted_cactus",           Pair.of("minecraft:cactus", 0))
+        .build();
 
     static final String[] colorId = new String[] {
         "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
@@ -410,21 +410,20 @@ public class DowngraderV113V112 extends SchematicDataConverter
             bannerColor.put("minecraft:" + colorId[i] + "_wall_banner", 15 - i);
         }
     }
-    static final Map<String, Integer> skullTypes = new HashMap<>();
-    static {
-        skullTypes.put("minecraft:skeleton_skull", 0);
-        skullTypes.put("minecraft:skeleton_wall_skull", 0);
-        skullTypes.put("minecraft:wither_skeleton_skull", 1);
-        skullTypes.put("minecraft:wither_skeleton_wall_skull", 1);
-        skullTypes.put("minecraft:zombie_head", 2);
-        skullTypes.put("minecraft:zombie_wall_head", 2);
-        skullTypes.put("minecraft:player_head", 3);
-        skullTypes.put("minecraft:player_wall_head", 3);
-        skullTypes.put("minecraft:creeper_head", 4);
-        skullTypes.put("minecraft:creeper_wall_head", 4);
-        skullTypes.put("minecraft:dragon_head", 5);
-        skullTypes.put("minecraft:dragon_wall_head", 5);
-    }
+    static final ImmutableMap<String, Integer> skullTypes = ImmutableMap.<String, Integer>builder()
+        .put("minecraft:skeleton_skull",             0)
+        .put("minecraft:skeleton_wall_skull",        0)
+        .put("minecraft:wither_skeleton_skull",      1)
+        .put("minecraft:wither_skeleton_wall_skull", 1)
+        .put("minecraft:zombie_head",                2)
+        .put("minecraft:zombie_wall_head",           2)
+        .put("minecraft:player_head",                3)
+        .put("minecraft:player_wall_head",           3)
+        .put("minecraft:creeper_head",               4)
+        .put("minecraft:creeper_wall_head",          4)
+        .put("minecraft:dragon_head",                5)
+        .put("minecraft:dragon_wall_head",           5)
+        .build();
 
     static final UnfixBlockEntityCreator UNFIX_FLOWERPOT = (pos, container, blockEntityMap, originalTag) -> {
         Pair<String, Integer> itemData = flowerPotData.get(originalTag.getString("Name"));
@@ -553,7 +552,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
 
         blockEntityTag.putByte("Rot", rotationByte);
         blockEntityTag.putString("id", "minecraft:skull");
-        blockEntityTag.putByte("SkullType", (byte) (int) skullTypes.getOrDefault(originalTag.getString("Name"), 0));
+        blockEntityTag.putByte("SkullType", skullTypes.getOrDefault(originalTag.getString("Name"), 0).byteValue());
         blockEntityTag.putInt("x", pos.getX());
         blockEntityTag.putInt("y", pos.getY());
         blockEntityTag.putInt("z", pos.getZ());
@@ -607,50 +606,46 @@ public class DowngraderV113V112 extends SchematicDataConverter
         unfixers.put("minecraft:dragon_wall_head",           UNFIX_SKULL);
     }
 
-    static final Map<Integer, String> ENCHANTMENT_ID_TO_NAME = new HashMap<>();
-    static final Map<String, Short> ENCHANTMENT_NAME_TO_ID = new HashMap<>();
-    static {
-        ENCHANTMENT_ID_TO_NAME.put(0, "minecraft:protection");
-        ENCHANTMENT_ID_TO_NAME.put(1, "minecraft:fire_protection");
-        ENCHANTMENT_ID_TO_NAME.put(2, "minecraft:feather_falling");
-        ENCHANTMENT_ID_TO_NAME.put(3, "minecraft:blast_protection");
-        ENCHANTMENT_ID_TO_NAME.put(4, "minecraft:projectile_protection");
-        ENCHANTMENT_ID_TO_NAME.put(5, "minecraft:respiration");
-        ENCHANTMENT_ID_TO_NAME.put(6, "minecraft:aqua_affinity");
-        ENCHANTMENT_ID_TO_NAME.put(7, "minecraft:thorns");
-        ENCHANTMENT_ID_TO_NAME.put(8, "minecraft:depth_strider");
-        ENCHANTMENT_ID_TO_NAME.put(9, "minecraft:frost_walker");
-        ENCHANTMENT_ID_TO_NAME.put(10, "minecraft:binding_curse");
-        ENCHANTMENT_ID_TO_NAME.put(16, "minecraft:sharpness");
-        ENCHANTMENT_ID_TO_NAME.put(17, "minecraft:smite");
-        ENCHANTMENT_ID_TO_NAME.put(18, "minecraft:bane_of_arthropods");
-        ENCHANTMENT_ID_TO_NAME.put(19, "minecraft:knockback");
-        ENCHANTMENT_ID_TO_NAME.put(20, "minecraft:fire_aspect");
-        ENCHANTMENT_ID_TO_NAME.put(21, "minecraft:looting");
-        ENCHANTMENT_ID_TO_NAME.put(22, "minecraft:sweeping");
-        ENCHANTMENT_ID_TO_NAME.put(32, "minecraft:efficiency");
-        ENCHANTMENT_ID_TO_NAME.put(33, "minecraft:silk_touch");
-        ENCHANTMENT_ID_TO_NAME.put(34, "minecraft:unbreaking");
-        ENCHANTMENT_ID_TO_NAME.put(35, "minecraft:fortune");
-        ENCHANTMENT_ID_TO_NAME.put(48, "minecraft:power");
-        ENCHANTMENT_ID_TO_NAME.put(49, "minecraft:punch");
-        ENCHANTMENT_ID_TO_NAME.put(50, "minecraft:flame");
-        ENCHANTMENT_ID_TO_NAME.put(51, "minecraft:infinity");
-        ENCHANTMENT_ID_TO_NAME.put(61, "minecraft:luck_of_the_sea");
-        ENCHANTMENT_ID_TO_NAME.put(62, "minecraft:lure");
-        ENCHANTMENT_ID_TO_NAME.put(65, "minecraft:loyalty");
-        ENCHANTMENT_ID_TO_NAME.put(66, "minecraft:impaling");
-        ENCHANTMENT_ID_TO_NAME.put(67, "minecraft:riptide");
-        ENCHANTMENT_ID_TO_NAME.put(68, "minecraft:channeling");
-        ENCHANTMENT_ID_TO_NAME.put(70, "minecraft:mending");
-        ENCHANTMENT_ID_TO_NAME.put(71, "minecraft:vanishing_curse");
-        for (Map.Entry<Integer, String> entry : ENCHANTMENT_ID_TO_NAME.entrySet()) {
-            ENCHANTMENT_NAME_TO_ID.put(entry.getValue(), entry.getKey().shortValue());
-        }
-    }
+    // v1494
+    static final ImmutableMap<String, Integer> ENCHANTMENT_ID_TO_NAME = ImmutableMap.<String, Integer>builder()
+        .put("minecraft:protection",            0)
+        .put("minecraft:fire_protection",       1)
+        .put("minecraft:feather_falling",       2)
+        .put("minecraft:blast_protection",      3)
+        .put("minecraft:projectile_protection", 4)
+        .put("minecraft:respiration",           5)
+        .put("minecraft:aqua_affinity",         6)
+        .put("minecraft:thorns",                7)
+        .put("minecraft:depth_strider",         8)
+        .put("minecraft:frost_walker",          9)
+        .put("minecraft:binding_curse",         10)
+        .put("minecraft:sharpness",             16)
+        .put("minecraft:smite",                 17)
+        .put("minecraft:bane_of_arthropods",    18)
+        .put("minecraft:knockback",             19)
+        .put("minecraft:fire_aspect",           20)
+        .put("minecraft:looting",               21)
+        .put("minecraft:sweeping",              22)
+        .put("minecraft:efficiency",            32)
+        .put("minecraft:silk_touch",            33)
+        .put("minecraft:unbreaking",            34)
+        .put("minecraft:fortune",               35)
+        .put("minecraft:power",                 48)
+        .put("minecraft:punch",                 49)
+        .put("minecraft:flame",                 50)
+        .put("minecraft:infinity",              51)
+        .put("minecraft:luck_of_the_sea",       61)
+        .put("minecraft:lure",                  62)
+        .put("minecraft:loyalty",               65)
+        .put("minecraft:impaling",              66)
+        .put("minecraft:riptide",               67)
+        .put("minecraft:channeling",            68)
+        .put("minecraft:mending",               70)
+        .put("minecraft:vanishing_curse",       71)
+        .build();
 
+    // v1510
     static final ImmutableMap<String, String> ENTITY_UNRENAME_MAP = ImmutableMap.<String, String>builder()
-        // v1510
         .put("minecraft:command_block_minecart", "minecraft:commandblock_minecart")
         .put("minecraft:end_crystal", "minecraft:ender_crystal")
         .put("minecraft:snow_golem", "minecraft:snowman")
