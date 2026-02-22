@@ -23,12 +23,12 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 
-public class DowngraderV113V112 extends SchematicDataConverter
+public class DowngraderV113V112 extends SchematicDataConverter implements MiniDataConverter
 {
     public static DowngraderV113V112 INSTANCE = new DowngraderV113V112();
 
     protected Map<CompoundData, CompoundData> stateMap = new HashMap<>();
-    protected Map<String, ItemIdDamage> itemMap = new HashMap<>();
+    Map<String, ItemIdDamage> itemMap = new HashMap<>();
 
     public static MinecraftVersion versionFrom = MinecraftVersion.MC_1_13;
     public static MinecraftVersion versionTo = MinecraftVersion.MC_1_12;
@@ -92,31 +92,22 @@ public class DowngraderV113V112 extends SchematicDataConverter
         for (int i = 0; i < paletteSize; ++i)
         {
             CompoundData tag = paletteTag.getCompoundAt(i);
-            CompoundData convertedTag = this.stateMap.get(tag);
+            String flattenedBlockName = tag.getString("Name");
 
-            if (convertedTag != null)
-            {
-                //System.out.printf("converted: %s => %s\n", tag, convertedTag);
-                paletteTag.set(i, convertedTag.copy());
-                //paletteTagOut.add(convertedTag.copy());
-                ++successCount;
-
-                String blockName = tag.getString("Name");
-
-                if (unfixers.containsKey(blockName))
-                {
+            if (this.convertBlockStateData(tag)) {
+                System.out.printf("converted: %s => %s\n", paletteTagOriginal.getCompoundAt(i), tag);
+                if (unfixers.containsKey(flattenedBlockName)) {
                     needBlockFixer = true;
                 }
-            }
-            else
-            {
-                System.out.printf("FAILED: %s => %s\n", tag, convertedTag);
+                successCount += 1;
+            } else {
+                System.out.printf("FAILED: %s\n", tag);
                 failedStates.add(tag.toString());
-                //paletteTagOut.add(tag.copy());
                 paletteTag.set(i, BlockUtils.writeBlockState(new CompoundData(), BlockState.of(Blocks.BARRIER.getDefaultState())));
-                ++failCount;
+                failCount += 1;
             }
         }
+
         // TODO fix duplicate blockstates in palette from downgrade, e.g. merge "flower_pot"s
 
         if (needBlockFixer) {
@@ -135,7 +126,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
             }
         }
 
-        convertBlockEntities(blockEntityMap);
+        this.convertBlockEntities(blockEntityMap);
 
         if (failCount > 0)
         {
@@ -149,6 +140,19 @@ public class DowngraderV113V112 extends SchematicDataConverter
         }
     }
 
+    public boolean convertBlockStateData(CompoundData data) {
+        CompoundData convertedData = this.stateMap.get(data);
+        if (convertedData == null) {
+            return false;
+        }
+        data.putString("Name", convertedData.getString("Name"));
+        data.remove("Properties");
+        if (convertedData.contains("Properties", Constants.NBT.TAG_COMPOUND)) {
+            data.put("Properties", convertedData.getCompound("Properties").copy());
+        }
+        return true;
+    }
+
     public void convertEntityList(List<EntityData> entityList)
     {
         // TODO: painting Motive remap
@@ -159,7 +163,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
         }
     }
 
-    private void convertEntityData(CompoundData data)
+    public boolean convertEntityData(CompoundData data)
     {
         String id = data.getString("id");
         String unrenamedId = ENTITY_UNRENAME_MAP.get(id);
@@ -173,42 +177,37 @@ public class DowngraderV113V112 extends SchematicDataConverter
             switch (facing3d) {
                 case 3: facing2d = 0; break;
                 case 4: facing2d = 1; break;
-                case 2: facing2d = 2; break;
                 case 5: facing2d = 3; break;
+                case 2: // fallthrough
                 default: facing2d = 2;
             }
             data.putByte("Facing", facing2d);
         }
 
         if (data.contains("Item", Constants.NBT.TAG_COMPOUND)) {
-            convertItem(data.getCompound("Item"));
+            convertItemData(data.getCompound("Item"));
         }
-        if (data.containsList("Items", Constants.NBT.TAG_COMPOUND)) {
-            convertItemsTag(data.getList("Items", Constants.NBT.TAG_COMPOUND));
-        }
-        if (data.containsList("ArmorItems", Constants.NBT.TAG_COMPOUND)) {
-            convertItemsTag(data.getList("ArmorItems", Constants.NBT.TAG_COMPOUND));
-        }
-        if (data.containsList("HandItems", Constants.NBT.TAG_COMPOUND)) {
-            convertItemsTag(data.getList("HandItems", Constants.NBT.TAG_COMPOUND));
-        }
+
+        this.convertItemsListIfKey(data, "Items");
+        this.convertItemsListIfKey(data, "ArmorItems");
+        this.convertItemsListIfKey(data, "HandItems");
 
         if (data.contains("Offers", Constants.NBT.TAG_COMPOUND)) {
             convertOffers(data.getCompound("Offers"));
         }
-
+        return true;
     }
 
     private void convertBlockEntities(Map<BlockPos, CompoundData> blockEntityMap)
     {
         for (CompoundData blockEntityTag : blockEntityMap.values())
         {
-            convertBlockEntityTag(blockEntityTag);
+            convertBlockEntityData(blockEntityTag);
         }
     }
 
     // TODO: in 1.12, double chests have reversed inventories when facing north or east
-    private void convertBlockEntityTag(CompoundData blockEntityTag)
+    public boolean convertBlockEntityData(CompoundData blockEntityTag)
     {
         String id = blockEntityTag.getString("id");
         switch (id) {
@@ -237,8 +236,9 @@ public class DowngraderV113V112 extends SchematicDataConverter
             // TODO piston Block 36 blockState -> blockId + blockData
             // TODO Jukebox RecordItem id Count -> Record
             default:
-                break;
+                return true;
         }
+        return true;
     }
     
     
@@ -260,19 +260,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
     {
         // v1458
         convertNamed(blockEntityTag);
-        if (blockEntityTag.containsList("Items", Constants.NBT.TAG_COMPOUND)) {
-            convertItemsTag(blockEntityTag.getList("Items", Constants.NBT.TAG_COMPOUND));
-        }
-    }
-
-    private void convertItemsTag(ListData items)
-    {
-        for (int i = 0; i < items.size(); i++) {
-            CompoundData itemTag = items.getCompoundAt(i);
-            if (itemTag != null && itemTag.isEmpty() == false) {
-                convertItem(itemTag);
-            }
-        }
+        this.convertItemsListIfKey(blockEntityTag, "Items");
     }
 
     private void convertOffers(CompoundData offers)
@@ -282,16 +270,16 @@ public class DowngraderV113V112 extends SchematicDataConverter
             for (int i = 0; i < recipes.size(); i++) {
                 CompoundData recipe = recipes.getCompoundAt(i);
                 if (recipe.contains("buy", Constants.NBT.TAG_COMPOUND)) {
-                    convertItem(recipe.getCompound("buy"));
+                    convertItemData(recipe.getCompound("buy"));
                 }
                 if (recipe.contains("sell", Constants.NBT.TAG_COMPOUND)) {
-                    convertItem(recipe.getCompound("sell"));
+                    convertItemData(recipe.getCompound("sell"));
                 }
             }
         }
     }
 
-    private void convertItem(CompoundData itemTag)
+    public boolean convertItemData(CompoundData itemTag)
     {
         // v1451 flattening item names
         String id13 = itemTag.getString("id");
@@ -333,7 +321,7 @@ public class DowngraderV113V112 extends SchematicDataConverter
 
             if (tag.contains("BlockEntityTag", Constants.NBT.TAG_COMPOUND)) {
                 CompoundData blockEntityTag = tag.getCompound("BlockEntityTag");
-                convertBlockEntityTag(blockEntityTag);
+                convertBlockEntityData(blockEntityTag);
             }
 
             if (tag.contains("display", Constants.NBT.TAG_COMPOUND)) {
@@ -349,11 +337,11 @@ public class DowngraderV113V112 extends SchematicDataConverter
             }
 
         }
-        if (tag.isEmpty())
+        if (tag != null && tag.isEmpty())
         {
             itemTag.remove("tag");
         }
-
+        return true;
     }
 
     // v1494 enchantment id to name
@@ -365,7 +353,6 @@ public class DowngraderV113V112 extends SchematicDataConverter
             enchantmentTag.putShort("id", ENCHANTMENT_ID_TO_NAME.get(nameId).shortValue());
             // keep lvl the same
         }
-
     }
 
     static final ImmutableMap<String, Pair<String, Integer>> flowerPotData =
