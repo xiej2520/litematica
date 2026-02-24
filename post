@@ -1,0 +1,483 @@
+{
+  Version: 4,
+  MinecraftDataVersion: 1343,
+  Metadata: {
+    Name: "falling blocks 2 1.13",
+    Author: "Friendly_Bot",
+    SchematicVersion: 5,
+    TimeCreated: 1771911919641L,
+    EnclosingSize: {
+      x: 3,
+      y: 3,
+      z: 3
+    },
+    McDataVersion: 1343,
+    McVersion: "1.12.2",
+    RegionCount: 1,
+    EntityCount: 9,
+    TotalVolume: 27L,
+    TotalBlocks: 9L,
+    BlockEntityCount: 0L
+  },
+  Regions: {
+    "falling blocks 2 1.13": {
+      DataVersion: 1343,
+      BlockStatePalette: [
+        {
+          Name: "minecraft:air"
+        },
+        {
+          Name: "minecraft:cobblestone_wall",
+          Properties: {
+            east: "true",
+            north: "false",
+            south: "true",
+            up: "true",
+            variant: "cobblestone",
+            west: "false"
+          }
+        },
+        {
+          Name: "minecraft:cobblestone_wall",
+          Properties: {
+            east: "true",
+            north: "false",
+            south: "true",
+            up: "true",
+            variant: "cobblestone",
+            west: "true"
+          }
+        },
+        {
+          Name: "minecraft:cobblestone_wall",
+          Properties: {
+            east: "false",
+            north: "false",
+            south: "true",
+            up: "true",
+            variant: "cobblestone",
+            west: "true"
+          }
+        },
+        {
+          Name: "minecraft:cobblestone_wall",
+          Properties: {
+            east: "true",
+            north: "true",
+            south: "true",
+            up: "true",
+            variant: "cobblestone",
+            west: "false"
+          }
+        },
+        {
+          Name: "minecraft:cobblestone_wall",
+          Properties: {
+            east: "true",
+            north: "true",
+            south: "true",
+            up: "true",
+            variant: "cobblestone",
+            west: "true"
+          }
+        },
+        {
+          Name: "minecraft:cobblestone_wall",
+          Properties: {
+            east: "false",
+            north: "true",
+            south: "true",
+            up: "true",
+            variant: "cobblestone",
+            west: "true"
+          }
+        },
+        {
+          Name: "minecraft:cobblestone_wall",
+          Properties: {
+            east: "true",
+            north: "true",
+            south: "false",
+            up: "true",
+            variant: "cobblestone",
+            west: "false"
+          }
+        },
+        {
+          Name: "minecraft:cobblestone_wall",
+          Properties: {
+            east: "true",
+            north: "true",
+            south: "false",
+            up: "true",
+            variant: "cobblestone",
+            west: "true"
+          }
+        },
+        {
+          Name: "minecraft:cobblestone_wall",
+          Properties: {
+            east: "false",
+            north: "true",
+            south: "false",
+            up: "true",
+            variant: "cobblestone",
+            west: "true"
+          }
+        }
+      ],
+      BlockStates: [I;40926266145L,0L],
+      Entities: [
+        {
+          Motion: [
+            0.0,
+            0.0,
+            0.0
+          ],
+          FallHurtMax: 40,
+          UUIDLeast: -4752512720916479344L,
+          Invulnerable: 0b,
+          Time: 6986,
+          Air: 0s,
+          OnGround: 0b,
+          Dimension: 0,
+          PortalCooldown: 0,
+          Rotation: [
+            0f,
+            0f
+          ],
+          DropItem: 1b,
+          FallDistance: 0f,
+          HurtEntities: 0b,
+          UUIDMost: -3950810327454301411L,
+          Pos: [
+            0.281060990162473,
+            1.5,
+            -1.4463963105894209
+          ],
+          Fire: -1s,
+          id: "minecraft:falling_block",
+          FallHurtAmount: 2f,
+          Block: "minecraft:portal",
+          Data: 1b
+        },
+        {
+          Motion: [
+            0.0,
+            0.0,
+            0.0
+          ],
+          FallHurtMax: 40,
+          UUIDLeast: -8378015883763397967L,
+          Invulnerable: 0b,
+          Time: 6818,
+          Air: 0s,
+          OnGround: 0b,
+          Dimension: 0,
+          PortalCooldown: 0,
+          Rotation: [
+            0f,
+            0f
+          ],
+          DropItem: 1b,
+          FallDistance: 0f,
+          HurtEntities: 0b,
+          UUIDMost: -754744050845135529L,
+          Pos: [
+            -1.5116056684663022,
+            1.5,
+            -1.4240867214998048
+          ],
+          Fire: -1s,
+          id: "minecraft:falling_block",
+          FallHurtAmount: 2f,
+          Block: "minecraft:end_portal",
+          Data: 0b
+        },
+        {
+          Motion: [
+            0.0,
+            0.0,
+            0.0
+          ],
+          FallHurtMax: 40,
+          UUIDLeast: -7211139703606985274L,
+          Invulnerable: 0b,
+          Time: 6080,
+          Air: 0s,
+          OnGround: 0b,
+          Dimension: 0,
+          PortalCooldown: 0,
+          Rotation: [
+            0f,
+            0f
+          ],
+          DropItem: 1b,
+          FallDistance: 0f,
+          HurtEntities: 0b,
+          UUIDMost: 5826834180677190145L,
+          Pos: [
+            -0.4931918544416476,
+            1.5,
+            -1.742431999002008
+          ],
+          Fire: -1s,
+          id: "minecraft:falling_block",
+          FallHurtAmount: 2f,
+          Block: "minecraft:end_portal_frame",
+          Data: 0b
+        },
+        {
+          Motion: [
+            0.0,
+            0.0,
+            0.0
+          ],
+          FallHurtMax: 40,
+          UUIDLeast: -6427112003560312540L,
+          Invulnerable: 0b,
+          Time: 11028,
+          Air: 300s,
+          OnGround: 0b,
+          Dimension: 0,
+          PortalCooldown: 0,
+          Rotation: [
+            0f,
+            0f
+          ],
+          DropItem: 1b,
+          FallDistance: 0f,
+          HurtEntities: 0b,
+          UUIDMost: -7212740291510186397L,
+          Pos: [
+            -0.5,
+            1.5,
+            -0.5
+          ],
+          Fire: -1s,
+          id: "minecraft:falling_block",
+          FallHurtAmount: 2f,
+          Block: "minecraft:concrete_powder",
+          Data: 3b
+        },
+        {
+          Motion: [
+            0.0,
+            0.0,
+            0.0
+          ],
+          FallHurtMax: 40,
+          UUIDLeast: -6034890996223023015L,
+          Invulnerable: 0b,
+          Time: 5933,
+          Air: 0s,
+          OnGround: 0b,
+          Dimension: 0,
+          PortalCooldown: 0,
+          Rotation: [
+            0f,
+            0f
+          ],
+          DropItem: 1b,
+          FallDistance: 0f,
+          HurtEntities: 0b,
+          UUIDMost: -9198354482261637388L,
+          Pos: [
+            0.638803596494995,
+            1.5,
+            -0.523784239443728
+          ],
+          Fire: -1s,
+          id: "minecraft:falling_block",
+          FallHurtAmount: 2f,
+          Block: "minecraft:command_block",
+          Data: 0b
+        },
+        {
+          Motion: [
+            0.0,
+            0.0,
+            0.0
+          ],
+          FallHurtMax: 40,
+          UUIDLeast: -6405501700214590674L,
+          Invulnerable: 0b,
+          Time: 5657,
+          Air: 0s,
+          OnGround: 0b,
+          Dimension: 0,
+          PortalCooldown: 0,
+          Rotation: [
+            0f,
+            0f
+          ],
+          DropItem: 1b,
+          FallDistance: 0f,
+          HurtEntities: 0b,
+          UUIDMost: -8085841723500314522L,
+          Pos: [
+            -1.479672763177291,
+            1.5,
+            -0.5263209896094736
+          ],
+          Fire: -1s,
+          id: "minecraft:falling_block",
+          FallHurtAmount: 2f,
+          Block: "minecraft:barrier",
+          Data: 0b
+        },
+        {
+          Motion: [
+            0.0,
+            0.0,
+            0.0
+          ],
+          FallHurtMax: 40,
+          UUIDLeast: -8886316966269198593L,
+          Invulnerable: 0b,
+          Time: 2346,
+          Air: 0s,
+          OnGround: 0b,
+          Dimension: 0,
+          PortalCooldown: 0,
+          Rotation: [
+            0f,
+            0f
+          ],
+          TileEntityData: {
+            TransferCooldown: 0,
+            Items: [
+              {
+                Slot: 1b,
+                id: "minecraft:diamond_chestplate",
+                tag: {
+                  ench: [
+                    {
+                      lvl: 4s,
+                      id: 4s
+                    }
+                  ]
+                },
+                Count: 1b,
+                Damage: 221s
+              }
+            ],
+            id: "minecraft:hopper",
+            Lock: ""
+          },
+          DropItem: 1b,
+          FallDistance: 0f,
+          HurtEntities: 0b,
+          UUIDMost: -5420318355278508267L,
+          Pos: [
+            -1.7841260826111807,
+            1.5,
+            0.6375410372461374
+          ],
+          Fire: -1s,
+          id: "minecraft:falling_block",
+          FallHurtAmount: 2f,
+          Block: "minecraft:hopper",
+          Data: 4b
+        },
+        {
+          Motion: [
+            0.0,
+            0.0,
+            0.0
+          ],
+          FallHurtMax: 40,
+          UUIDLeast: -5364017134545124899L,
+          Invulnerable: 0b,
+          Time: 1870,
+          Air: 0s,
+          OnGround: 0b,
+          Dimension: 0,
+          PortalCooldown: 0,
+          Rotation: [
+            0f,
+            0f
+          ],
+          TileEntityData: {
+            TransferCooldown: 0,
+            Items: [
+              {
+                Slot: 1b,
+                id: "minecraft:diamond_boots",
+                tag: {
+                  ench: [
+                    {
+                      lvl: 4s,
+                      id: 2s
+                    }
+                  ]
+                },
+                Count: 1b,
+                Damage: 221s
+              }
+            ],
+            id: "minecraft:chest",
+            Lock: ""
+          },
+          DropItem: 1b,
+          FallDistance: 0f,
+          HurtEntities: 0b,
+          UUIDMost: -5590122862553053101L,
+          Pos: [
+            -0.5867346510217999,
+            1.5,
+            0.4097415034088385
+          ],
+          Fire: -1s,
+          id: "minecraft:falling_block",
+          FallHurtAmount: 2f,
+          Block: "minecraft:chest",
+          Data: 2b
+        },
+        {
+          Motion: [
+            0.0,
+            0.0,
+            0.0
+          ],
+          FallHurtMax: 40,
+          UUIDLeast: -5082312220856004511L,
+          Invulnerable: 0b,
+          Time: 270,
+          Air: 0s,
+          OnGround: 0b,
+          Dimension: 0,
+          PortalCooldown: 0,
+          Rotation: [
+            0f,
+            0f
+          ],
+          DropItem: 1b,
+          FallDistance: 0f,
+          HurtEntities: 0b,
+          UUIDMost: -7304807499826640070L,
+          Pos: [
+            0.6672919847031267,
+            1.5,
+            0.666232611239991
+          ],
+          Fire: -1s,
+          id: "minecraft:falling_block",
+          FallHurtAmount: 2f,
+          Block: "minecraft:stone_brick_stairs",
+          Data: 5b
+        }
+      ],
+      Position: {
+        x: 2,
+        y: 0,
+        z: 2
+      },
+      Size: {
+        x: -3,
+        y: 3,
+        z: -3
+      }
+    }
+  }
+}

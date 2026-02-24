@@ -18,6 +18,7 @@ import malilib.util.game.MinecraftVersion;
 import malilib.util.position.BlockPos;
 import malilib.util.world.BlockState;
 import malilib.util.world.ScheduledBlockTickData;
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -195,6 +196,24 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
         if (data.contains("Offers", Constants.NBT.TAG_COMPOUND)) {
             convertOffers(data.getCompound("Offers"));
         }
+
+        if (data.getString("id").equals("minecraft:falling_block")) {
+            if (data.contains("BlockState", Constants.NBT.TAG_COMPOUND)) {
+                CompoundData blockStateData = data.getCompound("BlockState").copy();
+                if (convertBlockStateData(blockStateData)) {
+                    // TODO: move this to json instead of relying on vanilla code
+                    BlockState state = BlockState.ofData(blockStateData, MinecraftVersion.MC_1_12_2.dataVersion);
+                    byte meta = (byte) state.getBlock().getMetaFromState(state.vanillaState());
+                    data.remove("BlockState");
+                    data.putString("Block", Block.REGISTRY.getNameForObject(state.getBlock()).toString());
+                    data.putByte("Data", meta);
+                }
+            }
+            if (data.contains("TileEntityData", Constants.NBT.TAG_COMPOUND)) {
+                convertBlockEntityData(data.getCompound("TileEntityData"));
+            }
+        }
+
         return true;
     }
 
