@@ -1,6 +1,9 @@
 package litematica.schematic.conversion.converter;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import litematica.Litematica;
 import litematica.schematic.container.ArrayBlockContainer;
 import litematica.schematic.conversion.SchematicDataConverter;
@@ -15,16 +18,20 @@ import malilib.util.game.MinecraftVersion;
 import malilib.util.position.BlockPos;
 import malilib.util.world.BlockState;
 import malilib.util.world.ScheduledBlockTickData;
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
+import net.minecraft.item.Item;
+import net.minecraft.util.ResourceLocation;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 
-public class DowngraderV113V112 extends SchematicDataConverter
+public class DowngraderV113V112 extends SchematicDataConverter implements MiniDataConverter
 {
     public static DowngraderV113V112 INSTANCE = new DowngraderV113V112();
 
     protected Map<CompoundData, CompoundData> stateMap = new HashMap<>();
+    Map<String, ItemIdDamage> itemMap = new HashMap<>();
 
     public static MinecraftVersion versionFrom = MinecraftVersion.MC_1_13;
     public static MinecraftVersion versionTo = MinecraftVersion.MC_1_12;
@@ -40,16 +47,35 @@ public class DowngraderV113V112 extends SchematicDataConverter
         {
             MessageDispatcher.error("failed to read block_state_map_113_to_112.json");
         }
+
+        Optional<Map<CompoundData, CompoundData>> itemTagMap = ItemMapReader.readMap("item_map_113_to_112.ndjson", "1.13", "1.12");
+        if (itemTagMap.isPresent())
+        {
+            for (Map.Entry<CompoundData, CompoundData> entry : itemTagMap.get().entrySet())
+            {
+                String id113 = entry.getKey().getString("id");
+
+                CompoundData tag112 = entry.getValue();
+                ItemIdDamage idDamage112 = new ItemIdDamage(tag112.getString("id"), tag112.getShort("Damage"));
+                this.itemMap.put(id113, idDamage112);
+            }
+        }
+        else
+        {
+            MessageDispatcher.error("failed to read item_map_113_to_112.json");
+        }
     }
 
 
-    // right inverse converter: if a blockstate exists in 1.13, and a 1.12 blockstate gets converted
-    // to it by vanilla datafixer, then this converter should try to restore the 1.13 blockstate to
-    // the 1.12 blockstate. If multiple 1.12 blockstates map to the 1.13 state, pick the most reasonable one.
-    // duplicates from merges:
-    // dirt/coarse dirt, flowing water/lava, leaves, shrub (tallgrass 31:0), double stone slab,
-    // smooth_stone, smooth (red)sandstone, smooth quartz, mushroom blocks, pumpkin/melon stem
-    // flower pot, skull, powered redstone comparator, double_plant
+    /// BlockState downgrade converter
+    /// right inverse function: if a blockstate exists in 1.13, and a 1.12 blockstate gets converted
+    /// to it by vanilla datafixer, then this converter should try to restore the 1.13 blockstate to
+    /// the 1.12 blockstate. If multiple 1.12 blockstates map to the 1.13 state, pick the most reasonable one.
+    ///
+    /// duplicates from merges:
+    /// dirt/coarse dirt, flowing water/lava, leaves, shrub (tallgrass 31:0), double stone slab,
+    /// smooth_stone, smooth (red)sandstone, smooth quartz, mushroom blocks, pumpkin/melon stem
+    /// flower pot, skull, powered redstone comparator, double_plant
     public void convertContainer(
         ListData paletteTag,
         ArrayBlockContainer container,
@@ -71,23 +97,21 @@ public class DowngraderV113V112 extends SchematicDataConverter
             CompoundData tag = paletteTag.getCompoundAt(i);
             String flattenedBlockName = tag.getString("Name");
 
-            if (this.convertBlockStateData(tag))
-            {
+            if (this.convertBlockStateData(tag)) {
                 System.out.printf("converted: %s => %s\n", paletteTagOriginal.getCompoundAt(i), tag);
-                if (unfixers.containsKey(flattenedBlockName))
-                {
+                if (unfixers.containsKey(flattenedBlockName)) {
                     needBlockFixer = true;
                 }
-                ++successCount;
-            }
-            else
-            {
+                successCount += 1;
+            } else {
                 System.out.printf("FAILED: %s\n", tag);
                 failedStates.add(tag.toString());
                 paletteTag.set(i, BlockUtils.writeBlockState(new CompoundData(), BlockState.of(Blocks.BARRIER.getDefaultState())));
                 failCount += 1;
             }
         }
+
+        // TODO fix duplicate blockstates in palette from downgrade, e.g. merge "flower_pot"s
 
         if (needBlockFixer) {
             for (int x = 0; x < container.getSize().getX(); x++) {
@@ -104,6 +128,8 @@ public class DowngraderV113V112 extends SchematicDataConverter
                 }
             }
         }
+
+        this.convertBlockEntities(blockEntityMap);
 
         if (failCount > 0)
         {
@@ -132,7 +158,269 @@ public class DowngraderV113V112 extends SchematicDataConverter
 
     public void convertEntityList(List<EntityData> entityList)
     {
+        // TODO: painting Motive remap
+        //   "donkeykong" <- "donkey_kong"; "burningskull" <- "burning_skull; "skullandroses" <- "skull_and_roses"
 
+        for (EntityData entityData : entityList) {
+            convertEntityData(entityData.data);
+        }
+    }
+
+    public boolean convertEntityData(CompoundData data)
+    {
+        String id = data.getString("id");
+        String unrenamedId = ENTITY_UNRENAME_MAP.get(id);
+        if (unrenamedId != null) {
+            data.putString("id", unrenamedId);
+        }
+
+        if (id.equals("minecraft:item_frame")) { // v1456
+            byte facing3d = data.getByte("Facing");
+            byte facing2d;
+            switch (facing3d) {
+                case 3: facing2d = 0; break;
+                case 4: facing2d = 1; break;
+                case 5: facing2d = 3; break;
+                case 2: // fallthrough
+                default: facing2d = 2;
+            }
+            data.putByte("Facing", facing2d);
+        }
+
+        if (data.contains("Item", Constants.NBT.TAG_COMPOUND)) {
+            convertItemData(data.getCompound("Item"));
+        }
+
+        this.convertItemsListIfKey(data, "Items");
+        this.convertItemsListIfKey(data, "ArmorItems");
+        this.convertItemsListIfKey(data, "HandItems");
+
+        if (data.containsList("Passengers", Constants.NBT.TAG_COMPOUND))
+        {
+            ListData passengers = data.getList("Passengers", Constants.NBT.TAG_COMPOUND);
+
+            for (int i = 0; i < passengers.size(); ++i)
+            {
+                convertEntityData(passengers.getCompoundAt(i));
+            }
+        }
+
+        if (data.contains("Offers", Constants.NBT.TAG_COMPOUND)) {
+            convertOffers(data.getCompound("Offers"));
+        }
+
+        if (data.getString("id").equals("minecraft:falling_block")) {
+            if (data.contains("BlockState", Constants.NBT.TAG_COMPOUND)) {
+                CompoundData blockStateData = data.getCompound("BlockState").copy();
+                if (convertBlockStateData(blockStateData)) {
+                    // TODO: move this to json instead of relying on vanilla code
+                    BlockState state = BlockState.ofData(blockStateData, MinecraftVersion.MC_1_12_2.dataVersion);
+                    byte meta = (byte) state.getBlock().getMetaFromState(state.vanillaState());
+                    data.remove("BlockState");
+                    data.putString("Block", Block.REGISTRY.getNameForObject(state.getBlock()).toString());
+                    data.putByte("Data", meta);
+                }
+            }
+            if (data.contains("TileEntityData", Constants.NBT.TAG_COMPOUND)) {
+                convertBlockEntityData(data.getCompound("TileEntityData"));
+            }
+        }
+
+        return true;
+    }
+
+    private void convertBlockEntities(Map<BlockPos, CompoundData> blockEntityMap)
+    {
+        for (CompoundData blockEntityTag : blockEntityMap.values())
+        {
+            convertBlockEntityData(blockEntityTag);
+        }
+    }
+
+    // TODO: in 1.12, double chests have reversed inventories when facing north or east
+    public boolean convertBlockEntityData(CompoundData blockEntityTag)
+    {
+        String id = blockEntityTag.getString("id");
+        switch (id) {
+            case "minecraft:beacon":
+            case "minecraft:enchanting_table":
+                convertNamed(blockEntityTag);
+                break;
+            case "minecraft:banner":
+                convertNamed(blockEntityTag);
+                unfixBannerBlockEntity(blockEntityTag);
+                blockEntityTag.remove("id"); // not stored in tag in 1.12
+                break;
+            case "minecraft:brewing_stand":
+            case "minecraft:chest":
+            case "minecraft:dispenser":
+            case "minecraft:dropper":
+            case "minecraft:furnace":
+            case "minecraft:hopper":
+            case "minecraft:shulker_box":
+                convertNamedInventory(blockEntityTag);
+                break;
+            case "minecraft:trapped_chest":
+                blockEntityTag.putString("id", "minecraft:chest"); // v1624, 1.13.1
+                convertNamedInventory(blockEntityTag);
+                break;
+            case "minecraft:piston":
+                if (blockEntityTag.contains("blockState", Constants.NBT.TAG_COMPOUND))
+                {
+                    CompoundData blockStateData = blockEntityTag.getCompound("blockState").copy();
+
+                    if (convertBlockStateData(blockStateData))
+                    {
+                        BlockState state = BlockState.ofData(blockStateData, MinecraftVersion.MC_1_12_2.dataVersion);
+                        blockEntityTag.remove("blockState");
+                        blockEntityTag.putInt("blockId", Block.REGISTRY.getIDForObject(state.getBlock()));
+                        blockEntityTag.putInt("blockData", state.getBlock().getMetaFromState(state.vanillaState()));
+                    }
+                }
+                break;
+            case "minecraft:jukebox":
+                if (blockEntityTag.contains("RecordItem", Constants.NBT.TAG_COMPOUND))
+                {
+                    CompoundData recordItem = blockEntityTag.getCompound("RecordItem");
+                    convertItemData(recordItem);
+                    Item item = Item.REGISTRY.getObject(new ResourceLocation(recordItem.getString("id")));
+
+                    if (item != null)
+                    {
+                        blockEntityTag.remove("RecordItem");
+                        blockEntityTag.putInt("Record", Item.getIdFromItem(item));
+                    }
+                }
+                break;
+            default:
+                return true;
+        }
+        return true;
+    }
+
+
+    private void convertNamed(CompoundData blockEntityTag)
+    {
+        // TODO: verify this is correct, from plain text component
+        // v1458
+        if (blockEntityTag.contains("CustomName", Constants.NBT.TAG_STRING)) {
+            JsonObject obj = JsonParser.parseString(blockEntityTag.getString("CustomName")).getAsJsonObject();
+            JsonElement textComponent = obj.get("text");
+            if (textComponent != null && textComponent.isJsonPrimitive()) {
+                String customName = textComponent.getAsString();
+                blockEntityTag.putString("CustomName", customName);
+            }
+        }
+    }
+
+    private void convertNamedInventory(CompoundData blockEntityTag)
+    {
+        // v1458
+        convertNamed(blockEntityTag);
+        this.convertItemsListIfKey(blockEntityTag, "Items");
+    }
+
+    private void convertOffers(CompoundData offers)
+    {
+        if (offers.containsList("Recipes", Constants.NBT.TAG_COMPOUND)) {
+            ListData recipes = offers.getList("Recipes", Constants.NBT.TAG_COMPOUND);
+            for (int i = 0; i < recipes.size(); i++) {
+                CompoundData recipe = recipes.getCompoundAt(i);
+                if (recipe.contains("buy", Constants.NBT.TAG_COMPOUND)) {
+                    convertItemData(recipe.getCompound("buy"));
+                }
+                if (recipe.contains("buyB", Constants.NBT.TAG_COMPOUND)) {
+                    convertItemData(recipe.getCompound("buyB"));
+                }
+                if (recipe.contains("sell", Constants.NBT.TAG_COMPOUND)) {
+                    convertItemData(recipe.getCompound("sell"));
+                }
+            }
+        }
+    }
+
+    public boolean convertItemData(CompoundData itemTag)
+    {
+        // v1451 flattening item names
+        String id13 = itemTag.getString("id");
+        ItemIdDamage idDamage = this.itemMap.get(id13);
+
+        // TODO: fallback items
+        if (idDamage != null) {
+            itemTag.putString("id", idDamage.id);
+            itemTag.putShort("Damage", idDamage.damage);
+        }
+
+        CompoundData tag = itemTag.getCompound("tag");
+        if (tag != null && tag.isEmpty() == false) {
+            if (tag.contains("Damage", Constants.NBT.TAG_INT)) {
+                short actualDamage = tag.getShort("Damage");
+                itemTag.putShort("Damage", actualDamage);
+                tag.remove("Damage");
+            }
+
+            if (tag.contains("StoredEnchantments", Constants.NBT.TAG_LIST)) { // v1494
+                ListData storedEnchantments = tag.getList("StoredEnchantments", Constants.NBT.TAG_LIST);
+                convertEnchantments(storedEnchantments);
+            }
+            if (tag.contains("Enchantments", Constants.NBT.TAG_LIST)) { // v1494
+                ListData enchantments = tag.getList("Enchantments", Constants.NBT.TAG_LIST);
+                convertEnchantments(enchantments);
+                tag.remove("Enchantments");
+                tag.put("ench", enchantments);
+            }
+
+            // Potion stayed the same (I think?)
+            //if (tag.contains("Potion", Constants.NBT.TAG_STRING))
+
+            if (tag.contains("EntityTag", Constants.NBT.TAG_COMPOUND)) {
+                CompoundData entityTag = tag.getCompound("EntityTag");
+                // TODO: confirm this is correct
+                convertEntityData(entityTag);
+            }
+
+            if (tag.contains("BlockEntityTag", Constants.NBT.TAG_COMPOUND)) {
+                CompoundData blockEntityTag = tag.getCompound("BlockEntityTag");
+                convertBlockEntityData(blockEntityTag);
+            }
+
+            if (tag.contains("display", Constants.NBT.TAG_COMPOUND)) {
+                CompoundData displayTag = tag.getCompound("display");
+                if (displayTag.contains("Name", Constants.NBT.TAG_STRING)) {
+                    JsonObject obj = JsonParser.parseString(displayTag.getString("Name")).getAsJsonObject();
+                    JsonElement textComponent = obj.get("text");
+                    if (textComponent != null && textComponent.isJsonPrimitive()) {
+                        String customName = textComponent.getAsString();
+                        displayTag.putString("Name", customName);
+                    }
+                }
+            }
+
+        }
+        if (tag != null && tag.isEmpty())
+        {
+            itemTag.remove("tag");
+        }
+        return true;
+    }
+
+    // v1494 enchantment id to name
+    private void convertEnchantments(ListData storedEnchantments)
+    {
+        for (int i = 0; i < storedEnchantments.size(); i++) {
+            CompoundData enchantmentTag = storedEnchantments.getCompoundAt(i);
+            String nameId = enchantmentTag.getString("id");
+            Integer numericId = ENCHANTMENT_ID_TO_NAME.get(nameId);
+            if (numericId != null)
+            {
+                // keep lvl the same
+                enchantmentTag.putShort("id", numericId.shortValue());
+            }
+            else
+            {
+                Litematica.LOGGER.warn("Unable to downgrade unknown enchantment id: {}", nameId);
+            }
+        }
     }
 
     static final ImmutableMap<String, Pair<String, Integer>> flowerPotData =
@@ -195,14 +483,14 @@ public class DowngraderV113V112 extends SchematicDataConverter
     static final UnfixBlockEntityCreator UNFIX_FLOWERPOT = (pos, container, blockEntityMap, originalTag) -> {
         Pair<String, Integer> itemData = flowerPotData.get(originalTag.getString("Name"));
 
-        CompoundData flowerPotBeTag = new CompoundData();
-        flowerPotBeTag.putString("Item", itemData.getLeft());
-        flowerPotBeTag.putInt("Data", itemData.getRight());
-        flowerPotBeTag.putString("id", "minecraft:flower_pot");
-        flowerPotBeTag.putInt("x", pos.getX());
-        flowerPotBeTag.putInt("y", pos.getY());
-        flowerPotBeTag.putInt("z", pos.getZ());
-        blockEntityMap.put(pos, flowerPotBeTag);
+        CompoundData blockEntityTag = new CompoundData();
+        blockEntityTag.putString("Item", itemData.getLeft());
+        blockEntityTag.putInt("Data", itemData.getRight());
+        blockEntityTag.putString("id", "minecraft:flower_pot");
+        blockEntityTag.putInt("x", pos.getX());
+        blockEntityTag.putInt("y", pos.getY());
+        blockEntityTag.putInt("z", pos.getZ());
+        blockEntityMap.put(pos, blockEntityTag);
     };
 
     static final UnfixBlockEntityCreator UNFIX_NOTE_BLOCK = (pos, container, blockEntityMap, originalTag) -> {
@@ -218,14 +506,14 @@ public class DowngraderV113V112 extends SchematicDataConverter
             }
             // instrument is not stored in 1.12
 
-            CompoundData noteBlockBeTag = new CompoundData();
-            noteBlockBeTag.putByte("note", note);
-            noteBlockBeTag.putBoolean("powered", powered);
-            noteBlockBeTag.putString("id", "minecraft:noteblock");
-            noteBlockBeTag.putInt("x", pos.getX());
-            noteBlockBeTag.putInt("y", pos.getY());
-            noteBlockBeTag.putInt("z", pos.getZ());
-            blockEntityMap.put(pos, noteBlockBeTag);
+            CompoundData blockEntityTag = new CompoundData();
+            blockEntityTag.putByte("note", note);
+            blockEntityTag.putBoolean("powered", powered);
+            blockEntityTag.putString("id", "minecraft:noteblock");
+            blockEntityTag.putInt("x", pos.getX());
+            blockEntityTag.putInt("y", pos.getY());
+            blockEntityTag.putInt("z", pos.getZ());
+            blockEntityMap.put(pos, blockEntityTag);
         }
     };
 
@@ -350,7 +638,9 @@ public class DowngraderV113V112 extends SchematicDataConverter
         unfixers.put("minecraft:potted_dead_bush",        UNFIX_FLOWERPOT);
         unfixers.put("minecraft:potted_fern",             UNFIX_FLOWERPOT);
         unfixers.put("minecraft:potted_cactus",           UNFIX_FLOWERPOT);
+
         unfixers.put("minecraft:note_block", UNFIX_NOTE_BLOCK);
+
         for (String color : colorId)
         {
             unfixers.put("minecraft:" + color + "_bed", UNFIX_BED);
@@ -370,6 +660,60 @@ public class DowngraderV113V112 extends SchematicDataConverter
         unfixers.put("minecraft:dragon_head",                UNFIX_SKULL);
         unfixers.put("minecraft:dragon_wall_head",           UNFIX_SKULL);
     }
+
+    // v1494
+    static final ImmutableMap<String, Integer> ENCHANTMENT_ID_TO_NAME = ImmutableMap.<String, Integer>builder()
+        .put("minecraft:protection",            0)
+        .put("minecraft:fire_protection",       1)
+        .put("minecraft:feather_falling",       2)
+        .put("minecraft:blast_protection",      3)
+        .put("minecraft:projectile_protection", 4)
+        .put("minecraft:respiration",           5)
+        .put("minecraft:aqua_affinity",         6)
+        .put("minecraft:thorns",                7)
+        .put("minecraft:depth_strider",         8)
+        .put("minecraft:frost_walker",          9)
+        .put("minecraft:binding_curse",         10)
+        .put("minecraft:sharpness",             16)
+        .put("minecraft:smite",                 17)
+        .put("minecraft:bane_of_arthropods",    18)
+        .put("minecraft:knockback",             19)
+        .put("minecraft:fire_aspect",           20)
+        .put("minecraft:looting",               21)
+        .put("minecraft:sweeping",              22)
+        .put("minecraft:efficiency",            32)
+        .put("minecraft:silk_touch",            33)
+        .put("minecraft:unbreaking",            34)
+        .put("minecraft:fortune",               35)
+        .put("minecraft:power",                 48)
+        .put("minecraft:punch",                 49)
+        .put("minecraft:flame",                 50)
+        .put("minecraft:infinity",              51)
+        .put("minecraft:luck_of_the_sea",       61)
+        .put("minecraft:lure",                  62)
+        .put("minecraft:loyalty",               65)
+        .put("minecraft:impaling",              66)
+        .put("minecraft:riptide",               67)
+        .put("minecraft:channeling",            68)
+        .put("minecraft:mending",               70)
+        .put("minecraft:vanishing_curse",       71)
+        .build();
+
+    // v1510
+    static final ImmutableMap<String, String> ENTITY_UNRENAME_MAP = ImmutableMap.<String, String>builder()
+        .put("minecraft:command_block_minecart", "minecraft:commandblock_minecart")
+        .put("minecraft:end_crystal", "minecraft:ender_crystal")
+        .put("minecraft:snow_golem", "minecraft:snowman")
+        .put("minecraft:evoker", "minecraft:evocation_illager")
+        .put("minecraft:evoker_fangs", "minecraft:evocation_fangs")
+        .put("minecraft:illusioner", "minecraft:illusion_illager")
+        .put("minecraft:vindicator", "minecraft:vindication_illager")
+        .put("minecraft:iron_golem", "minecraft:villager_golem")
+        .put("minecraft:experience_orb", "minecraft:xp_orb")
+        .put("minecraft:experience_bottle", "minecraft:xp_bottle")
+        .put("minecraft:eye_of_ender", "minecraft:eye_of_ender_signal")
+        .put("minecraft:firework_rocket", "minecraft:fireworks_rocket")
+        .build();
 }
 
 interface UnfixBlockEntityCreator {
@@ -379,4 +723,14 @@ interface UnfixBlockEntityCreator {
         Map<BlockPos, CompoundData> blockEntityMap,
         CompoundData originalTag
     );
+}
+
+class ItemIdDamage {
+    String id;
+    short damage;
+    public ItemIdDamage(String id, short damage)
+    {
+        this.id = id;
+        this.damage = damage;
+    }
 }
