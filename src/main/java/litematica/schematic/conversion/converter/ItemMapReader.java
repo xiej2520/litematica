@@ -1,12 +1,9 @@
 package litematica.schematic.conversion.converter;
 
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -15,7 +12,6 @@ import litematica.Litematica;
 import malilib.overlay.message.MessageDispatcher;
 import malilib.util.data.json.JsonUtils;
 import malilib.util.data.tag.CompoundData;
-import org.apache.commons.io.IOUtils;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -60,48 +56,29 @@ public class ItemMapReader
 
     public static List<JsonObject> readNdjson(String fileName)
     {
-        FileSystem filesystem = null;
         String location = "/assets/litematica/conversion_data/" + fileName;
 
-        try
+        try (InputStream stream = BlockStateMapReader.class.getResourceAsStream(location))
         {
-            URL url = ItemMapReader.class.getResource(location);
-            if (url == null) {
+            if (stream == null)
+            {
+                Litematica.LOGGER.error("Resource not found: {}", location);
                 return new ArrayList<>();
             }
 
-            URI uri = url.toURI();
-            Path path;
-
-            if ("file".equals(uri.getScheme()))
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8)))
             {
-                path = Paths.get(uri);
-            }
-            else if ("jar".equals(uri.getScheme()))
-            {
-                filesystem = FileSystems.newFileSystem(uri, Collections.emptyMap());
-                path = filesystem.getPath(location);
-            }
-            else
-            {
-                Litematica.LOGGER.error("Unsupported scheme " + uri + " while trying to read item mapping data");
-                return new ArrayList<>();
-            }
-
-            try (Stream<String> lines = Files.lines(path)) {
-                return lines.map(String::trim)
-                    .filter(l -> !l.isEmpty())
-                    .map(l -> JsonParser.parseString(l).getAsJsonObject())
-                    .collect(Collectors.toList());
+                try (Stream<String> lines = reader.lines()) {
+                    return lines.map(String::trim)
+                        .filter(l -> !l.isEmpty())
+                        .map(l -> JsonParser.parseString(l).getAsJsonObject())
+                        .collect(Collectors.toList());
+                }
             }
         }
         catch (Exception e)
         {
-            Litematica.LOGGER.error("Exception while trying to read block state mapping data", e);
-        }
-        finally
-        {
-            IOUtils.closeQuietly(filesystem);
+            Litematica.LOGGER.error("Exception while trying to read item mapping data", e);
         }
 
         return new ArrayList<>();
