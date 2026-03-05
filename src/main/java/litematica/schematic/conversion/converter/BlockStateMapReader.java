@@ -1,14 +1,9 @@
 package litematica.schematic.conversion.converter;
 
 import java.io.BufferedReader;
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collections;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -17,7 +12,6 @@ import litematica.Litematica;
 import malilib.overlay.message.MessageDispatcher;
 import malilib.util.data.json.JsonUtils;
 import malilib.util.data.tag.CompoundData;
-import org.apache.commons.io.IOUtils;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -66,45 +60,27 @@ public class BlockStateMapReader
 
     public static Optional<JsonArray> read(String fileName)
     {
-        FileSystem filesystem = null;
         String location = "/assets/litematica/conversion_data/" + fileName;
 
-        try
+        try (InputStream stream = BlockStateMapReader.class.getResourceAsStream(location))
         {
-            URL url = BlockStateMapReader.class.getResource(location);
-
-            if (url != null)
+            if (stream == null)
             {
-                URI uri = url.toURI();
-                Path path;
+                Litematica.LOGGER.error("Resource not found: {}", location);
+                return Optional.empty();
+            }
 
-                if ("file".equals(uri.getScheme()))
-                {
-                    path = Paths.get(BlockStateMapReader.class.getResource(location).toURI());
-                }
-                else
-                {
-                    if ("jar".equals(uri.getScheme()) == false)
-                    {
-                        Litematica.LOGGER.error("Unsupported scheme " + uri + " while trying to read block state mapping data");
-                        return Optional.empty();
-                    }
-
-                    filesystem = FileSystems.newFileSystem(uri, Collections.emptyMap());
-                    path = filesystem.getPath(location);
-                }
-
-                BufferedReader reader = Files.newBufferedReader(path);
-
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8)))
+            {
                 JsonElement element = JsonParser.parseReader(reader);
-                reader.close();
 
                 if (element != null && element.isJsonObject())
                 {
                     JsonObject obj = element.getAsJsonObject();
+
                     if (JsonUtils.hasArray(obj, "block_states"))
                     {
-                        return Optional.of(obj.get("block_states").getAsJsonArray());
+                        return Optional.of(obj.getAsJsonArray("block_states"));
                     }
                 }
             }
@@ -112,10 +88,6 @@ public class BlockStateMapReader
         catch (Exception e)
         {
             Litematica.LOGGER.error("Exception while trying to read block state mapping data", e);
-        }
-        finally
-        {
-            IOUtils.closeQuietly(filesystem);
         }
 
         return Optional.empty();
