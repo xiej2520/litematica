@@ -90,6 +90,7 @@ public class Configs implements IConfigHandler
         public static final ConfigBoolean       PLACEMENT_RESTRICTION   = new ConfigBoolean(    "placementRestriction", false, "When enabled, the use key can only be used\nwhen holding the correct item for the targeted position,\nand the targeted position must have a missing block in the schematic", "Placement Restriction");
         public static final ConfigOptionList    PLACEMENT_RESTRICTION_WARN = new ConfigOptionList  ("placementRestrictionWarn", MessageOutputType.ACTIONBAR, "Selects which type of warning message to show (if any)\nwhen either the Easy Place mode or Placement Restriction prevent placing a block");
         public static final ConfigBoolean       RENDER_MATERIALS_IN_GUI = new ConfigBoolean(    "renderMaterialListInGuis", true, "Whether or not the material list should\nbe rendered inside GUIs");
+        public static final ConfigBoolean       REVERSE_OP_MODE_DIRECTION = new ConfigBoolean(  "reverseOperationModeDirection", false, "If enabled, reverses the scroll direction used for cycling\nthrough operation modes while holding the operation mode change modifier key");
         public static final ConfigBoolean       RENDER_THREAD_NO_TIMEOUT = new ConfigBoolean(   "renderThreadNoTimeout", true, "Removes the timeout from the rendering worker threads.\nIf you get very stuttery rendering when moving around\nor dealing with large schematics, try disabling this. It will however make\nthe schematic rendering a lot slower in some cases.");
         public static final ConfigBoolean       REPLACE_MODE_IGNORE_STATE = new ConfigBoolean(  "replaceModeIgnoreState", false, "Makes the Replace creative feature ignore the exact state of the block to replace");
         public static final ConfigOptionList    SCHEMATIC_VCS_DELETE_MODE = new ConfigOptionList("schematicVcsDeleteMode", PlacementDeletionMode.MATCHING_BLOCK, "The deletion mode to use for removing the previous schematic version\nwhen pasting the next version in the Schematic VCS mode");
@@ -149,6 +150,7 @@ public class Configs implements IConfigHandler
                 TOOL_ITEM_ENABLED,
                 UNHIDE_SCHEMATIC_PROJECTS,
 
+                REVERSE_OP_MODE_DIRECTION,
                 PASTE_REPLACE_BEHAVIOR,
                 PASTE_LAYER_BEHAVIOR,
                 SCHEMATIC_VCS_DELETE_MODE,
