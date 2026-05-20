@@ -325,11 +325,11 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
     protected String getSummonCommandForItemFrame(ItemFrameEntity itemFrame, String originalCommand)
     {
         ItemStack stack = itemFrame.getHeldItemStack();
+        int facingId = itemFrame.getHorizontalFacing().getId();
 
         if (stack.isEmpty() == false)
         {
             Identifier itemId = Registry.ITEM.getId(stack.getItem());
-            int facingId = itemFrame.getHorizontalFacing().getId();
             String nbtStr = String.format(" {Facing:%db,Item:{id:\"%s\",Count:1b}}", facingId, itemId);
             CompoundTag tag = stack.getTag();
 
@@ -348,7 +348,7 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
             return originalCommand + nbtStr;
         }
 
-        return originalCommand;
+        return originalCommand + String.format(" {Facing:%db}", facingId);
     }
 
     protected void queueSetBlockCommand(int x, int y, int z, BlockState state)
