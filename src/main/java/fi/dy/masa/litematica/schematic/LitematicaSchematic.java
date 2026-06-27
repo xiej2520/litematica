@@ -8,6 +8,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -1627,11 +1628,28 @@ public class LitematicaSchematic
     {
         Vec3i size = readSizeFromTagImpl(tag);
 
-        if (tag.contains("palette", Constants.NBT.TAG_LIST) &&
+        if ((tag.contains("palette", Constants.NBT.TAG_LIST) || tag.contains("palettes", Constants.NBT.TAG_LIST)) &&
             tag.contains("blocks", Constants.NBT.TAG_LIST) &&
             isSizeValid(size))
         {
-            ListTag paletteTag = tag.getList("palette", Constants.NBT.TAG_COMPOUND);
+            ListTag paletteTag;
+
+            if (tag.contains("palette", Constants.NBT.TAG_LIST))
+            {
+                paletteTag = tag.getList("palette", Constants.NBT.TAG_COMPOUND);
+            }
+            else
+            {
+                ListTag palettes = tag.getList("palettes", Constants.NBT.TAG_LIST);
+                final int pSize = palettes.size();
+
+                if (pSize == 0)
+                {
+                    return false;
+                }
+
+                paletteTag = palettes.getList(new Random().nextInt(pSize));
+            }
 
             Map<BlockPos, CompoundTag> tileMap = new HashMap<>();
             this.tileEntities.put(name, tileMap);
