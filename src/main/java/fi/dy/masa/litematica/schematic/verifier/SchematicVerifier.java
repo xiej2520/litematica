@@ -41,6 +41,7 @@ import fi.dy.masa.litematica.scheduler.TaskScheduler;
 import fi.dy.masa.litematica.scheduler.tasks.TaskBase;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.util.BlockInfoListType;
+import fi.dy.masa.litematica.util.BlockUtils;
 import fi.dy.masa.litematica.util.ItemUtils;
 import fi.dy.masa.litematica.util.PositionUtils;
 import fi.dy.masa.litematica.util.WorldUtils;
@@ -711,6 +712,20 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
 
         if (stateClient != stateSchematic && (stateClient.isAir() == false || stateSchematic.isAir() == false))
         {
+            if (Configs.Visuals.IGNORE_CROP_AGE.getBooleanValue() &&
+                BlockUtils.areStatesEqualIgnoringAge(stateSchematic, stateClient))
+            {
+                ItemUtils.setItemForBlock(this.worldClient, pos, stateClient);
+                this.correctStateCounts.addTo(stateClient, 1);
+
+                if (stateSchematic.isAir() == false)
+                {
+                    ++this.correctStatesCount;
+                }
+
+                return;
+            }
+
             MUTABLE_PAIR.setLeft(stateSchematic);
             MUTABLE_PAIR.setRight(stateClient);
 

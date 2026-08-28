@@ -125,4 +125,32 @@ public class BlockUtils
         StateManager<Block, BlockState> stateManager2 = state2.getBlock().getStateManager();
         return stateManager1.getProperties().equals(stateManager2.getProperties());
     }
+
+    public static boolean areStatesEqualIgnoringAge(BlockState state1, BlockState state2)
+    {
+        if (state1 == state2)
+        {
+            return true;
+        }
+
+        if (state1.getBlock() != state2.getBlock())
+        {
+            return false;
+        }
+
+        for (Property<?> prop : state1.getProperties())
+        {
+            if ("age".equalsIgnoreCase(prop.getName()))
+            {
+                continue;
+            }
+
+            if (state1.get(prop).equals(state2.get(prop)) == false)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

@@ -34,6 +34,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.chunk.WorldChunk;
+import fi.dy.masa.litematica.util.BlockUtils;
 
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
@@ -68,6 +69,7 @@ public class ChunkRendererSchematicVbo
     protected Color4f overlayColor;
     protected boolean hasOverlay = false;
     private boolean ignoreClientWorldFluids;
+    private boolean ignoreCropAge;
 
     protected ChunkCacheSchematic schematicWorldView;
     protected ChunkCacheSchematic clientWorldView;
@@ -667,6 +669,11 @@ public class ChunkRendererSchematicVbo
                 {
                     return OverlayType.WRONG_BLOCK;
                 }
+                // Same block, but states differ
+                else if (this.ignoreCropAge && BlockUtils.areStatesEqualIgnoringAge(stateSchematic, stateClient))
+                {
+                    return OverlayType.NONE;
+                }
                 // Wrong state
                 else
                 {
@@ -884,6 +891,7 @@ public class ChunkRendererSchematicVbo
         synchronized (this.boxes)
         {
             this.ignoreClientWorldFluids = Configs.Visuals.IGNORE_EXISTING_FLUIDS.getBooleanValue();
+            this.ignoreCropAge = Configs.Visuals.IGNORE_CROP_AGE.getBooleanValue();
             ClientWorld worldClient = MinecraftClient.getInstance().world;
             this.schematicWorldView = new ChunkCacheSchematic(this.world, worldClient, this.position, 2);
             this.clientWorldView    = new ChunkCacheSchematic(worldClient, worldClient, this.position, 2);
