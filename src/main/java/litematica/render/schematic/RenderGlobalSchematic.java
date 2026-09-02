@@ -494,12 +494,19 @@ public class RenderGlobalSchematic extends RenderGlobal
                 this.prevRenderSortX = entityX;
                 this.prevRenderSortY = entityY;
                 this.prevRenderSortZ = entityZ;
-                int i = 0;
+                int translucentCount = 0;
+                int overlayCount = 0;
 
                 for (RenderChunkSchematicVbo renderChunk : this.renderInfos)
                 {
-                    if ((renderChunk.getChunkRenderData().isLayerStarted(blockLayerIn) ||
-                        (renderChunk.getChunkRenderData() != CompiledChunk.DUMMY && renderChunk.hasOverlay())) && i++ < 15)
+                    CompiledChunkSchematic compiledChunk = renderChunk.getChunkRenderData();
+                    boolean hasTranslucent = compiledChunk.isLayerEmpty(blockLayerIn) == false;
+                    boolean hasOverlayQuad = compiledChunk != CompiledChunk.DUMMY &&
+                                             compiledChunk.isOverlayTypeEmpty(OverlayRenderType.QUAD) == false;
+                    boolean resortTranslucent = hasTranslucent && translucentCount++ < 15;
+                    boolean resortOverlay = hasOverlayQuad && overlayCount++ < 15;
+
+                    if (resortTranslucent || resortOverlay)
                     {
                         this.renderDispatcher.updateTransparencyLater(renderChunk);
                     }

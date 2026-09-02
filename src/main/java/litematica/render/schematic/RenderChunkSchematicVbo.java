@@ -720,7 +720,8 @@ public class RenderChunkSchematicVbo extends RenderChunk
     {
         if (type == OverlayRenderType.QUAD && compiledChunk.isOverlayTypeEmpty(type) == false)
         {
-            builder.sortVertexData(x, y, z);
+            net.minecraft.util.math.BlockPos chunkPos = this.getPosition();
+            builder.sortVertexData(x - chunkPos.getX(), y - chunkPos.getY(), z - chunkPos.getZ());
             compiledChunk.setOverlayBufferState(type, builder.getVertexData());
         }
 
