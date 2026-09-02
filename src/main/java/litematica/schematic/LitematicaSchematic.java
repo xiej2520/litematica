@@ -71,6 +71,12 @@ public class LitematicaSchematic extends BaseSchematic
         boolean needsVersionConversion = this.minecraftDataVersion != CURRENT_MINECRAFT_DATA_VERSION;
 
         this.regions = this.readRegions(data, version, this.minecraftDataVersion);
+
+        if (needsVersionConversion && MinecraftVersion.getVersionByDataVersion(this.minecraftDataVersion).isPresent())
+        {
+            this.minecraftDataVersion = CURRENT_MINECRAFT_DATA_VERSION;
+        }
+
         this.metadata = createAndReadMetadata(data).orElse(new SchematicMetadata());
 
         // TODO: only recalculate when conversion has actually been done
@@ -204,13 +210,16 @@ public class LitematicaSchematic extends BaseSchematic
                 continue;
             }
 
-            boolean needsVersionConversion = mainDataVersion != CURRENT_MINECRAFT_DATA_VERSION;
+            boolean needsVersionConversion = dataVersion != CURRENT_MINECRAFT_DATA_VERSION;
 
             if (needsVersionConversion)
             {
-                this.convertSchematicDataToCurrentGameVersion(paletteTag, container, blockEntityMap, blockTickMap, entityList);
-                this.minecraftDataVersion = CURRENT_MINECRAFT_DATA_VERSION;
-                dataVersion = CURRENT_MINECRAFT_DATA_VERSION;
+                this.convertSchematicDataToCurrentGameVersion(paletteTag, container, blockEntityMap, blockTickMap, entityList, dataVersion);
+
+                if (MinecraftVersion.getVersionByDataVersion(dataVersion).isPresent())
+                {
+                    dataVersion = CURRENT_MINECRAFT_DATA_VERSION;
+                }
             }
 
             if (readPaletteFromLitematicaFormatTag(paletteTag, container.getPalette(), dataVersion) == false) {
@@ -532,10 +541,11 @@ public class LitematicaSchematic extends BaseSchematic
         ArrayBlockContainer container,
         Map<BlockPos, CompoundData> blockEntityMap,
         Map<BlockPos, ScheduledBlockTickData> blockTickMap,
-        List<EntityData> entityList
+        List<EntityData> entityList,
+        int dataVersion
     )
     {
-        Optional<MinecraftVersion> versionFrom = MinecraftVersion.getVersionByDataVersion(this.minecraftDataVersion);
+        Optional<MinecraftVersion> versionFrom = MinecraftVersion.getVersionByDataVersion(dataVersion);
         if (versionFrom.isPresent())
         {
             SchematicDataConverter.convert(
