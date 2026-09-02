@@ -23,7 +23,7 @@ public abstract class SchematicDataConverter {
 
     private static Optional<SchematicDataConverter> getDataConverter(MinecraftVersion versionFrom, MinecraftVersion versionTo)
     {
-        if (versionTo.equals(MinecraftVersion.MC_1_12_2) && versionFrom.dataVersion > MinecraftVersion.MC_1_13.dataVersion)
+        if (versionTo.equals(MinecraftVersion.MC_1_12_2) && versionFrom.dataVersion >= MinecraftVersion.MC_1_13.dataVersion)
         {
             //return Optional.of(DowngraderV113V112Fallback.INSTANCE);
             return Optional.of(DowngraderV113V112.INSTANCE);
