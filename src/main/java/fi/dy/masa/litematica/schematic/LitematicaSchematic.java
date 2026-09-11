@@ -53,6 +53,7 @@ import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.conversion.SchematicConversionFixers;
 import fi.dy.masa.litematica.schematic.conversion.SchematicConversionMaps;
 import fi.dy.masa.litematica.schematic.conversion.SchematicConverter;
+import fi.dy.masa.litematica.schematic.conversion.SchematicDowngradeFixers;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.schematic.placement.SubRegionPlacement;
 import fi.dy.masa.litematica.selection.AreaSelection;
@@ -1233,6 +1234,7 @@ public class LitematicaSchematic
                         BlockPos size = posMax.subtract(posMin).add(1, 1, 1);
 
                         palette = this.convertBlockStatePalette_1_12_to_1_13_2(palette, version, minecraftDataVersion);
+                        palette = SchematicDowngradeFixers.convertBlockStatePalette_1_16_to_1_15(palette, minecraftDataVersion);
 
                         LitematicaBlockStateContainer container = LitematicaBlockStateContainer.createFrom(palette, blockStateArr, size);
 
