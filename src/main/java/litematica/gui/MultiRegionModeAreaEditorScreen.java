@@ -20,6 +20,7 @@ import litematica.config.Configs;
 import litematica.data.DataManager;
 import litematica.gui.util.LitematicaIcons;
 import litematica.gui.widget.list.entry.AreaSubRegionEntryWidget;
+import litematica.materials.MaterialListAreaAnalyzer;
 import litematica.selection.AreaSelection;
 import litematica.selection.AreaSelectionManager;
 
@@ -217,6 +218,10 @@ public class MultiRegionModeAreaEditorScreen extends BaseListScreen<DataListWidg
 
     protected void openAreaAnalyzer()
     {
+        MaterialListAreaAnalyzer materialList = new MaterialListAreaAnalyzer(this.areaSelection);
+        DataManager.setMaterialList(materialList);
+        BaseScreen.openScreen(new MaterialListScreen(materialList));
+        materialList.reCreateMaterialList();
     }
 
     protected void openSaveSchematicScreen()
