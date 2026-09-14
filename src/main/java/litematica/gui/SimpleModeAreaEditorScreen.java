@@ -12,6 +12,7 @@ import malilib.util.game.wrap.EntityWrap;
 import malilib.util.position.BlockPos;
 import litematica.config.Configs;
 import litematica.data.DataManager;
+import litematica.materials.MaterialListAreaAnalyzer;
 import litematica.selection.AreaSelection;
 import litematica.selection.AreaSelectionManager;
 import litematica.selection.AreaSelectionType;
@@ -199,6 +200,10 @@ public class SimpleModeAreaEditorScreen extends BaseAreaSubRegionEditScreen
 
     protected void openAreaAnalyzer()
     {
+        MaterialListAreaAnalyzer materialList = new MaterialListAreaAnalyzer(this.areaSelection);
+        DataManager.setMaterialList(materialList);
+        BaseScreen.openScreen(new MaterialListScreen(materialList));
+        materialList.reCreateMaterialList();
     }
 
     protected void openSaveSchematicScreen()
