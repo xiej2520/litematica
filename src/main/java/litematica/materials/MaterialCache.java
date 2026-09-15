@@ -10,15 +10,8 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import litematica.util.ItemUtils;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockBed;
-import net.minecraft.block.BlockDoor;
-import net.minecraft.block.BlockDoublePlant;
-import net.minecraft.block.BlockFlowerPot;
+import net.minecraft.block.*;
 import net.minecraft.block.BlockFlowerPot.EnumFlowerType;
-import net.minecraft.block.BlockLiquid;
-import net.minecraft.block.BlockSlab;
-import net.minecraft.block.BlockSnow;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.init.Blocks;
@@ -275,6 +268,10 @@ public class MaterialCache
         else if (block instanceof BlockDoublePlant && state.getValue(BlockDoublePlant.HALF) == BlockDoublePlant.EnumBlockHalf.UPPER)
         {
             return ItemStack.EMPTY;
+        }
+        else if (block instanceof BlockMobSpawner)
+        {
+            return new ItemStack(Blocks.MOB_SPAWNER);
         }
 
         return null;
