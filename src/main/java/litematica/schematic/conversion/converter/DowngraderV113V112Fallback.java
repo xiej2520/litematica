@@ -44,7 +44,7 @@ public class DowngraderV113V112Fallback extends DowngraderV113V112
             {
                 if (this.stateMap.containsKey(entry.getKey())) {
                     MessageDispatcher.error("conflicting entries for " + entry.getKey());
-                    System.out.printf("conflicting entries for %s\n", entry);
+                    //System.out.printf("conflicting entries for %s\n", entry);
                 }
                 else {
                     this.stateMap.put(entry.getKey(), entry.getValue());
@@ -64,7 +64,7 @@ public class DowngraderV113V112Fallback extends DowngraderV113V112
                 CompoundData waterloggedState = entry.getKey().copy();
                 waterloggedState.getCompound("Properties").putString("waterlogged", "true");
                 waterlogged.put(waterloggedState, entry.getValue());
-                System.out.printf("WATERLOGGED MAPPING: %s %s %s\n",props, waterloggedState, entry.getValue());
+                //System.out.printf("WATERLOGGED MAPPING: %s %s %s\n",props, waterloggedState, entry.getValue());
             }
         }
         this.stateMap.putAll(waterlogged);

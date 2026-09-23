@@ -42,7 +42,7 @@ public class BlockStateMapReader
                     Optional<CompoundData> tagFrom = blockStateJsonObjectToTag(objFrom);
                     Optional<CompoundData> tagTo = blockStateJsonObjectToTag(objTo);
 
-                    System.out.printf("MAPPING: %s => %s\n", tagFrom, tagTo);
+                    //System.out.printf("MAPPING: %s => %s\n", tagFrom, tagTo);
                     if (tagFrom.isPresent() && tagTo.isPresent()) {
                         map.put(tagFrom.get(), tagTo.get());
                     } else {

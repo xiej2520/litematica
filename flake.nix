@@ -3,60 +3,68 @@
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-  outputs = { self, nixpkgs }:
+  outputs =
+    { nixpkgs, ... }:
     let
-      supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
 
-      forEachSupportedSystem = f: nixpkgs.lib.genAttrs supportedSystems (system: let
-        pkgs = import nixpkgs { inherit system; };
-        deps = with pkgs; [
-          openjdk
-          gradle
-          libpulseaudio
-          libGL
-          glfw
-          openal
-          stdenv.cc.cc.lib
-          libXxf86vm
-          libXcursor
-          libxrandr
-        ];
-      in
-      f {
-        pkgs = pkgs;
-        deps = deps;
-      });
-
+      forEachSupportedSystem =
+        f:
+        nixpkgs.lib.genAttrs supportedSystems (
+          system:
+          let
+            pkgs = import nixpkgs { inherit system; };
+          in
+          f pkgs
+        );
     in
     {
-      devShells = forEachSupportedSystem ({ pkgs, deps }: {
-        default = pkgs.mkShell {
-          packages = deps;
-          buildInputs = deps;
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath deps;  # Set up the library path for linking
+      devShells = forEachSupportedSystem (
+        pkgs:
+        let
+          lib = pkgs.lib;
 
-          # tell Intellij to use jdk and gradle in ./.share since nixos doesn't like dynamically linked executables
-          # Settings -> Build, Execution, Deployment -> Build Tools -> Gradle
-          shellHook = ''
-            export BASE_DIR=$(pwd)
-            mkdir -p $BASE_DIR/.share
+          java = pkgs.jetbrains.jdk-no-jcef-21;
 
-            if [ -L "$BASE_DIR/.share/java" ]; then
-              unlink "$BASE_DIR/.share/java"
-            fi
-            ln -sf ${pkgs.openjdk}/lib/openjdk $BASE_DIR/.share/java
+          java8 = pkgs.zulu8;
 
-            if [ -L "$BASE_DIR/.share/gradle" ]; then
-              unlink "$BASE_DIR/.share/gradle"
-            fi
-            ln -sf ${pkgs.gradle}/libexec/gradle $BASE_DIR/.share/gradle
-            export GRADLE_HOME="$BASE_DIR/.share/gradle"
+          runtimeLibs =
+            with pkgs;
+            [
+              libGL
+              libpulseaudio
+              flite
+            ]
+            ++ lib.optionals stdenv.hostPlatform.isLinux [
+              glfw3-minecraft
 
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${
-              pkgs.lib.makeLibraryPath deps
-            };
-          '';
-        };
-      });
+              # idk maybe these are needed
+              openal
+              stdenv.cc.cc.lib
+              libXxf86vm
+              libXcursor
+              libxrandr
+            ];
+        in
+        {
+          default = pkgs.mkShell {
+            packages = with pkgs; [
+              java
+              java8
+              gradle
+              git
+            ];
+            JAVA_HOME = "${java.home}";
+            JAVA8_HOME = "${java8.home}";
+
+            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath runtimeLibs;
+          };
+        }
+      );
     };
 }
