@@ -8,7 +8,6 @@ import litematica.Litematica;
 import litematica.schematic.container.ArrayBlockContainer;
 import litematica.schematic.conversion.SchematicDataConverter;
 import litematica.schematic.data.EntityData;
-import malilib.gui.BaseScreen;
 import malilib.overlay.message.MessageDispatcher;
 import malilib.util.data.Constants;
 import malilib.util.data.tag.CompoundData;
@@ -76,7 +75,7 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
     /// dirt/coarse dirt, flowing water/lava, leaves, shrub (tallgrass 31:0), double stone slab,
     /// smooth_stone, smooth (red)sandstone, smooth quartz, mushroom blocks, pumpkin/melon stem
     /// flower pot, skull, powered redstone comparator, double_plant
-    public void convertContainer(
+    public ConversionResult convertContainer(
         ListData paletteTag,
         ArrayBlockContainer container,
         Map<BlockPos, CompoundData> blockEntityMap,
@@ -87,7 +86,6 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
 
         ArrayList<String> failedStates = new ArrayList<>();
         int successCount = 0;
-        int failCount = 0;
 
         ListData paletteTagOriginal = paletteTag.copy();
         boolean needBlockFixer = false;
@@ -98,16 +96,15 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
             String flattenedBlockName = tag.getString("Name");
 
             if (this.convertBlockStateData(tag)) {
-                System.out.printf("converted: %s => %s\n", paletteTagOriginal.getCompoundAt(i), tag);
+                //System.out.printf("converted: %s => %s\n", paletteTagOriginal.getCompoundAt(i), tag);
                 if (unfixers.containsKey(flattenedBlockName)) {
                     needBlockFixer = true;
                 }
                 successCount += 1;
             } else {
-                System.out.printf("FAILED: %s\n", tag);
+                //System.out.printf("FAILED: %s\n", tag);
                 failedStates.add(tag.toString());
-                paletteTag.set(i, BlockUtils.writeBlockState(new CompoundData(), BlockState.of(Blocks.BARRIER.getDefaultState())));
-                failCount += 1;
+                paletteTag.set(i, BlockUtils.writeBlockState(new CompoundData(), BlockState.of(Blocks.DIAMOND_BLOCK.getDefaultState())));
             }
         }
 
@@ -131,16 +128,7 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
 
         this.convertBlockEntities(blockEntityMap);
 
-        if (failCount > 0)
-        {
-            String verFrom = versionFrom.displayName;
-            String verTo = versionTo.displayName;
-            String strSu = String.valueOf(successCount);
-            String strFa = String.valueOf(failCount);
-            MessageDispatcher.warning("litematica.message.warn.schematic_conversion.palette_conversion_failures", verFrom, verTo, strSu, strFa);
-            MessageDispatcher.error(String.join("\n", failedStates));
-            BaseScreen.openPopupScreen(new SaveConversionFailureLogScreen(failedStates));
-        }
+        return new ConversionResult(successCount, failedStates);
     }
 
     public boolean convertBlockStateData(CompoundData data) {

@@ -33,6 +33,8 @@ public class LitematicaSchematic extends BaseSchematic
     public static final String FILE_NAME_EXTENSION = "litematic";
     public static final int CURRENT_SCHEMATIC_VERSION = 4;
 
+    public SchematicDataConverter.ConversionResult conversionResult = SchematicDataConverter.ConversionResult.empty();
+
     public LitematicaSchematic()
     {
         super(SchematicType.LITEMATICA);
@@ -548,7 +550,7 @@ public class LitematicaSchematic extends BaseSchematic
         Optional<MinecraftVersion> versionFrom = MinecraftVersion.getVersionByDataVersion(dataVersion);
         if (versionFrom.isPresent())
         {
-            SchematicDataConverter.convert(
+            this.conversionResult = SchematicDataConverter.convert(
                 paletteTag,
                 container,
                 blockEntityMap,

@@ -2,6 +2,8 @@ package litematica.gui.widget.list.entry;
 
 import java.nio.file.Path;
 
+import litematica.schematic.Schematic;
+import litematica.schematic.conversion.SchematicDataConverter;
 import malilib.gui.BaseScreen;
 import malilib.gui.icon.Icon;
 import malilib.gui.widget.button.GenericButton;
@@ -13,6 +15,7 @@ import malilib.util.position.BlockPos;
 import litematica.config.Configs;
 import litematica.data.DataManager;
 import litematica.schematic.LoadedSchematic;
+import litematica.schematic.LitematicaSchematic;
 import litematica.data.SchematicHolder;
 import litematica.gui.SaveConvertSchematicScreen;
 import litematica.gui.util.LitematicaIcons;
@@ -26,6 +29,7 @@ public class SchematicEntryWidget extends BaseSchematicEntryWidget
     protected final GenericButton reloadButton;
     protected final GenericButton saveToFileButton;
     protected final GenericButton unloadButton;
+    protected final GenericButton conversionLogButton;
     protected int buttonsStartX;
 
     public SchematicEntryWidget(LoadedSchematic schematic, DataListEntryWidgetData constructData)
@@ -46,16 +50,19 @@ public class SchematicEntryWidget extends BaseSchematicEntryWidget
             this.saveToFileButton      = GenericButton.create("litematica.button.schematic_list.save_to_file",     this::saveToFile);
             this.unloadButton          = GenericButton.create("litematica.button.schematic_list.unload",           this::unloadSchematic);
         }
+        this.conversionLogButton = GenericButton.create("litematica.button.schematic_list.conversion_log", this::showConversionFailures);
 
         this.createPlacementButton.translateAndAddHoverString("litematica.hover.button.schematic_list.create_placement");
         this.reloadButton.translateAndAddHoverString("litematica.hover.button.schematic_list.reload_schematic");
         this.saveToFileButton.translateAndAddHoverString("litematica.hover.button.schematic_list.save_to_file");
         this.unloadButton.translateAndAddHoverString("litematica.hover.button.schematic_list.unload");
+        this.conversionLogButton.translateAndAddHoverString("litematica.hover.button.schematic_list.conversion_log");
 
         this.createPlacementButton.setHoverInfoRequiresShift(true);
         this.reloadButton.setHoverInfoRequiresShift(true);
         this.saveToFileButton.setHoverInfoRequiresShift(true);
         this.unloadButton.setHoverInfoRequiresShift(true);
+        this.conversionLogButton.setHoverInfoRequiresShift(true);
     }
 
     @Override
@@ -67,6 +74,15 @@ public class SchematicEntryWidget extends BaseSchematicEntryWidget
         this.addWidget(this.reloadButton);
         this.addWidget(this.saveToFileButton);
         this.addWidget(this.unloadButton);
+
+        if (hasConversionFailures())
+        {
+            this.addWidget(this.conversionLogButton);
+        }
+        else
+        {
+            this.removeWidget(this.conversionLogButton);
+        }
     }
 
     @Override
@@ -85,6 +101,12 @@ public class SchematicEntryWidget extends BaseSchematicEntryWidget
         this.saveToFileButton.setRight(this.reloadButton.getX() - 1);
         this.createPlacementButton.setRight(this.saveToFileButton.getX() - 1);
         this.modificationNoticeIcon.setRight(this.createPlacementButton.getX() - 2);
+
+        if (hasConversionFailures())
+        {
+            this.conversionLogButton.centerVerticallyInside(this);
+            this.conversionLogButton.setRight(this.modificationNoticeIcon.getX() - 1);
+        }
 
         this.buttonsStartX = this.modificationNoticeIcon.getX() - 1;
     }
@@ -148,6 +170,21 @@ public class SchematicEntryWidget extends BaseSchematicEntryWidget
     protected void saveToFile()
     {
         BaseScreen.openScreenWithParent(new SaveConvertSchematicScreen(this.getData(), true));
+    }
+
+    protected void showConversionFailures()
+    {
+        LoadedSchematic loadedSchematic = this.getData();
+        if (loadedSchematic.schematic instanceof LitematicaSchematic)
+        {
+            SchematicDataConverter.showFailureScreen(((LitematicaSchematic) loadedSchematic.schematic).conversionResult);
+        }
+    }
+
+    protected boolean hasConversionFailures()
+    {
+        Schematic schematic = this.getData().schematic;
+        return schematic instanceof LitematicaSchematic && ((LitematicaSchematic) schematic).conversionResult.hasFailures();
     }
 
     protected void unloadSchematic()

@@ -38,7 +38,7 @@ public class ItemMapReader
                     Optional<CompoundData> tagFrom = itemJsonObjectToTag(objFrom);
                     Optional<CompoundData> tagTo = itemJsonObjectToTag(objTo);
 
-                    System.out.printf("MAPPING: %s => %s\n", tagFrom, tagTo);
+                    //System.out.printf("MAPPING: %s => %s\n", tagFrom, tagTo);
                     if (tagFrom.isPresent() && tagTo.isPresent()) {
                         map.put(tagFrom.get(), tagTo.get());
                     } else {

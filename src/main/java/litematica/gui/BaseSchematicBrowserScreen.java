@@ -12,6 +12,7 @@ import malilib.gui.widget.list.BaseFileBrowserWidget.DirectoryEntry;
 import malilib.util.StringUtils;
 import litematica.config.Configs;
 import litematica.data.DataManager;
+import litematica.data.SchematicHolder;
 import litematica.schematic.LoadedSchematic;
 import litematica.gui.util.SchematicBrowserIconProvider;
 import litematica.gui.widget.SchematicInfoWidgetByPath;
@@ -121,7 +122,7 @@ public class BaseSchematicBrowserScreen extends BaseListScreen<BaseFileBrowserWi
         if (this.lastSelectedSchematic.isPresent() == false &&
             this.lastSelectedSchematicFile != null)
         {
-            this.lastSelectedSchematic = LoadedSchematic.tryLoadSchematic(this.lastSelectedSchematicFile);
+            this.lastSelectedSchematic = SchematicHolder.INSTANCE.getOrLoad(this.lastSelectedSchematicFile);
         }
 
         return this.lastSelectedSchematic;

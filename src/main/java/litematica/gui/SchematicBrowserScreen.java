@@ -4,6 +4,8 @@ import java.nio.file.Path;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
+import litematica.schematic.LitematicaSchematic;
+import litematica.schematic.conversion.SchematicDataConverter;
 import malilib.gui.widget.CheckBoxWidget;
 import malilib.gui.widget.button.GenericButton;
 import malilib.gui.widget.list.BaseFileBrowserWidget.DirectoryEntry;
@@ -78,6 +80,11 @@ public class SchematicBrowserScreen extends BaseSchematicBrowserScreen
         // Clear the parent after loading as schematic, as presumably in most cases
         // the user would just want to close the screen at that point.
         this.setParent(null);
+
+        if (loadedSchematic.schematic instanceof LitematicaSchematic && (((LitematicaSchematic) loadedSchematic.schematic).conversionResult).hasFailures())
+        {
+            SchematicDataConverter.reportConversionResult(((LitematicaSchematic) loadedSchematic.schematic).conversionResult);
+        }
 
         if (Configs.Internal.CREATE_PLACEMENT_ON_LOAD.getBooleanValue())
         {

@@ -45,6 +45,7 @@ litematica.button.schematic_list.create_placement=Create Placement
 litematica.button.schematic_list.reload=Reload
 litematica.button.schematic_list.save_to_file=Save To File
 litematica.button.schematic_list.unload=Unload
+litematica.button.schematic_list.conversion_log=Conversion Log
 litematica.button.schematic_manager.convert_format=Convert Format
 litematica.button.schematic_manager.delete=§cDelete
 litematica.button.schematic_manager.edit_description=Set Description
