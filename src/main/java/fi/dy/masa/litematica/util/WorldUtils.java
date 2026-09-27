@@ -499,128 +499,121 @@ public class WorldUtils
             BlockPos pos = trace.getBlockPos();
             World world = SchematicWorldHandler.getSchematicWorld();
             BlockState stateSchematic = world.getBlockState(pos);
+            BlockState stateClient = mc.world.getBlockState(pos);
             ItemStack stack = MaterialCache.getInstance().getRequiredBuildItemForState(stateSchematic);
 
+            if (stateSchematic.isAir())
+            {
+                return ActionResult.FAIL;
+            }
+
             // Already placed to that position, possible server sync delay
-            if (easyPlaceIsPositionCached(pos))
+            if (stateSchematic == stateClient ||
+                easyPlaceIsPositionCached(pos) ||
+                easyPlaceIsTooFast() ||
+                stack.isEmpty())
             {
                 return ActionResult.FAIL;
             }
 
-            // Ignore action if too fast
-            if (easyPlaceIsTooFast())
+            // Abort if there is already a block in the target position
+            if (easyPlaceBlockChecksCancel(stateSchematic, stateClient, mc.player, traceVanilla, stack))
             {
                 return ActionResult.FAIL;
             }
 
-            if (stack.isEmpty() == false)
+            InventoryUtils.schematicWorldPickBlock(stack, pos, world, mc);
+            Hand hand = EntityUtils.getUsedHandForItem(mc.player, stack);
+
+            // Abort if a wrong item is in the player's hand
+            if (hand == null)
             {
-                BlockState stateClient = mc.world.getBlockState(pos);
+                return ActionResult.FAIL;
+            }
 
-                if (stateSchematic == stateClient)
+            Vec3d hitPos = trace.getPos();
+            Direction sideOrig = trace.getSide();
+            EasyPlaceProtocol protocol = PlacementHandler.getEffectiveProtocolVersion();
+
+            if (protocol == EasyPlaceProtocol.NONE || protocol == EasyPlaceProtocol.SLAB_ONLY)
+            {
+                // If there is a block in the world right behind the targeted schematic block, then use
+                // that block as the click position
+                if (traceVanilla != null && traceVanilla.getType() == HitResult.Type.BLOCK)
                 {
-                    return ActionResult.FAIL;
-                }
+                    BlockHitResult hitResult = (BlockHitResult) traceVanilla;
+                    BlockPos posVanilla = hitResult.getBlockPos();
+                    Direction sideVanilla = hitResult.getSide();
+                    BlockState stateVanilla = mc.world.getBlockState(posVanilla);
+                    Vec3d hit = traceVanilla.getPos();
+                    ItemPlacementContext ctx = new ItemPlacementContext(new ItemUsageContext(mc.player, hand, hitResult));
 
-                // Abort if there is already a block in the target position
-                if (easyPlaceBlockChecksCancel(stateSchematic, stateClient, mc.player, traceVanilla, stack))
-                {
-                    return ActionResult.FAIL;
-                }
-
-                InventoryUtils.schematicWorldPickBlock(stack, pos, world, mc);
-                Hand hand = EntityUtils.getUsedHandForItem(mc.player, stack);
-
-                // Abort if a wrong item is in the player's hand
-                if (hand == null)
-                {
-                    return ActionResult.FAIL;
-                }
-
-                Vec3d hitPos = trace.getPos();
-                Direction sideOrig = trace.getSide();
-                EasyPlaceProtocol protocol = PlacementHandler.getEffectiveProtocolVersion();
-
-                if (protocol == EasyPlaceProtocol.NONE || protocol == EasyPlaceProtocol.SLAB_ONLY)
-                {
-                    // If there is a block in the world right behind the targeted schematic block, then use
-                    // that block as the click position
-                    if (traceVanilla != null && traceVanilla.getType() == HitResult.Type.BLOCK)
+                    if (stateVanilla.canReplace(ctx) == false)
                     {
-                        BlockHitResult hitResult = (BlockHitResult) traceVanilla;
-                        BlockPos posVanilla = hitResult.getBlockPos();
-                        Direction sideVanilla = hitResult.getSide();
-                        BlockState stateVanilla = mc.world.getBlockState(posVanilla);
-                        Vec3d hit = traceVanilla.getPos();
-                        ItemPlacementContext ctx = new ItemPlacementContext(new ItemUsageContext(mc.player, hand, hitResult));
+                        posVanilla = posVanilla.offset(sideVanilla);
 
-                        if (stateVanilla.canReplace(ctx) == false)
+                        if (pos.equals(posVanilla))
                         {
-                            posVanilla = posVanilla.offset(sideVanilla);
-
-                            if (pos.equals(posVanilla))
-                            {
-                                hitPos = hit;
-                                sideOrig = sideVanilla;
-                            }
+                            hitPos = hit;
+                            sideOrig = sideVanilla;
                         }
                     }
                 }
+            }
 
-                Direction side = applyPlacementFacing(stateSchematic, sideOrig, stateClient);
+            Direction side = applyPlacementFacing(stateSchematic, sideOrig, stateClient);
 
-                // Support for special cases
-                PlacementProtocolData placementData = applyPlacementProtocolAll(pos, stateSchematic, hitPos);
-                if (placementData.mustFail)
-                    return ActionResult.FAIL; //disallowed cases (e.g. trying to place torch with no support block)
+            // Support for special cases
+            PlacementProtocolData placementData = applyPlacementProtocolAll(pos, stateSchematic, hitPos);
+            if (placementData.mustFail)
+                return ActionResult.FAIL; //disallowed cases (e.g. trying to place torch with no support block)
 
-                if (placementData.handled)
+            if (placementData.handled)
+            {
+                pos = placementData.pos;
+                side = placementData.side;
+                hitPos = placementData.hitVec;
+            }
+
+            if (protocol == EasyPlaceProtocol.V3)
+            {
+                hitPos = applyPlacementProtocolV3(pos, stateSchematic, hitPos);
+            }
+            else if (protocol == EasyPlaceProtocol.V2)
+            {
+                // Carpet Accurate Block Placement protocol support, plus slab support
+                hitPos = applyCarpetProtocolHitVec(pos, stateSchematic, hitPos);
+            }
+            else if (protocol == EasyPlaceProtocol.SLAB_ONLY)
+            {
+                // Slab support only
+                hitPos = applyBlockSlabProtocol(pos, stateSchematic, hitPos);
+            }
+
+            // Mark that this position has been handled (use the non-offset position that is checked above)
+            cacheEasyPlacePosition(pos);
+
+            BlockHitResult hitResult = new BlockHitResult(hitPos, side, pos, false);
+
+            //System.out.printf("pos: %s side: %s, hit: %s\n", pos, side, hitPos);
+            // pos, side, hitPos
+            ActionResult result = mc.interactionManager.interactBlock(mc.player, mc.world, hand, hitResult);
+
+            // swing hand fix, see MinecraftClient#doItemUse
+            if (result.shouldSwingHand() && Configs.Generic.EASY_PLACE_SWING_HAND.getBooleanValue())
+            {
+                mc.player.swingHand(hand);
+            }
+
+            if (stateSchematic.getBlock() instanceof SlabBlock && stateSchematic.get(SlabBlock.TYPE) == SlabType.DOUBLE)
+            {
+                stateClient = mc.world.getBlockState(pos);
+
+                if (stateClient.getBlock() instanceof SlabBlock && stateClient.get(SlabBlock.TYPE) != SlabType.DOUBLE)
                 {
-                    pos = placementData.pos;
-                    side = placementData.side;
-                    hitPos = placementData.hitVec;
-                }
-
-                if (protocol == EasyPlaceProtocol.V3)
-                {
-                    hitPos = applyPlacementProtocolV3(pos, stateSchematic, hitPos);
-                }
-                else if (protocol == EasyPlaceProtocol.V2)
-                {
-                    // Carpet Accurate Block Placement protocol support, plus slab support
-                    hitPos = applyCarpetProtocolHitVec(pos, stateSchematic, hitPos);
-                }
-                else if (protocol == EasyPlaceProtocol.SLAB_ONLY)
-                {
-                    // Slab support only
-                    hitPos = applyBlockSlabProtocol(pos, stateSchematic, hitPos);
-                }
-
-                // Mark that this position has been handled (use the non-offset position that is checked above)
-                cacheEasyPlacePosition(pos);
-
-                BlockHitResult hitResult = new BlockHitResult(hitPos, side, pos, false);
-
-                //System.out.printf("pos: %s side: %s, hit: %s\n", pos, side, hitPos);
-                // pos, side, hitPos
-                ActionResult result = mc.interactionManager.interactBlock(mc.player, mc.world, hand, hitResult);
-
-                // swing hand fix, see MinecraftClient#doItemUse
-                if (result.shouldSwingHand() && Configs.Generic.EASY_PLACE_SWING_HAND.getBooleanValue())
-                {
-                    mc.player.swingHand(hand);
-                }
-
-                if (stateSchematic.getBlock() instanceof SlabBlock && stateSchematic.get(SlabBlock.TYPE) == SlabType.DOUBLE)
-                {
-                    stateClient = mc.world.getBlockState(pos);
-
-                    if (stateClient.getBlock() instanceof SlabBlock && stateClient.get(SlabBlock.TYPE) != SlabType.DOUBLE)
-                    {
-                        side = applyPlacementFacing(stateSchematic, sideOrig, stateClient);
-                        hitResult = new BlockHitResult(hitPos, side, pos, false);
-                        mc.interactionManager.interactBlock(mc.player, mc.world, hand, hitResult);
-                    }
+                    side = applyPlacementFacing(stateSchematic, sideOrig, stateClient);
+                    hitResult = new BlockHitResult(hitPos, side, pos, false);
+                    mc.interactionManager.interactBlock(mc.player, mc.world, hand, hitResult);
                 }
             }
 
