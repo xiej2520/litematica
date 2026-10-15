@@ -1,7 +1,5 @@
 package litematica.schematic.conversion;
 
-import litematica.schematic.LitematicaSchematic;
-import litematica.schematic.Schematic;
 import litematica.schematic.container.ArrayBlockContainer;
 import litematica.schematic.conversion.converter.*;
 import litematica.schematic.data.EntityData;

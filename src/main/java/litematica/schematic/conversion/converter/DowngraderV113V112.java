@@ -182,6 +182,7 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
         this.convertItemsListIfKey(data, "Items");
         this.convertItemsListIfKey(data, "ArmorItems");
         this.convertItemsListIfKey(data, "HandItems");
+        this.convertItemsListIfKey(data, "Inventory");
 
         if (data.containsList("Passengers", Constants.NBT.TAG_COMPOUND))
         {
@@ -237,7 +238,7 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
             case "minecraft:banner":
                 convertNamed(blockEntityTag);
                 unfixBannerBlockEntity(blockEntityTag);
-                blockEntityTag.remove("id"); // not stored in tag in 1.12
+                //blockEntityTag.remove("id"); // in 1.12: not stored in item tag, is stored in block form
                 break;
             case "minecraft:brewing_stand":
             case "minecraft:chest":
@@ -247,6 +248,10 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
             case "minecraft:hopper":
             case "minecraft:shulker_box":
                 convertNamedInventory(blockEntityTag);
+                //blockEntityTag.remove("id"); // in 1.12: not stored in item tag, is stored in block form
+                break;
+            case "minecraft:mob_spawner":
+                convertSpawnerData(blockEntityTag);
                 break;
             case "minecraft:trapped_chest":
                 blockEntityTag.putString("id", "minecraft:chest"); // v1624, 1.13.1
@@ -280,12 +285,40 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
                     }
                 }
                 break;
+            // in 1.12/1.13, an item's BlockEntityTag sometimes have no "id", e.g. shulker box drop,
+            // banner with crafting patterns, shield with banner. So just run the converter in all
+            // cases, even if no id was found.
+            case "":
+                convertNamedInventory(blockEntityTag);
+                unfixBannerBlockEntity(blockEntityTag);
             default:
                 return true;
         }
         return true;
     }
 
+    private void convertSpawnerData(CompoundData spawnerTag)
+    {
+        if (spawnerTag.contains("SpawnData", Constants.NBT.TAG_COMPOUND))
+        {
+            convertEntityData(spawnerTag.getCompound("SpawnData"));
+        }
+
+        if (spawnerTag.containsList("SpawnPotentials", Constants.NBT.TAG_COMPOUND))
+        {
+            ListData potentials = spawnerTag.getList("SpawnPotentials", Constants.NBT.TAG_COMPOUND);
+
+            for (int i = 0; i < potentials.size(); i++)
+            {
+                CompoundData potential = potentials.getCompoundAt(i);
+
+                if (potential.contains("Entity", Constants.NBT.TAG_COMPOUND))
+                {
+                    convertEntityData(potential.getCompound("Entity"));
+                }
+            }
+        }
+    }
 
     private void convertNamed(CompoundData blockEntityTag)
     {
@@ -339,12 +372,41 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
             itemTag.putShort("Damage", idDamage.damage);
         }
 
+        String spawnEggEntityId = getSpawnEggEntityId(id13);
+        if (spawnEggEntityId != null)
+        {
+            if (itemTag.contains("tag", Constants.NBT.TAG_COMPOUND) == false)
+            {
+                itemTag.put("tag", new CompoundData());
+            }
+            CompoundData spawnEggTag = itemTag.getCompound("tag");
+            CompoundData entityTag;
+            if (spawnEggTag.contains("EntityTag", Constants.NBT.TAG_COMPOUND))
+            {
+                entityTag = spawnEggTag.getCompound("EntityTag");
+            }
+            else
+            {
+                entityTag = new CompoundData();
+                spawnEggTag.put("EntityTag", entityTag);
+            }
+            if (entityTag.getString("id").isEmpty())
+            {
+                entityTag.putString("id", spawnEggEntityId);
+            }
+        }
+
         CompoundData tag = itemTag.getCompound("tag");
         if (tag != null && tag.isEmpty() == false) {
             if (tag.contains("Damage", Constants.NBT.TAG_INT)) {
                 short actualDamage = tag.getShort("Damage");
                 itemTag.putShort("Damage", actualDamage);
                 tag.remove("Damage");
+            }
+
+            if ("minecraft:filled_map".equals(id13) && tag.contains("map", Constants.NBT.TAG_ANY_NUMERIC)) {
+                itemTag.putShort("Damage", (short) tag.getInt("map"));
+                tag.remove("map");
             }
 
             if (tag.contains("StoredEnchantments", Constants.NBT.TAG_LIST)) { // v1494
@@ -702,6 +764,22 @@ public class DowngraderV113V112 extends SchematicDataConverter implements MiniDa
         .put("minecraft:eye_of_ender", "minecraft:eye_of_ender_signal")
         .put("minecraft:firework_rocket", "minecraft:fireworks_rocket")
         .build();
+
+    private static String getSpawnEggEntityId(String itemId)
+    {
+        final String prefix = "minecraft:";
+        final String suffix = "_spawn_egg";
+
+        if (itemId.startsWith(prefix) == false || itemId.endsWith(suffix) == false)
+        {
+            return null;
+        }
+
+        String entityId = prefix + itemId.substring(prefix.length(), itemId.length() - suffix.length());
+
+        // really just "evocation_illager_spawn_egg" and "vindication_illager_spawn_egg"
+        return ENTITY_UNRENAME_MAP.getOrDefault(entityId, entityId);
+    }
 }
 
 interface UnfixBlockEntityCreator {
