@@ -913,7 +913,7 @@ public class TaskPasteSchematicPerChunkCommand extends TaskPasteSchematicPerChun
         for (Direction side : PositionUtils.ALL_DIRECTIONS)
         {
             //if (world.isAir(pos.set(centerPos, side)) == false)
-            if (world.isAir(pos.set(pos.getX() + side.getOffsetX(), pos.getY() + side.getOffsetY(), pos.getZ() + side.getOffsetZ())))
+            if (world.isAir(pos.set(centerPos).setOffset(side)) == false)
             {
                 return false;
             }
