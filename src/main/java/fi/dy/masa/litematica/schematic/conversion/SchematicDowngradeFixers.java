@@ -2,6 +2,7 @@ package fi.dy.masa.litematica.schematic.conversion;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -67,4 +68,41 @@ public class SchematicDowngradeFixers
 
         return palette;
     }
+
+    // 1.20+ uses front_text/back_text for sign lines. Move them back to Text1-Text4 and Color,
+    // drop other lines. Don't modify `GlowingText`/`has_glowing_text` (handle in 1.17+).
+    public static void convertBlockEntities_1_20_to_1_15(Map<?, CompoundTag> blockEntities)
+    {
+        for (CompoundTag tag : blockEntities.values())
+        {
+            convertSignText_1_20_to_1_15(tag);
+        }
+    }
+
+    public static void convertSignText_1_20_to_1_15(CompoundTag tag)
+    {
+        if (tag.contains("front_text", Constants.NBT.TAG_COMPOUND) == false ||
+            tag.contains("Text1", Constants.NBT.TAG_STRING))
+        {
+            return;
+        }
+
+        CompoundTag front = tag.getCompound("front_text");
+        ListTag messages = front.getList("messages", Constants.NBT.TAG_STRING);
+
+        for (int i = 0; i < 4; ++i)
+        {
+            tag.putString("Text" + (i + 1), i < messages.size() ? messages.getString(i) : "\"\"");
+        }
+
+        if (front.contains("color", Constants.NBT.TAG_STRING))
+        {
+            tag.putString("Color", front.getString("color"));
+        }
+
+        tag.remove("front_text");
+        tag.remove("back_text");
+        tag.remove("is_waxed");
+    }
 }
+

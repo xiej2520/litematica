@@ -1198,6 +1198,12 @@ public class LitematicaSchematic
                     if (version >= 2)
                     {
                         tiles = this.readTileEntitiesFromNBT(regionTag.getList("TileEntities", Constants.NBT.TAG_COMPOUND));
+
+                        if (minecraftDataVersion > MINECRAFT_DATA_VERSION)
+                        {
+                            SchematicDowngradeFixers.convertBlockEntities_1_20_to_1_15(tiles);
+                        }
+
                         this.tileEntities.put(regionName, tiles);
                         this.entities.put(regionName, this.readEntitiesFromNBT(regionTag.getList("Entities", Constants.NBT.TAG_COMPOUND)));
                     }
