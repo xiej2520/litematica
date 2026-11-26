@@ -1,6 +1,7 @@
 package fi.dy.masa.litematica;
 
 import fi.dy.masa.litematica.config.Configs;
+import fi.dy.masa.litematica.gui.GuiConfigs;
 import fi.dy.masa.litematica.data.DataManager;
 import fi.dy.masa.litematica.event.InputHandler;
 import fi.dy.masa.litematica.event.KeyCallbacks;
@@ -14,6 +15,8 @@ import fi.dy.masa.malilib.event.RenderEventHandler;
 import fi.dy.masa.malilib.event.TickHandler;
 import fi.dy.masa.malilib.event.WorldLoadHandler;
 import fi.dy.masa.malilib.interfaces.IInitializationHandler;
+import fi.dy.masa.malilib.registry.Registry;
+import fi.dy.masa.malilib.util.data.ModInfo;
 import fi.dy.masa.malilib.interfaces.IRenderer;
 import net.minecraft.client.MinecraftClient;
 
@@ -23,6 +26,9 @@ public class InitHandler implements IInitializationHandler
     public void registerModHandlers()
     {
         ConfigManager.getInstance().registerConfigHandler(Reference.MOD_ID, new Configs());
+        Registry.CONFIG_SCREEN.registerConfigScreenFactory(
+                new ModInfo(Reference.MOD_ID, Reference.MOD_NAME, GuiConfigs::new)
+        );
 
         InputEventHandler.getKeybindManager().registerKeybindProvider(InputHandler.getInstance());
         InputEventHandler.getInputManager().registerKeyboardInputHandler(InputHandler.getInstance());
